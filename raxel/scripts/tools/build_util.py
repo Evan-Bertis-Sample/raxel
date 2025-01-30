@@ -145,7 +145,7 @@ class RaxelBuildUtil:
         print(f"Build complete. The executable should be in {build_dir}")
 
     @staticmethod
-    def run_project(options: RaxelBuildOptions):
+    def run_project(options: RaxelBuildOptions, use_gdb: bool = False):
         if not options.is_valid():
             print("Error: Invalid build options")
             return
@@ -165,8 +165,12 @@ class RaxelBuildUtil:
             return
 
         # Run the project
-        run_command = [os.path.join(build_dir, options.project_name)]
-        print(f"Running project: {' '.join(run_command)}\n")
+        if use_gdb:
+            run_command = ["gdb", os.path.join(build_dir, options.project_name)]
+            print(f"Running project with gdb: {' '.join(run_command)}\n")
+        else:
+            run_command = [os.path.join(build_dir, options.project_name)]
+            print(f"Running project: {' '.join(run_command)}\n")
 
         try:
             subprocess.run(run_command, check=True)

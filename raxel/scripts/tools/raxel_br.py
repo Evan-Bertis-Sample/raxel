@@ -1,4 +1,4 @@
-# raxel_run.py
+# raxel_br.py
 
 import os
 import sys
@@ -23,4 +23,5 @@ def main(args):
         project_dir = os.getcwd()
     build_options.set_project_dir(project_dir)
 
+    RaxelBuildUtil.build_project(build_options)
     RaxelBuildUtil.run_project(build_options, use_gdb=args.gdb)
