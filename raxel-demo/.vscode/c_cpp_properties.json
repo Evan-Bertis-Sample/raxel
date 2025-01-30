@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "name": "raxel",
+            "includePath": [
+                "D:\\Documents\\Code\\School\\raxel"
+            ],
+            "defines": []
+        }
+    ]
+}

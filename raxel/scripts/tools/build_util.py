@@ -163,6 +163,9 @@ class RaxelBuildUtil:
         if not os.path.exists(build_dir):
             print(f"Error: Build directory does not exist: {build_dir}")
             return
+        
+        if not os.path.exists(os.path.join(build_dir, options.project_name)):
+            print(f"Error: Project executable does not exist in build directory: {build_dir}")
 
         # Run the project
         if use_gdb:
