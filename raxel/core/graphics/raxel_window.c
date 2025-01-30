@@ -2,7 +2,6 @@
 
 #include <SFML/Audio.h>
 #include <SFML/Graphics.h>
-#include <SFML/Network.h>
 #include <SFML/System.h>
 
 void raxel_window_test()
@@ -21,12 +20,6 @@ void raxel_window_test()
 
     // Create a clock (System)
     sfClock* clock = sfClock_create();
-
-    // Create a UDP socket (Network)
-    sfUdpSocket* socket = sfUdpSocket_create();
-    if (socket) {
-        printf("Network module initialized!\n");
-    }
 
     // Create a sound buffer and sound (Audio)
     sfSoundBuffer* soundBuffer = sfSoundBuffer_createFromFile("../sound.mp3");
@@ -67,9 +60,7 @@ void raxel_window_test()
         sfSound_destroy(sound);
         sfSoundBuffer_destroy(soundBuffer);
     }
-    if (socket) {
-        sfUdpSocket_destroy(socket);
-    }
+    
     sfRenderWindow_destroy(window);
 
     return 0;

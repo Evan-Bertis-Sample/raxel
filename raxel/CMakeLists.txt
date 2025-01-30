@@ -81,21 +81,17 @@ set_property(TARGET raxel PROPERTY C_STANDARD 99)
 
 # --- Fetching Dependencies (Vulkan, GLFW, etc) ---
 
+include(FetchContent)
+
 # Vulkan is a required dependency.
 include(FindVulkan)
 if(NOT VULKAN_FOUND)
     message(FATAL_ERROR "Vulkan SDK not installed.")
 endif()
 
-# GLFW is a required dependency.
-set(GLFW_VERSION 3.3.8)
-include(FetchContent)
-FetchContent_Declare(
-    glfw
-    URL https://github.com/glfw/glfw/archive/refs/tags/${GLFW_VERSION}.tar.gz)
 
 
-set(SFML_VERSION "2.6.0")
+set(SFML_VERSION 2.6.1)
 # Remove C++ stdlib flag for C compilation
 if(APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument")
@@ -134,25 +130,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(CSFML)
 
-# Link all CSFML libraries
+# Link all SFML libraries
 target_link_libraries(raxel PRIVATE
     sfml-system
     sfml-window
     sfml-graphics
     sfml-audio
-    sfml-network
     csfml-system
     csfml-window
     csfml-graphics
     csfml-audio
-    csfml-network
 )
 
 # Include directories
 target_include_directories(raxel PRIVATE
     ${csfml_SOURCE_DIR}/include
 )
-
 
 # --- COMPILING GAME ---
 
@@ -161,3 +154,12 @@ include(${RAXEL_PROJECT_ROOT_DIR}/raxel.cmake)
 
 # link the game with the engine
 target_link_libraries(${PROJECT} PUBLIC raxel)
+
+# For each library, copy its DLL to the target output directory
+foreach(LIB_NAME IN LISTS SFML_CSFML_LIBS)
+    add_custom_command(TARGET ${PROJECT} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:${LIB_NAME}>"
+            "$<TARGET_FILE_DIR:${PROJECT}>"
+    )
+endforeach()
