@@ -1,4 +1,4 @@
-# raxel_build.py
+# raxel_run.py
 
 import os
 import sys
@@ -7,7 +7,6 @@ from tools.tool_util import RaxelToolUtil
 
 def register_subparser(subparser):
     RaxelBuildOptions.add_subparser_args(subparser)
-
 
 def main(args):
     build_options = RaxelBuildOptions()
@@ -18,4 +17,4 @@ def main(args):
         project_dir = os.getcwd()
     build_options.set_project_dir(project_dir)
 
-    RaxelBuildUtil.build_project(build_options)
+    RaxelBuildUtil.run_project(build_options)

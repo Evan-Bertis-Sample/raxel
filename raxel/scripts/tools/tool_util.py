@@ -12,7 +12,7 @@ class RaxelToolUtil:
 
     @staticmethod
     def get_raxel_dir():
-        return os.path.join(RaxelToolUtil.__get_root_dir(), "raxel")
+        return os.path.join(RaxelToolUtil.get_root_dir(), "raxel")
 
     @staticmethod
     def get_raxel_tool_dir():
