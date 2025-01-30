@@ -57,11 +57,28 @@ set(RAXEL_ENGINE_DIR ${CMAKE_SOURCE_DIR})
 file(GLOB_RECURSE RAXEL_CORE_SOURCES ${RAXEL_ENGINE_DIR}/core/*.c)
 file(GLOB_RECURSE RAXEL_CORE_HEADERS ${RAXEL_ENGINE_DIR}/core/*.h)
 
+# print out the files
+message(STATUS "Raxel Core Sources: ${RAXEL_CORE_SOURCES}")
+message(STATUS "Raxel Core Headers: ${RAXEL_CORE_HEADERS}")
+
 
 add_library(raxel STATIC 
     ${RAXEL_CORE_SOURCES} 
     ${RAXEL_CORE_HEADERS}
 )
+
+# sets where the raxel engine is located, and how to include it
+# I think that being a bit more explicit about the include directories is best
+# so you have to do <raxel/...> instead of just <...>
+# or if you just want to do <...> just place the inlcude file
+# in raxel/include
+set(RAXEL_PARENT_DIR ${RAXEL_ENGINE_DIR}/..)
+target_include_directories(raxel PUBLIC
+    ${RAXEL_PARENT_DIR}
+)
+
+# set raxel to be a c99 library
+set_property(TARGET raxel PROPERTY C_STANDARD 99)
 
 # --- Fetching Dependencies (Vulkan, GLFW, etc) ---
 
@@ -138,13 +155,10 @@ target_include_directories(${PROJECT} PRIVATE
 )
 
 
-# set raxel to be a c99 library
-set_property(TARGET raxel PROPERTY C_STANDARD 99)
-
 # --- COMPILING GAME ---
 
 message(STATUS "Compiling Game")
 include(${RAXEL_PROJECT_ROOT_DIR}/raxel.cmake)
 
 # link the game with the engine
-target_link_libraries(${PROJECT} PRIVATE raxel)
+target_link_libraries(${PROJECT} PUBLIC raxel)
