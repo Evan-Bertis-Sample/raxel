@@ -72,16 +72,17 @@ add_library(raxel STATIC
 # or if you just want to do <...> just place the inlcude file
 # in raxel/include
 set(RAXEL_PARENT_DIR ${RAXEL_ENGINE_DIR}/..)
-target_include_directories(raxel PUBLIC
-    ${RAXEL_PARENT_DIR}
-)
 
 # set raxel to be a c99 library
 set_property(TARGET raxel PROPERTY C_STANDARD 99)
 
-# --- Fetching Dependencies (Vulkan, GLFW, etc) ---
+# --- Fetching Dependencies (Vulkan, GLFW, GLM, etc) ---
 
 include(FetchContent)
+
+set(RAXEL_ENGINE_VENDOR_DIR ${RAXEL_ENGINE_DIR}/vendor)
+
+message(STATUS "Vendor Directory: ${RAXEL_ENGINE_VENDOR_DIR}")
 
 # Vulkan is a required dependency.
 include(FindVulkan)
@@ -89,62 +90,25 @@ if(NOT VULKAN_FOUND)
     message(FATAL_ERROR "Vulkan SDK not installed.")
 endif()
 
-
-
-set(SFML_VERSION 2.6.1)
-# Remove C++ stdlib flag for C compilation
-if(APPLE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument")
-endif()
-
-# Fetch SFML
-FetchContent_Declare(
-    SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG "${SFML_VERSION}"
-)
-FetchContent_MakeAvailable(SFML)
-
-# Configure paths before fetching CSFML
-set(SFML_ROOT "${sfml_SOURCE_DIR}")
-set(SFML_DIR "${sfml_BINARY_DIR}")
-set(SFML_PATH "${sfml_SOURCE_DIR}")
-set(SFML_INCLUDE_DIR "${sfml_SOURCE_DIR}/include")
-set(SFML_LIBRARY_DIR "${sfml_BINARY_DIR}/lib")
-set(SFML_DEPENDENCIES_DIR "${sfml_SOURCE_DIR}/extlibs")
-
-# Create SFML config file that CSFML can find. This overwrites the already existing one because the original one causes conflict.
-file(WRITE "${sfml_BINARY_DIR}/SFMLConfig.cmake" 
-"set(SFML_VERSION ${SFML_VERSION})
-set(SFML_INCLUDE_DIR \"${SFML_INCLUDE_DIR}\")
-set(SFML_LIBRARY_DIR \"${SFML_LIBRARY_DIR}\")
-set(SFML_DEPENDENCIES_DIR \"${SFML_DEPENDENCIES_DIR}\")
-set(SFML_FOUND TRUE)
-")
-
-# Fetch CSFML
-FetchContent_Declare(
-    CSFML
-    GIT_REPOSITORY https://github.com/SFML/CSFML.git
-    GIT_TAG "${SFML_VERSION}"
-)
-FetchContent_MakeAvailable(CSFML)
-
-# Link all SFML libraries
-target_link_libraries(raxel PRIVATE
-    sfml-system
-    sfml-window
-    sfml-graphics
-    sfml-audio
-    csfml-system
-    csfml-window
-    csfml-graphics
-    csfml-audio
-)
+# now add GLFW and GLM
+# I just put them as gitsubmodules, no cmake magic here
+# glfw
+set(GLFW_BUILD_DOCS OFF CACHE BOOL  "GLFW lib only")
+set(GLFW_INSTALL OFF CACHE BOOL  "GLFW lib only")
+set(GLAD_GL "")
+add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/glfw)
+# glm
+add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/glm)
 
 # Include directories
-target_include_directories(raxel PRIVATE
-    ${csfml_SOURCE_DIR}/include
+target_include_directories(raxel 
+    PUBLIC ${RAXEL_PARENT_DIR}
+    PRIVATE ${Vulkan_INCLUDE_DIRS} libs/glfw/include
+)
+
+target_link_libraries(raxel 
+    Vulkan::Vulkan
+    glm glfw
 )
 
 # --- COMPILING GAME ---
@@ -155,11 +119,5 @@ include(${RAXEL_PROJECT_ROOT_DIR}/raxel.cmake)
 # link the game with the engine
 target_link_libraries(${PROJECT} PUBLIC raxel)
 
-# For each library, copy its DLL to the target output directory
-foreach(LIB_NAME IN LISTS SFML_CSFML_LIBS)
-    add_custom_command(TARGET ${PROJECT} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:${LIB_NAME}>"
-            "$<TARGET_FILE_DIR:${PROJECT}>"
-    )
-endforeach()
+get_target_property(INCLUDE_DIRS raxel INCLUDE_DIRECTORIES)
+message(STATUS "Raxel Include Directories: ${INCLUDE_DIRS}")

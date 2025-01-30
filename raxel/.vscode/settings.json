@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.sqlbook": "sql",
+        "*.ndjson": "jsonl",
+        "*.dbclient-js": "javascript",
+        "*.compute": "hlsl",
+        "raxel_surface.h": "c",
+        "glfw3.h": "c"
+    }
+}
