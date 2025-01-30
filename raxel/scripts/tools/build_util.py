@@ -115,7 +115,7 @@ class RaxelBuildUtil:
             "-B",
             build_dir,
             f"-DPROJECT={options.project_name}",
-            f"-DPROJECT_CMAKE_DIR={rel_project_dir}",
+            f"-DRAXEL_PROJECT_ROOT_DIR={rel_project_dir}",
             f"-DCMAKE_BUILD_TYPE={RaxelBuildType.to_clean_str(options.build_type)}",
         ]
 

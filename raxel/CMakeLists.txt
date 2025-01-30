@@ -30,9 +30,22 @@ cmake_minimum_required(VERSION 3.13)
 
 project(${PROJECT} C CXX)
 
-set(RAXEL_PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
 add_executable(${PROJECT})
+
+# --- Do some initial checking ---
+
+if(NOT DEFINED PROJECT)
+    message(FATAL_ERROR "PROJECT not defined.")
+endif()
+
+if(NOT DEFINED RAXEL_PROJECT_ROOT_DIR)
+    message(FATAL_ERROR "RAXEL_PROJECT_ROOT_DIR not defined.")
+endif()
+
+# check there is a raxel.cmake file in the project root directory
+if(NOT EXISTS ${RAXEL_PROJECT_ROOT_DIR}/raxel.cmake)
+    message(FATAL_ERROR "raxel.cmake not found in project root directory.")
+endif()
 
 # --- COMPILING RAXEL ENGINE ---
 
@@ -128,10 +141,10 @@ target_include_directories(${PROJECT} PRIVATE
 # set raxel to be a c99 library
 set_property(TARGET raxel PROPERTY C_STANDARD 99)
 
-# call the build_project function, which should be defined in the raxel.cmake file
-set(RAXEL_PROJECT_CMAKE ${RAXEL_PROJECT_ROOT_DIR}/raxel.cmake)
-if(EXISTS ${RAXEL_PROJECT_CMAKE})
-    include(${RAXEL_PROJECT_CMAKE})
-else()
-    message(FATAL_ERROR "raxel.cmake not found in project root directory.")
-endif()
+# --- COMPILING GAME ---
+
+message(STATUS "Compiling Game")
+include(${RAXEL_PROJECT_ROOT_DIR}/raxel.cmake)
+
+# link the game with the engine
+target_link_libraries(${PROJECT} PRIVATE raxel)
