@@ -96,8 +96,10 @@ endif()
 set(GLFW_BUILD_DOCS OFF CACHE BOOL  "GLFW lib only")
 set(GLFW_INSTALL OFF CACHE BOOL  "GLFW lib only")
 set(GLAD_GL "")
+set(GLFW_LIBRARY_TYPE "STATIC")
 add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/glfw)
 # glm
+set(GLM_BUILD_LIBRARY ON CACHE BOOL "GLM lib only")
 add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/glm)
 
 # Include directories

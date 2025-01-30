@@ -5,6 +5,9 @@
         "*.dbclient-js": "javascript",
         "*.compute": "hlsl",
         "raxel_surface.h": "c",
-        "glfw3.h": "c"
+        "glfw3.h": "c",
+        "util.h": "c",
+        "raxel_container.h": "c",
+        "raxel_mem.h": "c"
     }
 }

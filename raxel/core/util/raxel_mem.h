@@ -16,13 +16,9 @@ typedef struct {
     void (*free)(void *ctx, void *ptr);
 } raxel_allocator_t;
 
-void *raxel_malloc(raxel_allocator_t *allocator, raxel_size_t size) {
-    return allocator->alloc(allocator->ctx, size);
-}
+void *raxel_malloc(raxel_allocator_t *allocator, raxel_size_t size);
 
-void raxel_free(raxel_allocator_t *allocator, void *ptr) {
-    allocator->free(allocator->ctx, ptr);
-}
+void raxel_free(raxel_allocator_t *allocator, void *ptr);
 
 #ifdef __cplusplus
 }
