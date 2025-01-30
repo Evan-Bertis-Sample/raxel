@@ -61,7 +61,6 @@ file(GLOB_RECURSE RAXEL_CORE_HEADERS ${RAXEL_ENGINE_DIR}/core/*.h)
 message(STATUS "Raxel Core Sources: ${RAXEL_CORE_SOURCES}")
 message(STATUS "Raxel Core Headers: ${RAXEL_CORE_HEADERS}")
 
-
 add_library(raxel STATIC 
     ${RAXEL_CORE_SOURCES} 
     ${RAXEL_CORE_HEADERS}
@@ -150,7 +149,7 @@ target_link_libraries(raxel PRIVATE
 )
 
 # Include directories
-target_include_directories(${PROJECT} PRIVATE
+target_include_directories(raxel PRIVATE
     ${csfml_SOURCE_DIR}/include
 )
 

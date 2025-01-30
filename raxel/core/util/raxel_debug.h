@@ -46,6 +46,7 @@ extern "C" {
 // Just two prefix strings (no path/line in them)
 // We'll insert [%s:%d] at runtime in the macros
 #define RAXEL_CORE_MSG_PREFIX "[raxel-core]"
+
 #define RAXEL_APP_MSG_PREFIX "[raxel-app]"
 
 #ifdef RAXEL_CORE_LOG_ENABLED
