@@ -45,6 +45,7 @@ struct Light {
     int attenuationType; // 0 = none, 1 = linear, 2 = quadratic
 };
 
+
 // description of our scene
 SphereSDF spheres[3] = SphereSDF[](
     SphereSDF(vec3(0, 0, -5), 1.0, RaymarchMaterial(vec3(1, 0, 0), 0.1, 0.0, 1.5)), 

@@ -110,7 +110,7 @@ void createCommandPools(void);
 void createComputeResources(void);
 void createComputePipeline(void);
 void allocateComputeCommandBuffer(void);
-void updateComputeCmdBufEveryFrame(void);  // <-- new function
+void updateComputeCmdBufEveryFrame(void);
 void createGraphicsPipeline(void);
 void createFrameResources(void);
 void recordGraphicsCommandBuffers(void);

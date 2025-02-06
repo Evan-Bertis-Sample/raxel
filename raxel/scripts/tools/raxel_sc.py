@@ -11,7 +11,7 @@ RAXEL_SHADER_COMPILER_BASH_SCRIPT = "raxel_sc.sh"
 def register_subparser(subparser):
     # we need the path to the root directory of the project
     subparser.add_argument(
-        "project_dir",
+        "--project_dir",
         type=str,
         default=".",
         help="The path to the root directory of the project",
