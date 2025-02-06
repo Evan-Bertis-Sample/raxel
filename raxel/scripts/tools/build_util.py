@@ -15,15 +15,17 @@ class RaxelBuildType(enum.Enum):
     @staticmethod
     def options() -> list:
         return [RaxelBuildType.Debug, RaxelBuildType.Release]
-    
+
     @staticmethod
     def to_clean_str(option: "RaxelBuildType") -> str:
         base = str(option)
-        return base[base.index(".") + 1:]
+        return base[base.index(".") + 1 :]
 
     @staticmethod
     def options_as_strings() -> list:
-        return [RaxelBuildType.to_clean_str(option) for option in RaxelBuildType.options()]
+        return [
+            RaxelBuildType.to_clean_str(option) for option in RaxelBuildType.options()
+        ]
 
     @staticmethod
     def from_string(build_type_str: str) -> "RaxelBuildType":
@@ -49,7 +51,7 @@ class RaxelBuildOptions:
     def set_build_type(self, build_type: RaxelBuildType) -> "RaxelBuildOptions":
         self.build_type = build_type
         return self
-    
+
     def set_project_name(self, project_name: str) -> "RaxelBuildOptions":
         self.__project_name = project_name
         return self
@@ -78,50 +80,83 @@ class RaxelBuildUtil:
     @staticmethod
     def get_build_dir(project_dir: str) -> str:
         return os.path.join(RaxelToolUtil.get_raxel_work_dir(project_dir), "build")
-    
+
     @staticmethod
-    def generate_checksum(dirs : list) -> str:
+    def generate_checksum(dirs: list) -> str:
         checked_file_types = [
             # C/C++ sources
-            ".cpp", ".h", ".c", ".hpp",
-            # Shader sources
-            ".vert", ".frag", ".comp", ".geom", ".tesc", ".tese",
+            ".cpp",
+            ".h",
+            ".c",
+            ".hpp",
             # CMake files
             "CMakeLists.txt",
         ]
 
-        sha256 = hashlib.sha256()
+        shader_types = [
+            # Shader sources
+            ".vert",
+            ".frag",
+            ".comp",
+            ".geom",
+            ".tesc",
+            ".tese",
+            ".glsl",
+        ]
+
+        def add_sha(file: str, sha: hashlib.sha256):
+            with open(file, "rb") as f:
+                while True:
+                    data = f.read(65536)
+                    if not data:
+                        break
+                    sha.update(data)
+
+        source_sha256 = hashlib.sha256()
+        shader_sha256 = hashlib.sha256()
+
         for dir in dirs:
             for root, _, files in os.walk(dir):
                 for file in files:
                     if os.path.splitext(file)[1] in checked_file_types:
-                        with open(os.path.join(root, file), "rb") as f:
-                            while True:
-                                data = f.read(65536)
-                                if not data:
-                                    break
-                                sha256.update(data)
+                        add_sha(os.path.join(root, file), source_sha256)
+                    if os.path.splitext(file)[1] in shader_types:
+                        add_sha(os.path.join(root, file), shader_sha256)
 
-        return sha256.hexdigest()
-    
+
+        return (source_sha256.hexdigest(), shader_sha256.hexdigest())
+
     @staticmethod
-    def create_build_checksum(build_options : RaxelBuildOptions):
-        checksum = RaxelBuildUtil.generate_checksum([build_options.project_dir, RaxelToolUtil.get_raxel_dir()])
-        checksum_file = os.path.join(RaxelBuildUtil.get_build_dir(build_options.project_dir), "checksum.txt")
+    def create_build_checksum(build_options: RaxelBuildOptions):
+        source_checksum, shader_sha = RaxelBuildUtil.generate_checksum(
+            [build_options.project_dir, RaxelToolUtil.get_raxel_dir()]
+        )
+        checksum_file = os.path.join(
+            RaxelBuildUtil.get_build_dir(build_options.project_dir), "checksum.txt"
+        )
         with open(checksum_file, "w") as f:
-            f.write(checksum)
-    
+            f.write(source_checksum)
+            f.write("\n")
+            f.write(shader_sha)
+
     @staticmethod
-    def is_checksum_valid(build_options : RaxelBuildOptions) -> bool:
-        checksum_file = os.path.join(RaxelBuildUtil.get_build_dir(build_options.project_dir), "checksum.txt")
+    def is_checksum_valid(build_options: RaxelBuildOptions) -> bool:
+        checksum_file = os.path.join(
+            RaxelBuildUtil.get_build_dir(build_options.project_dir), "checksum.txt"
+        )
         if not os.path.exists(checksum_file):
             return False
         
+        content = ""
         with open(checksum_file, "r") as f:
-            checksum = f.read()
-        
-        new_checksum = RaxelBuildUtil.generate_checksum([build_options.project_dir, RaxelToolUtil.get_raxel_dir()])
-        return checksum == new_checksum
+            content = f.read()
+
+        checksums = content.split("\n")
+
+        new_checksums = RaxelBuildUtil.generate_checksum(
+            [build_options.project_dir, RaxelToolUtil.get_raxel_dir()]
+        )
+        return (checksums[0] == new_checksums[0], checksums[1] == new_checksums[1])
 
     @staticmethod
     def build_project(options: RaxelBuildOptions):
@@ -173,8 +208,14 @@ class RaxelBuildUtil:
             return
 
         # 5. Run the build for the requested project target
-        build_command = ["cmake", "--build", build_dir, "--target", options.project_name]
-        print (f"Building project: {' '.join(build_command)}\n")
+        build_command = [
+            "cmake",
+            "--build",
+            build_dir,
+            "--target",
+            options.project_name,
+        ]
+        print(f"Building project: {' '.join(build_command)}\n")
         try:
             subprocess.run(build_command, check=True, cwd=work_dir)
         except subprocess.CalledProcessError as e:
@@ -186,7 +227,7 @@ class RaxelBuildUtil:
 
             print(f"Error building project: {e}")
             return
-        
+
         # now we should build a checksum of the project, and store it in the build directory for later use
         RaxelBuildUtil.create_build_checksum(options)
 
@@ -206,26 +247,42 @@ class RaxelBuildUtil:
 
         # Figure out build directory
         build_dir = RaxelBuildUtil.get_build_dir(project_dir)
-        executable_name = options.project_name + ".exe" if os.name == "nt" else options.project_name
+        executable_name = (
+            options.project_name + ".exe" if os.name == "nt" else options.project_name
+        )
 
         # Check if the build directory exists
         if not os.path.exists(build_dir):
             print(f"Error: Build directory does not exist: {build_dir}")
             return
-        
+
         if not os.path.exists(os.path.join(build_dir, executable_name)):
-            print(f"Error: Project executable does not exist in build directory: {build_dir}")
+            print(
+                f"Error: Project executable does not exist in build directory: {build_dir}"
+            )
             return
         
-        if not RaxelBuildUtil.is_checksum_valid(options):
+
+        source_valid, shader_valid =  RaxelBuildUtil.is_checksum_valid(options)
+
+        if not source_valid or not shader_valid:
             # print in a nice red color that there have been changes to the project
-            print("\033[91m" + "Error: The project has changed since the last build. Please rebuild the project." + "\033[0m")
-            print("We recommend running the following command:\n")
-            print ("    raxel build\n")
-            print("However, you can still run the project with the current build if you want.\n")
+            print(
+                "\033[91m"
+                + "Error: The project has changed since the last build. Please rebuild the project."
+                + "\033[0m"
+            )
+            print("We recommend running the following command(s):\n")
+            if not source_valid:
+                print("    raxel build\n")
+            if not shader_valid:
+                print("    raxel sc\n")
+            print(
+                "However, you can still run the project with the current build if you want.\n"
+            )
 
         # Run the project
-        executable_path = os.path.join(build_dir, executable_name)  
+        executable_path = os.path.join(build_dir, executable_name)
         if use_gdb:
             run_command = ["gdb", executable_path]
             print(f"Running project with gdb: {' '.join(run_command)}\n")
@@ -238,3 +295,13 @@ class RaxelBuildUtil:
         except subprocess.CalledProcessError as e:
             print(f"Error running project: {e}")
             return
+        
+    @staticmethod
+    def compile_shaders(project_dir: str):
+        raxel_sc_script = os.path.join(RaxelToolUtil.get_raxel_tool_dir(), "raxel_sc.sh")
+        if not os.path.exists(raxel_sc_script):
+            print(f"Error: The raxel shader compiler script {raxel_sc_script} does not exist")
+            return
+
+        # raxel_sc.sh <project_root> <raxel_root>
+        os.system(f"bash {raxel_sc_script} {project_dir} {RaxelToolUtil.get_raxel_dir()}")

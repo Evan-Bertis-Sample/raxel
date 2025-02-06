@@ -24,4 +24,5 @@ def main(args):
     build_options.set_project_dir(project_dir)
 
     RaxelBuildUtil.build_project(build_options)
+    RaxelBuildUtil.compile_shaders(project_dir)
     RaxelBuildUtil.run_project(build_options, use_gdb=args.gdb)

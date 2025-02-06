@@ -5,22 +5,22 @@
  *  playground.c
  *
  *  To compile (example on Linux):
- *    cc minimal_vulkan_compute.c -o minimal_vulkan_compute \
- *       -lglfw -lvulkan -lm
+ *    cc playground.c -o playground -lglfw -lvulkan -lm
  *
  *  This code is *not* production-ready and omits error checks, 
  *  validations, and many details for brevity.
  *
  *  Make sure to have:
- *    - compute.spv
- *    - vert.spv
- *    - frag.spv
+ *    - internal/shaders/compute.comp.spv   (the raymarch compute shader)
+ *    - internal/shaders/blit.vert.spv      (the simple fullscreen-quad vertex shader)
+ *    - internal/shaders/blit.frag.spv      (the simple fragment sampler)
  *  in the working directory or adjust the file paths accordingly.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>  // for any needed math
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
@@ -87,6 +87,12 @@ static VkImageView       g_storageImageView;
 // Descriptor pool for both compute & graphics
 static VkDescriptorPool  g_descriptorPool;
 
+// -------------------------------------------------------------------
+// Camera animation: We'll move the camera in/out each frame
+// -------------------------------------------------------------------
+
+static float g_startingCameraZ = -5.0f;  // Start the camera behind the sphere
+static float g_cameraZ = -5.0f;  // Start the camera behind the sphere
 
 // --------------- Forward Declarations ---------------
 void initWindow(void);
@@ -103,10 +109,23 @@ void createSwapchain(void);
 void createCommandPools(void);
 void createComputeResources(void);
 void createComputePipeline(void);
-void recordComputeCommandBuffer(void);
+void allocateComputeCommandBuffer(void);
+void updateComputeCmdBufEveryFrame(void);
 void createGraphicsPipeline(void);
 void createFrameResources(void);
 void recordGraphicsCommandBuffers(void);
+
+// -------------------------------------------------------------------
+// ADDED FOR PUSH CONSTANTS
+// We'll match the shader layout: 4x4 matrix + a float fov (plus padding).
+// Each row is 16 bytes, so 4 rows => 64 bytes for mat4, plus 16 bytes for
+// the float + padding = 80 bytes total, which is a multiple of 16.
+// -------------------------------------------------------------------
+typedef struct {
+    float view[16];   // row-major 4x4
+    float fov;        // field-of-view in radians
+    float pad[3];     // padding so total is 80 bytes
+} PushConstants;
 
 // The entry point
 int playground(void)
@@ -124,7 +143,7 @@ void initWindow(void)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    g_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Compute Example", NULL, NULL);
+    g_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Compute Raymarch Example", NULL, NULL);
 }
 
 void initVulkan(void)
@@ -138,11 +157,10 @@ void initVulkan(void)
 
     // Create descriptor pool for both compute & graphics
     {
-        // We'll just create a single pool big enough for a few descriptors
         VkDescriptorPoolSize poolSizes[2];
-        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;   // for compute
+        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;   
         poolSizes[0].descriptorCount = 1;
-        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // for graphics
+        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo poolInfo = {0};
@@ -156,7 +174,9 @@ void initVulkan(void)
 
     createComputeResources();
     createComputePipeline();
-    recordComputeCommandBuffer();
+
+    // Allocate (but don't record) the compute command buffer
+    allocateComputeCommandBuffer();
 
     createGraphicsPipeline();
     createFrameResources();
@@ -165,16 +185,25 @@ void initVulkan(void)
 
 void mainLoop(void)
 {
+    float time = 0.0f;
+
     while (!glfwWindowShouldClose(g_window))
     {
         glfwPollEvents();
-        
-        // 1. Submit compute
+
+        // Animate the camera Z just for demonstration
+        // (a simple sin wave to move the camera in/out)
+        time += 0.01f;
+        g_cameraZ = g_startingCameraZ + sinf(time) * 2.0f;
+
+        // 1. Re-record the compute command buffer with updated camera
+        updateComputeCmdBufEveryFrame();
+
+        // 2. Submit compute
         {
             VkSubmitInfo submitInfo = {0};
             submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-            // Compute doesn't depend on any semaphores in this simplistic case
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers    = &g_computeCmdBuf;
 
@@ -182,7 +211,7 @@ void mainLoop(void)
             vkQueueWaitIdle(g_computeQueue); 
         }
 
-        // 2. Acquire swapchain image
+        // 3. Acquire swapchain image
         uint32_t imageIndex;
         vkAcquireNextImageKHR(
             g_device, 
@@ -193,7 +222,7 @@ void mainLoop(void)
             &imageIndex
         );
 
-        // 3. Submit graphics
+        // 4. Submit graphics
         {
             VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
             VkSubmitInfo submitInfo = {0};
@@ -211,7 +240,7 @@ void mainLoop(void)
             vkQueueSubmit(g_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
         }
 
-        // 4. Present
+        // 5. Present
         {
             VkPresentInfoKHR presentInfo = {0};
             presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -231,30 +260,29 @@ void mainLoop(void)
 
 void cleanup(void)
 {
-    // Wait for device idle before cleanup
     vkDeviceWaitIdle(g_device);
 
-    // Destroy our storage image
+    // Destroy storage image
     if (g_storageImageView) vkDestroyImageView(g_device, g_storageImageView, NULL);
     if (g_storageImage) vkDestroyImage(g_device, g_storageImage, NULL);
     if (g_storageImageMemory) vkFreeMemory(g_device, g_storageImageMemory, NULL);
 
-    // Destroy pipelines, layouts
+    // Pipelines
     vkDestroyPipeline(g_device, g_computePipeline, NULL);
     vkDestroyPipelineLayout(g_device, g_computePipelineLayout, NULL);
     vkDestroyPipeline(g_device, g_graphicsPipeline, NULL);
     vkDestroyPipelineLayout(g_device, g_graphicsPipelineLayout, NULL);
 
-    // Descriptor sets are implicitly freed with the descriptor pool
+    // Descriptor pool
     if (g_descriptorPool) {
         vkDestroyDescriptorPool(g_device, g_descriptorPool, NULL);
     }
 
-    // Destroy command pools
+    // Command pools
     if (g_commandPoolCompute)  vkDestroyCommandPool(g_device, g_commandPoolCompute, NULL);
     if (g_commandPoolGraphics) vkDestroyCommandPool(g_device, g_commandPoolGraphics, NULL);
 
-    // Swapchain image views
+    // Swapchain
     for (uint32_t i = 0; i < g_swapchainImageCount; i++) {
         vkDestroyImageView(g_device, g_swapchainImageViews[i], NULL);
     }
@@ -268,7 +296,7 @@ void cleanup(void)
     glfwTerminate();
 }
 
-// --------------- Sub-steps (Skeletal Implementations) ---------------
+// --------------- Sub-steps ---------------
 
 void createInstance(void)
 {
@@ -292,7 +320,6 @@ void createInstance(void)
 
 void createSurface(void)
 {
-    // Let GLFW create the VkSurfaceKHR
     VK_CHECK(glfwCreateWindowSurface(g_instance, g_window, NULL, &g_surface));
 }
 
@@ -307,13 +334,8 @@ void pickPhysicalDevice(void)
     VkPhysicalDevice* devices = malloc(sizeof(VkPhysicalDevice) * deviceCount);
     vkEnumeratePhysicalDevices(g_instance, &deviceCount, devices);
 
-    // For simplicity, just pick the first device that can do compute & graphics
-    for (uint32_t i = 0; i < deviceCount; i++) {
-        g_physicalDevice = devices[i];
-        // Normally you'd check features, memory, queue families, etc.
-        // We'll just break here.
-        break;
-    }
+    // Just pick the first
+    g_physicalDevice = devices[0];
     free(devices);
 
     // Query queue families
@@ -324,8 +346,6 @@ void pickPhysicalDevice(void)
 
     g_graphicsQueueFamilyIndex = 0;
     g_computeQueueFamilyIndex  = 0;
-
-    // Find indices (very naive approach)
     for (uint32_t i = 0; i < queueFamilyCount; i++) {
         if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && 
             (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
@@ -343,7 +363,7 @@ void createLogicalDevice(void)
     float queuePriority = 1.0f;
     VkDeviceQueueCreateInfo queueCreateInfos[1] = {0};
     queueCreateInfos[0].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfos[0].queueFamilyIndex = g_graphicsQueueFamilyIndex; // same for compute in this example
+    queueCreateInfos[0].queueFamilyIndex = g_graphicsQueueFamilyIndex;
     queueCreateInfos[0].queueCount       = 1;
     queueCreateInfos[0].pQueuePriorities = &queuePriority;
 
@@ -365,12 +385,10 @@ void createLogicalDevice(void)
 
 void createSwapchain(void)
 {
-    // Normally you'd query surface formats, choose one, etc. We'll guess something like:
     g_swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
     g_swapchainExtent.width  = WIDTH;
     g_swapchainExtent.height = HEIGHT;
 
-    // We create a basic swapchain with triple buffering
     VkSwapchainCreateInfoKHR createInfo = {0};
     createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.surface          = g_surface;
@@ -418,82 +436,66 @@ void createSwapchain(void)
 
 void createCommandPools(void)
 {
-    // Compute command pool
     {
         VkCommandPoolCreateInfo poolInfo = {0};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = g_computeQueueFamilyIndex;
-        poolInfo.flags            = 0;
-
         VK_CHECK(vkCreateCommandPool(g_device, &poolInfo, NULL, &g_commandPoolCompute));
     }
-    // Graphics command pool
     {
         VkCommandPoolCreateInfo poolInfo = {0};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = g_graphicsQueueFamilyIndex;
-        poolInfo.flags            = 0;
-
         VK_CHECK(vkCreateCommandPool(g_device, &poolInfo, NULL, &g_commandPoolGraphics));
     }
 }
 
 void createComputeResources(void)
 {
-    // We'll create a 2D image the same size as the swapchain for the compute shader to write into
+    // Create a 2D storage image
+    VkImageCreateInfo imageInfo = {0};
+    imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+    imageInfo.format        = VK_FORMAT_R32G32B32A32_SFLOAT;
+    imageInfo.extent.width  = WIDTH;
+    imageInfo.extent.height = HEIGHT;
+    imageInfo.extent.depth  = 1;
+    imageInfo.mipLevels     = 1;
+    imageInfo.arrayLayers   = 1;
+    imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.usage         = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    // 1. Create the VkImage
-    {
-        VkImageCreateInfo imageInfo = {0};
-        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-        imageInfo.format        = VK_FORMAT_R32G32B32A32_SFLOAT; // for storage
-        imageInfo.extent.width  = WIDTH;
-        imageInfo.extent.height = HEIGHT;
-        imageInfo.extent.depth  = 1;
-        imageInfo.mipLevels     = 1;
-        imageInfo.arrayLayers   = 1;
-        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.usage         = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VK_CHECK(vkCreateImage(g_device, &imageInfo, NULL, &g_storageImage));
 
-        VK_CHECK(vkCreateImage(g_device, &imageInfo, NULL, &g_storageImage));
-    }
+    // Allocate memory
+    VkMemoryRequirements memReq;
+    vkGetImageMemoryRequirements(g_device, g_storageImage, &memReq);
 
-    // 2. Allocate memory
-    {
-        VkMemoryRequirements memReq;
-        vkGetImageMemoryRequirements(g_device, g_storageImage, &memReq);
+    VkMemoryAllocateInfo allocInfo = {0};
+    allocInfo.sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memReq.size;
+    // Very naive: pick first memory type
+    allocInfo.memoryTypeIndex = 0;
 
-        VkMemoryAllocateInfo allocInfo = {0};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memReq.size;
+    VK_CHECK(vkAllocateMemory(g_device, &allocInfo, NULL, &g_storageImageMemory));
+    VK_CHECK(vkBindImageMemory(g_device, g_storageImage, g_storageImageMemory, 0));
 
-        // For brevity, pick the first memory type that is DEVICE_LOCAL
-        // In real code, you'd query and match properly
-        allocInfo.memoryTypeIndex = 0; // This is a placeholder!
+    // Image view
+    VkImageViewCreateInfo viewInfo = {0};
+    viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image                           = g_storageImage;
+    viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format                          = VK_FORMAT_R32G32B32A32_SFLOAT;
+    viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel   = 0;
+    viewInfo.subresourceRange.levelCount     = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount     = 1;
 
-        VK_CHECK(vkAllocateMemory(g_device, &allocInfo, NULL, &g_storageImageMemory));
-        VK_CHECK(vkBindImageMemory(g_device, g_storageImage, g_storageImageMemory, 0));
-    }
-
-    // 3. Create image view
-    {
-        VkImageViewCreateInfo viewInfo = {0};
-        viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image                           = g_storageImage;
-        viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format                          = VK_FORMAT_R32G32B32A32_SFLOAT;
-        viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        viewInfo.subresourceRange.baseMipLevel   = 0;
-        viewInfo.subresourceRange.levelCount     = 1;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount     = 1;
-
-        VK_CHECK(vkCreateImageView(g_device, &viewInfo, NULL, &g_storageImageView));
-    }
+    VK_CHECK(vkCreateImageView(g_device, &viewInfo, NULL, &g_storageImageView));
 }
 
 static VkShaderModule loadShaderModule(const char* path)
@@ -525,7 +527,7 @@ static VkShaderModule loadShaderModule(const char* path)
 
 void createComputePipeline(void)
 {
-    // Descriptor set layout for compute: single binding for storage image
+    // Descriptor set layout
     {
         VkDescriptorSetLayoutBinding binding = {0};
         binding.binding            = 0;
@@ -552,7 +554,7 @@ void createComputePipeline(void)
         VK_CHECK(vkAllocateDescriptorSets(g_device, &allocInfo, &g_computeDescriptorSet));
     }
 
-    // Update descriptor set to point to our storage image
+    // Update descriptor
     {
         VkDescriptorImageInfo imageInfo = {0};
         imageInfo.imageView   = g_storageImageView;
@@ -569,17 +571,25 @@ void createComputePipeline(void)
         vkUpdateDescriptorSets(g_device, 1, &write, 0, NULL);
     }
 
-    // Create pipeline layout
+    // Push constant range
+    VkPushConstantRange pcRange;
+    pcRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pcRange.offset     = 0;
+    pcRange.size       = sizeof(PushConstants);
+
+    // Pipeline layout
     {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount         = 1;
         pipelineLayoutInfo.pSetLayouts            = &g_computeDescSetLayout;
+        pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineLayoutInfo.pPushConstantRanges    = &pcRange;
 
         VK_CHECK(vkCreatePipelineLayout(g_device, &pipelineLayoutInfo, NULL, &g_computePipelineLayout));
     }
 
-    // Create compute pipeline
+    // Compute pipeline
     {
         VkShaderModule compShaderModule = loadShaderModule("internal/shaders/compute.comp.spv");
 
@@ -600,68 +610,93 @@ void createComputePipeline(void)
     }
 }
 
-void recordComputeCommandBuffer(void)
+// Allocate the compute command buffer, but do NOT record it yet
+void allocateComputeCommandBuffer(void)
 {
-    // Allocate a single command buffer
-    {
-        VkCommandBufferAllocateInfo allocInfo = {0};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool        = g_commandPoolCompute;
-        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo allocInfo = {0};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = g_commandPoolCompute;
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
 
-        VK_CHECK(vkAllocateCommandBuffers(g_device, &allocInfo, &g_computeCmdBuf));
-    }
+    VK_CHECK(vkAllocateCommandBuffers(g_device, &allocInfo, &g_computeCmdBuf));
+}
 
-    // Record commands
-    {
-        VkCommandBufferBeginInfo beginInfo = {0};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+// Re-record the compute command buffer every frame with updated camera
+void updateComputeCmdBufEveryFrame(void)
+{
+    // Begin
+    VkCommandBufferBeginInfo beginInfo = {0};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VK_CHECK(vkBeginCommandBuffer(g_computeCmdBuf, &beginInfo));
 
-        vkBeginCommandBuffer(g_computeCmdBuf, &beginInfo);
+    // Transition storage image layout
+    VkImageMemoryBarrier barrier = {0};
+    barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.srcAccessMask                   = 0;
+    barrier.dstAccessMask                   = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED; 
+    barrier.newLayout                       = VK_IMAGE_LAYOUT_GENERAL;
+    barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image                           = g_storageImage;
+    barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel   = 0;
+    barrier.subresourceRange.levelCount     = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount     = 1;
 
-        // We need the image to be in general layout for writing
-        VkImageMemoryBarrier barrier = {0};
-        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.srcAccessMask                   = 0;
-        barrier.dstAccessMask                   = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED;
-        barrier.newLayout                       = VK_IMAGE_LAYOUT_GENERAL;
-        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image                           = g_storageImage;
-        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel   = 0;
-        barrier.subresourceRange.levelCount     = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount     = 1;
+    vkCmdPipelineBarrier(
+        g_computeCmdBuf,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        0,
+        0, NULL,
+        0, NULL,
+        1, &barrier
+    );
 
-        vkCmdPipelineBarrier(
-            g_computeCmdBuf,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            0,
-            0, NULL,
-            0, NULL,
-            1, &barrier
-        );
+    // Bind pipeline & descriptor
+    vkCmdBindPipeline(g_computeCmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, g_computePipeline);
+    vkCmdBindDescriptorSets(g_computeCmdBuf,
+                            VK_PIPELINE_BIND_POINT_COMPUTE,
+                            g_computePipelineLayout,
+                            0, 1, &g_computeDescriptorSet,
+                            0, NULL);
 
-        vkCmdBindPipeline(g_computeCmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, g_computePipeline);
-        vkCmdBindDescriptorSets(g_computeCmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                g_computePipelineLayout, 0, 1, &g_computeDescriptorSet, 0, NULL);
+    // Prepare push constants
+    PushConstants pc;
+    memset(&pc, 0, sizeof(pc));
+    // Identity matrix
+    pc.view[0]  = 1.0f; 
+    pc.view[5]  = 1.0f; 
+    pc.view[10] = 1.0f;
+    pc.view[15] = 1.0f;
+    // Translate camera along Z
+    pc.view[14] = g_cameraZ;
+    // Field of view
+    pc.fov = 1.0f; // ~57 degrees
 
-        // Dispatch enough groups for the whole image
-        uint32_t groupSizeX = (WIDTH + 16 - 1) / 16;
-        uint32_t groupSizeY = (HEIGHT + 16 - 1) / 16;
-        vkCmdDispatch(g_computeCmdBuf, groupSizeX, groupSizeY, 1);
+    vkCmdPushConstants(
+        g_computeCmdBuf,
+        g_computePipelineLayout,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        0,
+        sizeof(pc),
+        &pc
+    );
 
-        vkEndCommandBuffer(g_computeCmdBuf);
-    }
+    // Dispatch
+    uint32_t groupSizeX = (WIDTH + 16 - 1) / 16;
+    uint32_t groupSizeY = (HEIGHT + 16 - 1) / 16;
+    vkCmdDispatch(g_computeCmdBuf, groupSizeX, groupSizeY, 1);
+
+    VK_CHECK(vkEndCommandBuffer(g_computeCmdBuf));
 }
 
 void createGraphicsPipeline(void)
 {
-    // Descriptor set layout for graphics: single combined image sampler
+    // Descriptor set layout for graphics
     {
         VkDescriptorSetLayoutBinding binding = {0};
         binding.binding            = 0;
@@ -677,10 +712,9 @@ void createGraphicsPipeline(void)
         VK_CHECK(vkCreateDescriptorSetLayout(g_device, &layoutInfo, NULL, &g_graphicsDescSetLayout));
     }
 
-    // Allocate descriptor set for graphics
     {
         VkDescriptorSetAllocateInfo allocInfo = {0};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool     = g_descriptorPool;
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts        = &g_graphicsDescSetLayout;
@@ -688,7 +722,7 @@ void createGraphicsPipeline(void)
         VK_CHECK(vkAllocateDescriptorSets(g_device, &allocInfo, &g_graphicsDescriptorSet));
     }
 
-    // Create a sampler
+    // Create sampler
     VkSampler sampler;
     {
         VkSamplerCreateInfo samplerInfo = {0};
@@ -702,7 +736,7 @@ void createGraphicsPipeline(void)
         VK_CHECK(vkCreateSampler(g_device, &samplerInfo, NULL, &sampler));
     }
 
-    // Update descriptor to use g_storageImageView + sampler
+    // Update descriptor
     {
         VkDescriptorImageInfo imageInfo = {0};
         imageInfo.sampler     = sampler;
@@ -720,17 +754,17 @@ void createGraphicsPipeline(void)
         vkUpdateDescriptorSets(g_device, 1, &write, 0, NULL);
     }
 
-    // Create pipeline layout
+    // Pipeline layout
     {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
-        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount         = 1;
         pipelineLayoutInfo.pSetLayouts            = &g_graphicsDescSetLayout;
 
         VK_CHECK(vkCreatePipelineLayout(g_device, &pipelineLayoutInfo, NULL, &g_graphicsPipelineLayout));
     }
 
-    // Create render pass (very minimal)
+    // Minimal render pass
     VkRenderPass renderPass;
     {
         VkAttachmentDescription colorAttachment = {0};
@@ -738,8 +772,6 @@ void createGraphicsPipeline(void)
         colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
         colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
@@ -748,21 +780,21 @@ void createGraphicsPipeline(void)
         colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass = {0};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = 1;
-        subpass.pColorAttachments       = &colorAttachmentRef;
+        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments    = &colorAttachmentRef;
 
         VkRenderPassCreateInfo renderPassInfo = {0};
-        renderPassInfo.sType            = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount  = 1;
-        renderPassInfo.pAttachments     = &colorAttachment;
-        renderPassInfo.subpassCount     = 1;
-        renderPassInfo.pSubpasses       = &subpass;
+        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments    = &colorAttachment;
+        renderPassInfo.subpassCount    = 1;
+        renderPassInfo.pSubpasses      = &subpass;
 
         VK_CHECK(vkCreateRenderPass(g_device, &renderPassInfo, NULL, &renderPass));
     }
 
-    // Create pipeline (vertex + fragment)
+    // Graphics pipeline
     {
         VkShaderModule vertShaderModule = loadShaderModule("internal/shaders/blit.vert.spv");
         VkShaderModule fragShaderModule = loadShaderModule("internal/shaders/blit.frag.spv");
@@ -781,16 +813,13 @@ void createGraphicsPipeline(void)
 
         VkPipelineShaderStageCreateInfo stages[] = {vertStageInfo, fragStageInfo};
 
-        // Vertex input (none in this case, full-screen triangle)
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {0};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        // Input assembly
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = {0};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-        // Viewport / scissor
         VkViewport viewport = {0};
         viewport.x        = 0.0f;
         viewport.y        = 0.0f;
@@ -812,19 +841,16 @@ void createGraphicsPipeline(void)
         viewportState.scissorCount  = 1;
         viewportState.pScissors     = &scissor;
 
-        // Rasterizer
         VkPipelineRasterizationStateCreateInfo rasterizer = {0};
-        rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.sType       = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.cullMode    = VK_CULL_MODE_NONE;
         rasterizer.lineWidth   = 1.0f;
 
-        // Multisampling
         VkPipelineMultisampleStateCreateInfo multisampling = {0};
         multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-        // Color blend
         VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
                                               VK_COLOR_COMPONENT_G_BIT |
@@ -833,9 +859,9 @@ void createGraphicsPipeline(void)
         colorBlendAttachment.blendEnable = VK_FALSE;
 
         VkPipelineColorBlendStateCreateInfo colorBlending = {0};
-        colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        colorBlending.attachmentCount   = 1;
-        colorBlending.pAttachments      = &colorBlendAttachment;
+        colorBlending.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlending.attachmentCount = 1;
+        colorBlending.pAttachments    = &colorBlendAttachment;
 
         VkGraphicsPipelineCreateInfo pipelineInfo = {0};
         pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -857,29 +883,19 @@ void createGraphicsPipeline(void)
         vkDestroyShaderModule(g_device, fragShaderModule, NULL);
     }
 
-    // We don't keep the render pass around for each frame in this minimal example,
-    // but normally you'd store it. Let's store it in a local static if you want.
-    // For simplicity, let's just store it in a local static here:
-    // (In advanced code, you might keep a global or pass around to each frame.)
-    static VkRenderPass s_renderPass;
-    s_renderPass = renderPass;
-
-    // We can store the renderPass in the pipeline layout or a global, but let's
-    // keep it in mind for the command buffer recording.
+    // If you want to keep the renderPass around, store it. We do a minimal approach here.
 }
 
 void createFrameResources(void)
 {
-    // Create semaphores
-    {
-        VkSemaphoreCreateInfo semInfo = {0};
-        semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    // Semaphores
+    VkSemaphoreCreateInfo semInfo = {0};
+    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        VK_CHECK(vkCreateSemaphore(g_device, &semInfo, NULL, &g_imageAvailableSemaphore));
-        VK_CHECK(vkCreateSemaphore(g_device, &semInfo, NULL, &g_renderFinishedSemaphore));
-    }
+    VK_CHECK(vkCreateSemaphore(g_device, &semInfo, NULL, &g_imageAvailableSemaphore));
+    VK_CHECK(vkCreateSemaphore(g_device, &semInfo, NULL, &g_renderFinishedSemaphore));
 
-    // Create a fence for each swapchain image
+    // Fences
     g_inFlightFences = malloc(sizeof(VkFence) * g_swapchainImageCount);
     for (uint32_t i = 0; i < g_swapchainImageCount; i++) {
         VkFenceCreateInfo fenceInfo = {0};
@@ -902,18 +918,8 @@ void createFrameResources(void)
 
 void recordGraphicsCommandBuffers(void)
 {
-    // We'll create a simple framebuffer for each swapchain image
-    // Then record a simple render pass which samples from our compute image
     for (uint32_t i = 0; i < g_swapchainImageCount; i++)
     {
-        // For brevity, let's create a temporary render pass and framebuffer each time
-        // (In reality, you'd reuse a single render pass object and create framebuffers up front.)
-
-        // We do have the same renderPass from createGraphicsPipeline. 
-        // Let's retrieve it from g_graphicsPipeline if we stored it somewhere. 
-        // But we only stored it in a local var. Let's do a minimal approach:
-
-        // Recreate the same render pass:
         VkAttachmentDescription colorAttachment = {0};
         colorAttachment.format         = g_swapchainImageFormat;
         colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
@@ -941,7 +947,7 @@ void recordGraphicsCommandBuffers(void)
         VkRenderPass renderPass;
         VK_CHECK(vkCreateRenderPass(g_device, &renderPassInfo, NULL, &renderPass));
 
-        // Framebuffer for this swapchain image
+        // Framebuffer
         VkFramebuffer framebuffer;
         {
             VkImageView attachments[] = { g_swapchainImageViews[i] };
@@ -959,10 +965,8 @@ void recordGraphicsCommandBuffers(void)
 
         VkCommandBufferBeginInfo beginInfo = {0};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
         VK_CHECK(vkBeginCommandBuffer(g_graphicsCmdBufs[i], &beginInfo));
 
-        // Begin render pass
         VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
         VkRenderPassBeginInfo rpBegin = {0};
         rpBegin.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -974,7 +978,6 @@ void recordGraphicsCommandBuffers(void)
         rpBegin.pClearValues      = &clearColor;
 
         vkCmdBeginRenderPass(g_graphicsCmdBufs[i], &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
-
         vkCmdBindPipeline(g_graphicsCmdBufs[i], VK_PIPELINE_BIND_POINT_GRAPHICS, g_graphicsPipeline);
         vkCmdBindDescriptorSets(g_graphicsCmdBufs[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 g_graphicsPipelineLayout, 0, 1, &g_graphicsDescriptorSet, 0, NULL);
@@ -982,11 +985,8 @@ void recordGraphicsCommandBuffers(void)
         vkCmdDraw(g_graphicsCmdBufs[i], 3, 1, 0, 0);
 
         vkCmdEndRenderPass(g_graphicsCmdBufs[i]);
-
         VK_CHECK(vkEndCommandBuffer(g_graphicsCmdBufs[i]));
 
-        // We destroy the framebuffer and render pass after recording
-        // (In a real application, you'd keep them around or re-create them at swapchain recreation)
         vkDestroyFramebuffer(g_device, framebuffer, NULL);
         vkDestroyRenderPass(g_device, renderPass, NULL);
     }
