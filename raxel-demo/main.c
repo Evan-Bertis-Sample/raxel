@@ -2,8 +2,9 @@
 #include <raxel/core/util.h>
 #include <raxel/core/graphics.h>
 
+#include <raxel/core/playground.h>
+
 int main() {
     RAXEL_APP_LOG("Hello, World!\n");
-
-    raxel_window_test();
+    return playground();
 }

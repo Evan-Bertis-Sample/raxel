@@ -1,51 +1,86 @@
 #version 450
 layout(local_size_x = 16, local_size_y = 16) in;
 
-// We'll bind our image at set=0, binding=0.
-layout(rgba32f, set = 0, binding = 0) uniform image2D outputImage;
+// Our storage image for output (set=0, binding=0).
+layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 
+// Push constant block with a 4x4 matrix + a float FOV
+layout(push_constant) uniform PC {
+    mat4 view;  // camera->world transform
+    float fov;  // field-of-view in radians
+} pc;
+
+// Hard-coded resolution to match your window:
 const vec2 iResolution = vec2(800.0, 600.0);
+
+// Simple sphere SDF at origin with radius=1
+float sphereSDF(vec3 p) {
+    return length(p) - 1.0;
+}
+
+const vec3 LIGHT_POS = vec3(0, 5, 0);
+
+// Raymarch parameters
+const float EPSILON = 0.001;
+const float MAX_DISTANCE = 100.0;
+const int MAX_STEPS = 64;
+
+// A naive raymarch for a single sphere at the origin
+bool raymarchSphere(in vec3 ro, in vec3 rd, out float tHit) {
+    float t = 0.0;
+    for(int i = 0; i < MAX_STEPS; i++) {
+        vec3 pos = ro + rd * t;
+        float d = sphereSDF(pos);
+        if(d < EPSILON) {
+            tHit = t;
+            return true;
+        }
+        t += d * 0.5; // step fraction
+        if(t > MAX_DISTANCE) {
+            break; // too far => miss
+        }
+    }
+    return false;
+}
 
 void main() {
     ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
     if(pix.x >= int(iResolution.x) || pix.y >= int(iResolution.y)) {
-        return;
+        return; // out of bounds
     }
 
-    // Convert pixel coords to normalized [-1..1] range:
+    // Convert pixel coords to [-1..1], adjusting for aspect ratio
     vec2 uv = (vec2(pix) + 0.5) / iResolution * 2.0 - 1.0;
-    // Adjust for aspect ratio (800 x 600):
     uv.x *= iResolution.x / iResolution.y;
 
-    float radius = 0.3;
+    // Construct a camera-space ray direction with perspective
+    // We'll assume negative Z is forward in camera space
+    float halfFov = pc.fov * 0.5;
+    vec3 rdCam = normalize(vec3(uv * tan(halfFov), -1.0));
 
-    // Distance from center of screen:
-    float distCenter = length(uv) - radius;
+    // Invert the view matrix to transform from camera space to world space
+    mat4 invView = inverse(pc.view);
 
-    // We'll sample a little bit to the right and up to approximate derivatives:
-    // Note: dx, dy in uv-space ~ 1 / iResolution, but we also adjusted uv.x by aspect ratio,
-    // so let's keep it consistent. We just do it in screen-space for simplicity.
-    vec2 dPix = vec2(1.0 / iResolution.x, 1.0 / iResolution.y);
-    // After adjusting for aspect ratio, moving one pixel in x is scaled:
-    vec2 dPixX = vec2(dPix.x * iResolution.x / iResolution.y, 0.0);
-    vec2 dPixY = vec2(0.0, dPix.y);
+    // Camera origin (0,0,0 in camera space -> world space)
+    vec3 ro = (invView * vec4(0, 0, 0, 1)).xyz;
+    // Ray direction (rdCam in camera space -> world direction)
+    vec3 rd = normalize((invView * vec4(rdCam, 0)).xyz);
 
-    float distRight = length(uv + dPixX) - radius;
-    float distUp = length(uv + dPixY) - radius;
+    // Raymarch the sphere
+    float tHit;
+    bool hit = raymarchSphere(ro, rd, tHit);
 
-    float ddx = distRight - distCenter;
-    float ddy = distUp - distCenter;
-    float gradient = sqrt(ddx * ddx + ddy * ddy);
+    // Simple color: red if hit, black otherwise
+    vec4 color = vec4(0, 0, 0, 1);
+    if(hit) {
+        // do some simple lighting
+        vec3 pos = ro + rd * tHit;
+        vec3 normal = normalize(pos);
+        vec3 lightDir = normalize(LIGHT_POS - pos);
+        float NdotL = dot(normal, lightDir);
+        // blend between red and the shadow color
+        color = vec4(mix(vec3(1, 0, 0), vec3(0.2), clamp(NdotL, 0.0, 1.0)), 1.0);
+    }
 
-    // We'll define an "edge width" for antialiasing:
-    float edge = gradient * 2.0; // tune as you like
-
-    // Use smoothstep around zero distance
-    // distCenter < 0 => inside circle, distCenter > 0 => outside circle
-    float alpha = smoothstep(-edge, edge, distCenter);
-
-    // Inside circle = black, outside circle = white
-    vec3 color = mix(vec3(0.0), vec3(1.0), alpha);
-
-    imageStore(outputImage, pix, vec4(color, 1.0));
+    imageStore(outImage, pix, color);
 }
