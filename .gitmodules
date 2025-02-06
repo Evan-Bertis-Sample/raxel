@@ -4,6 +4,3 @@
 [submodule "raxel/vendor/glfw"]
 	path = raxel/vendor/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "raxel/vendor/glm"]
-	path = raxel/vendor/glm
-	url = https://github.com/g-truc/glm.git
