@@ -24,6 +24,7 @@
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+#include <cglm/cglm.h>  // for CGLM (OpenGL Mathematics)
 
 // ---------- Constants ----------
 #define WIDTH  800
@@ -91,8 +92,7 @@ static VkDescriptorPool  g_descriptorPool;
 // Camera animation: We'll move the camera in/out each frame
 // -------------------------------------------------------------------
 
-static float g_startingCameraZ = -5.0f;  // Start the camera behind the sphere
-static float g_cameraZ = -5.0f;  // Start the camera behind the sphere
+static mat4 g_viewMatrix;
 
 // --------------- Forward Declarations ---------------
 void initWindow(void);
@@ -187,6 +187,8 @@ void mainLoop(void)
 {
     float time = 0.0f;
 
+    vec4 cameraPosition = {0.0f, 0.0f, 0.0f, 1.0f};
+
     while (!glfwWindowShouldClose(g_window))
     {
         glfwPollEvents();
@@ -194,7 +196,12 @@ void mainLoop(void)
         // Animate the camera Z just for demonstration
         // (a simple sin wave to move the camera in/out)
         time += 0.01f;
-        g_cameraZ = g_startingCameraZ + sinf(time) * 2.0f;
+        // rotate the camera around the origin
+        cameraPosition[2] = sinf(time) * 20.0f;
+        cameraPosition[0] = cosf(time) * 20.0f;
+
+        // Update the view matrix
+        glm_lookat(cameraPosition, (vec3){0.0f, 0.0f, 0.0f}, (vec3){0.0f, 1.0f, 0.0f}, g_viewMatrix);
 
         // 1. Re-record the compute command buffer with updated camera
         updateComputeCmdBufEveryFrame();
@@ -667,13 +674,9 @@ void updateComputeCmdBufEveryFrame(void)
     // Prepare push constants
     PushConstants pc;
     memset(&pc, 0, sizeof(pc));
-    // Identity matrix
-    pc.view[0]  = 1.0f; 
-    pc.view[5]  = 1.0f; 
-    pc.view[10] = 1.0f;
-    pc.view[15] = 1.0f;
-    // Translate camera along Z
-    pc.view[14] = g_cameraZ;
+    // set the view matrix
+    memcpy(pc.view, g_viewMatrix, sizeof(mat4));
+
     // Field of view
     pc.fov = 1.0f; // ~57 degrees
 
