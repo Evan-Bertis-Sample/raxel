@@ -295,3 +295,13 @@ class RaxelBuildUtil:
         except subprocess.CalledProcessError as e:
             print(f"Error running project: {e}")
             return
+        
+    @staticmethod
+    def compile_shaders(project_dir: str):
+        raxel_sc_script = os.path.join(RaxelToolUtil.get_raxel_tool_dir(), "raxel_sc.sh")
+        if not os.path.exists(raxel_sc_script):
+            print(f"Error: The raxel shader compiler script {raxel_sc_script} does not exist")
+            return
+
+        # raxel_sc.sh <project_root> <raxel_root>
+        os.system(f"bash {raxel_sc_script} {project_dir} {RaxelToolUtil.get_raxel_dir()}")
