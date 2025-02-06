@@ -99,8 +99,12 @@ set(GLAD_GL "")
 set(GLFW_LIBRARY_TYPE "STATIC")
 add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/glfw)
 # glm
-set(GLM_BUILD_LIBRARY ON CACHE BOOL "GLM lib only")
-add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/glm)
+option(CGLM_SHARED "Shared build" ON)
+option(CGLM_STATIC "Static build" OFF)
+option(CGLM_USE_C99 "" OFF) # C11 
+option(CGLM_USE_TEST "Enable Tests" OFF) # for make check - make test
+add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/cglm)
+
 
 # Include directories
 target_include_directories(raxel 
@@ -110,7 +114,7 @@ target_include_directories(raxel
 
 target_link_libraries(raxel 
     Vulkan::Vulkan
-    glm glfw
+    cglm glfw
 )
 
 # --- COMPILING GAME ---
