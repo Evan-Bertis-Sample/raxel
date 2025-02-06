@@ -1,5 +1,7 @@
 #include "raxel_container.h"
 
+#include <string.h>
+
 #include "raxel_mem.h"
 
 /**------------------------------------------------------------------------
@@ -10,7 +12,8 @@ void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxe
     raxel_size_t header_size = sizeof(__raxel_array_header_t);
     raxel_size_t data_size = size * stride;
     void *array = raxel_malloc(allocator, header_size + data_size);
-    __raxel_array_header_t *header = (__raxel_array_header_t){
+    __raxel_array_header_t *header = array;
+    *header = (__raxel_array_header_t){
         .__size = size,
         .__stride = stride};
     // return the pointer to the data
@@ -48,7 +51,8 @@ void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t size, raxel
     raxel_size_t header_size = sizeof(__raxel_list_header_t);
     raxel_size_t data_size = size * stride;
     void *list = raxel_malloc(allocator, header_size + data_size);
-    __raxel_list_header_t *header = (__raxel_list_header_t){
+    __raxel_list_header_t *header = list;
+    *header = (__raxel_list_header_t){
         .__size = size,
         .__stride = stride,
         .__capacity = size,
@@ -62,8 +66,7 @@ void __raxel_list_destroy(void *list) {
     raxel_free(header->__allocator, (void *)((raxel_size_t *)list - sizeof(__raxel_list_header_t)));
 }
 
-void __raxel_list_resize(void **list_ptr, raxel_size_t size)
-{
+void __raxel_list_resize(void **list_ptr, raxel_size_t size) {
     __raxel_list_header_t *header = (__raxel_list_header_t *)((raxel_size_t *)*list_ptr - sizeof(__raxel_list_header_t));
     raxel_size_t header_size = sizeof(__raxel_list_header_t);
     raxel_size_t data_size = size * header->__stride;
@@ -73,11 +76,9 @@ void __raxel_list_resize(void **list_ptr, raxel_size_t size)
     *list_ptr = (void *)((raxel_size_t *)new_list + header_size);
 }
 
-void __raxel_list_push_back(void **list_ptr, void *data)
-{
+void __raxel_list_push_back(void **list_ptr, void *data) {
     __raxel_list_header_t *header = (__raxel_list_header_t *)((raxel_size_t *)*list_ptr - sizeof(__raxel_list_header_t));
-    if (header->__size == header->__capacity)
-    {
+    if (header->__size == header->__capacity) {
         __raxel_list_resize(list_ptr, header->__capacity * 2);
         header->__capacity *= 2;
     }
@@ -106,4 +107,3 @@ raxel_iterator_t raxel_list_iterator(void *list) {
 /**------------------------------------------------------------------------
  *                           RAXEL STRINGS
  *------------------------------------------------------------------------**/
-

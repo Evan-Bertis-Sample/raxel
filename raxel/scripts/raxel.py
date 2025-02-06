@@ -72,6 +72,8 @@ def main():
 
     args = parser.parse_args()
 
+    print("")
+
     # If no subcommand was specified, just print help
     if not args.tool:
         parser.print_help()

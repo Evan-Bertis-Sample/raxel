@@ -5,6 +5,7 @@ from tools.tool_util import RaxelToolUtil
 import subprocess
 import enum
 import shutil
+import hashlib
 
 
 class RaxelBuildType(enum.Enum):
@@ -77,6 +78,50 @@ class RaxelBuildUtil:
     @staticmethod
     def get_build_dir(project_dir: str) -> str:
         return os.path.join(RaxelToolUtil.get_raxel_work_dir(project_dir), "build")
+    
+    @staticmethod
+    def generate_checksum(dirs : list) -> str:
+        checked_file_types = [
+            # C/C++ sources
+            ".cpp", ".h", ".c", ".hpp",
+            # Shader sources
+            ".vert", ".frag", ".comp", ".geom", ".tesc", ".tese",
+            # CMake files
+            "CMakeLists.txt",
+        ]
+
+        sha256 = hashlib.sha256()
+        for dir in dirs:
+            for root, _, files in os.walk(dir):
+                for file in files:
+                    if os.path.splitext(file)[1] in checked_file_types:
+                        with open(os.path.join(root, file), "rb") as f:
+                            while True:
+                                data = f.read(65536)
+                                if not data:
+                                    break
+                                sha256.update(data)
+
+        return sha256.hexdigest()
+    
+    @staticmethod
+    def create_build_checksum(build_options : RaxelBuildOptions):
+        checksum = RaxelBuildUtil.generate_checksum([build_options.project_dir, RaxelToolUtil.get_raxel_dir()])
+        checksum_file = os.path.join(RaxelBuildUtil.get_build_dir(build_options.project_dir), "checksum.txt")
+        with open(checksum_file, "w") as f:
+            f.write(checksum)
+    
+    @staticmethod
+    def is_checksum_valid(build_options : RaxelBuildOptions) -> bool:
+        checksum_file = os.path.join(RaxelBuildUtil.get_build_dir(build_options.project_dir), "checksum.txt")
+        if not os.path.exists(checksum_file):
+            return False
+        
+        with open(checksum_file, "r") as f:
+            checksum = f.read()
+        
+        new_checksum = RaxelBuildUtil.generate_checksum([build_options.project_dir, RaxelToolUtil.get_raxel_dir()])
+        return checksum == new_checksum
 
     @staticmethod
     def build_project(options: RaxelBuildOptions):
@@ -141,6 +186,9 @@ class RaxelBuildUtil:
 
             print(f"Error building project: {e}")
             return
+        
+        # now we should build a checksum of the project, and store it in the build directory for later use
+        RaxelBuildUtil.create_build_checksum(options)
 
         print(f"Build complete. The executable should be in {build_dir}")
 
@@ -158,25 +206,35 @@ class RaxelBuildUtil:
 
         # Figure out build directory
         build_dir = RaxelBuildUtil.get_build_dir(project_dir)
+        executable_name = options.project_name + ".exe" if os.name == "nt" else options.project_name
 
         # Check if the build directory exists
         if not os.path.exists(build_dir):
             print(f"Error: Build directory does not exist: {build_dir}")
             return
         
-        if not os.path.exists(os.path.join(build_dir, options.project_name)):
+        if not os.path.exists(os.path.join(build_dir, executable_name)):
             print(f"Error: Project executable does not exist in build directory: {build_dir}")
+            return
+        
+        if not RaxelBuildUtil.is_checksum_valid(options):
+            # print in a nice red color that there have been changes to the project
+            print("\033[91m" + "Error: The project has changed since the last build. Please rebuild the project." + "\033[0m")
+            print("We recommend running the following command:\n")
+            print ("    raxel build\n")
+            print("However, you can still run the project with the current build if you want.\n")
 
         # Run the project
+        executable_path = os.path.join(build_dir, executable_name)  
         if use_gdb:
-            run_command = ["gdb", os.path.join(build_dir, options.project_name)]
+            run_command = ["gdb", executable_path]
             print(f"Running project with gdb: {' '.join(run_command)}\n")
         else:
-            run_command = [os.path.join(build_dir, options.project_name)]
+            run_command = [executable_path]
             print(f"Running project: {' '.join(run_command)}\n")
 
         try:
-            subprocess.run(run_command, check=True)
+            subprocess.run(run_command, check=True, cwd=build_dir)
         except subprocess.CalledProcessError as e:
             print(f"Error running project: {e}")
             return

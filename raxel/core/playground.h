@@ -1,3 +1,6 @@
+#ifndef __PLAYGROUND_H__
+#define __PLAYGROUND_H__
+
 /*
  *  playground.c
  *
@@ -106,7 +109,7 @@ void createFrameResources(void);
 void recordGraphicsCommandBuffers(void);
 
 // The entry point
-int main(void)
+int playground(void)
 {
     initWindow();
     initVulkan();
@@ -578,7 +581,7 @@ void createComputePipeline(void)
 
     // Create compute pipeline
     {
-        VkShaderModule compShaderModule = loadShaderModule("compute.spv");
+        VkShaderModule compShaderModule = loadShaderModule("internal/shaders/compute.comp.spv");
 
         VkPipelineShaderStageCreateInfo stageInfo = {0};
         stageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -761,8 +764,8 @@ void createGraphicsPipeline(void)
 
     // Create pipeline (vertex + fragment)
     {
-        VkShaderModule vertShaderModule = loadShaderModule("vert.spv");
-        VkShaderModule fragShaderModule = loadShaderModule("frag.spv");
+        VkShaderModule vertShaderModule = loadShaderModule("internal/shaders/blit.vert.spv");
+        VkShaderModule fragShaderModule = loadShaderModule("internal/shaders/blit.frag.spv");
 
         VkPipelineShaderStageCreateInfo vertStageInfo = {0};
         vertStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -988,3 +991,5 @@ void recordGraphicsCommandBuffers(void)
         vkDestroyRenderPass(g_device, renderPass, NULL);
     }
 }
+
+#endif // __PLAYGROUND_H__
