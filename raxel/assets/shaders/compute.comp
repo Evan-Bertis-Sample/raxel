@@ -32,17 +32,45 @@ struct SphereSDF {
     RaymarchMaterial material;
 };
 
+struct CubeSDF {
+    mat4 transform;
+    RaymarchMaterial material;
+};
+
+struct Light {
+    vec3 position;
+    vec3 color;
+    float intensity;
+    int lightType; // 0 = point, 1 = directional
+    int attenuationType; // 0 = none, 1 = linear, 2 = quadratic
+};
+
+// description of our scene
+SphereSDF spheres[3] = SphereSDF[](
+    SphereSDF(vec3(0, 0, -5), 1.0, RaymarchMaterial(vec3(1, 0, 0), 0.1, 0.0, 1.5)), 
+    SphereSDF(vec3(1, 0, -10), 2.0, RaymarchMaterial(vec3(0, 1, 0), 0.1, 0.0, 1.5)), 
+    SphereSDF(vec3(-1, 0, -15), 3.0, RaymarchMaterial(vec3(0, 0, 1), 0.1, 0.0, 1.5)));
+
+const int NUM_SPHERES = 3;
+
+CubeSDF cubes[1] = CubeSDF[](CubeSDF(mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, -20), vec4(0, 0, 0, 1)), RaymarchMaterial(vec3(1, 1, 1), 0.1, 0.0, 1.5)));
+
+const int NUM_CUBES = 0;
+
+// Light description
+Light lights[2] = Light[](
+    Light(vec3(0, 1, -2), vec3(1, 1, 1), 1.0, 0, 2), // point light
+    Light(vec3(1, 1, -1), vec3(0.4, 0.53, 0.87), 0.25, 1, 0) // directional light
+);
+const int NUM_LIGHTS = 2;
+
 // Hard-coded resolution to match your window:
 const vec2 iResolution = vec2(800.0, 600.0);
-
-
-const vec3 LIGHT_POS = vec3(0, 5, 0);
 
 // Raymarch parameters
 const float EPSILON = 0.001;
 const float MAX_DISTANCE = 100.0;
 const int MAX_STEPS = 64;
-
 
 // A naive raymarch for a single sphere at the origin
 RaymarchResult raymarchSphere(SphereSDF sphere, vec3 ro, vec3 rd) {
@@ -69,13 +97,79 @@ RaymarchResult raymarchSphere(SphereSDF sphere, vec3 ro, vec3 rd) {
     return res;
 }
 
-// description of our scene, a list of spheres
-SphereSDF spheres[2] = SphereSDF[](
-    SphereSDF(vec3(0, 0, -5), 1.0, RaymarchMaterial(vec3(1, 0, 0), 0.1, 0.0, 1.5)),
-    SphereSDF(vec3(0, 0, -10), 2.0, RaymarchMaterial(vec3(0, 1, 0), 0.1, 0.0, 1.5))
-);
+RaymarchResult raymarchCube(CubeSDF cube, vec3 ro, vec3 rd) {
+    float t = 0.0;
+    RaymarchResult res;
+    res.hit = false;
+    for(int i = 0; i < MAX_STEPS; i++) {
+        vec3 pos = ro + rd * t;
+        vec3 posLocal = (inverse(cube.transform) * vec4(pos, 1)).xyz;
+        float dist = length(max(abs(posLocal) - vec3(1.0), 0.0)) - 0.5;
+        if(dist < EPSILON) {
+            res.hit = true;
+            res.pos = pos;
+            res.normal = normalize(pos - cube.transform[3].xyz);
+            res.tHit = t;
+            res.material = cube.material;
+            break;
+        }
+        t += dist;
+        if(t > MAX_DISTANCE) {
+            break;
+        }
+    }
 
-const int NUM_SPHERES = 2;
+    return res;
+}
+
+vec4 calculateLightColor(RaymarchResult res, Light light, vec3 lightDir) {
+    vec3 viewDir = normalize(-res.pos);
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+
+    float NdotL = max(0.0, dot(res.normal, lightDir));
+    float NdotH = max(0.0, dot(res.normal, halfwayDir));
+    float VdotH = max(0.0, dot(viewDir, halfwayDir));
+
+    vec3 ambient = light.color * light.intensity;
+    vec3 diffuse = light.color * light.intensity * NdotL;
+    vec3 specular = light.color * light.intensity * pow(NdotH, 32.0);
+
+    return vec4(ambient + diffuse + specular, 1.0);
+}
+
+vec4 calculateDirectionalLightColor(RaymarchResult res, Light light) {
+    vec3 lightDir = normalize(-light.position);
+
+    return calculateLightColor(res, light, lightDir);
+}
+
+float calculateAttenuationFactor(Light light, float distance) {
+    float none = 1.0;
+    float linear = 1.0 / distance;
+    float quadratic = 1.0 / (distance * distance);
+
+    // linear combination of attenuation types, no branching
+    return none * float(light.attenuationType == 0) +
+        linear * float(light.attenuationType == 1) +
+        quadratic * float(light.attenuationType == 2);
+}
+
+vec4 calculatePointLightColor(RaymarchResult res, Light light) {
+    vec3 lightDir = normalize(light.position - res.pos);
+    float distance = length(light.position - res.pos);
+    float attenuation = calculateAttenuationFactor(light, distance);
+
+    return calculateLightColor(res, light, lightDir) * attenuation;
+}
+
+vec4 calculateLightColor(RaymarchResult res, Light light) {
+    vec4 pointLight = calculatePointLightColor(res, light) * vec4(res.material.color, 1.0);
+    vec4 directionalLight = calculateDirectionalLightColor(res, light) * vec4(res.material.color, 1.0);
+
+    // linear combination of light types, no branching
+    return pointLight * float(light.lightType == 0) +
+        directionalLight * float(light.lightType == 1);
+}
 
 void main() {
     ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
@@ -111,12 +205,19 @@ void main() {
         }
     }
 
+    for(int i = 0; i < NUM_CUBES; i++) {
+        RaymarchResult thisRes = raymarchCube(cubes[i], ro, rd);
+
+        if(thisRes.hit && (!res.hit || thisRes.tHit < res.tHit)) {
+            res = thisRes;
+        }
+    }
+
     vec4 color;
     if(res.hit) {
-        // Simple Lambertian shading
-        vec3 lightDir = normalize(LIGHT_POS - res.pos);
-        float NdotL = max(0.0, dot(res.normal, lightDir));
-        color = vec4(res.material.color * NdotL, 1.0);
+        for(int i = 0; i < NUM_LIGHTS; i++) {
+            color += calculateLightColor(res, lights[i]);
+        }
     } else {
         color = vec4(0.0, 0.0, 0.0, 1.0);
     }
