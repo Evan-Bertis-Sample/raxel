@@ -26,13 +26,15 @@ struct RaymarchResult {
     RaymarchMaterial material;
 };
 
+struct SphereSDF {
+    vec3 center;
+    float radius;
+    RaymarchMaterial material;
+};
+
 // Hard-coded resolution to match your window:
 const vec2 iResolution = vec2(800.0, 600.0);
 
-// Simple sphere SDF at origin with radius=1
-float sphereSDF(vec3 p) {
-    return length(p) - 1.0;
-}
 
 const vec3 LIGHT_POS = vec3(0, 5, 0);
 
@@ -43,28 +45,37 @@ const int MAX_STEPS = 64;
 
 
 // A naive raymarch for a single sphere at the origin
-RaymarchResult raymarchSphere(in vec3 ro, in vec3 rd) {
+RaymarchResult raymarchSphere(SphereSDF sphere, vec3 ro, vec3 rd) {
     float t = 0.0;
     RaymarchResult res;
     res.hit = false;
-
     for(int i = 0; i < MAX_STEPS; i++) {
         vec3 pos = ro + rd * t;
-        float dist = sphereSDF(pos);
+        float dist = length(pos - sphere.center) - sphere.radius;
         if(dist < EPSILON) {
             res.hit = true;
             res.pos = pos;
-            res.normal = normalize(pos);
+            res.normal = normalize(pos - sphere.center);
             res.tHit = t;
-            return res;
+            res.material = sphere.material;
+            break;
         }
         t += dist;
         if(t > MAX_DISTANCE) {
             break;
         }
     }
+
     return res;
 }
+
+// description of our scene, a list of spheres
+SphereSDF spheres[2] = SphereSDF[](
+    SphereSDF(vec3(0, 0, -5), 1.0, RaymarchMaterial(vec3(1, 0, 0), 0.1, 0.0, 1.5)),
+    SphereSDF(vec3(0, 0, -10), 2.0, RaymarchMaterial(vec3(0, 1, 0), 0.1, 0.0, 1.5))
+);
+
+const int NUM_SPHERES = 2;
 
 void main() {
     ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
@@ -89,16 +100,25 @@ void main() {
     // Ray direction (rdCam in camera space -> world direction)
     vec3 rd = normalize((invView * vec4(rdCam, 0)).xyz);
 
-    // Raymarch the sphere
-    float tHit;
-    RaymarchResult res = raymarchSphere(ro, rd);
+    // Raymarch the scene
+    RaymarchResult res;
+    res.hit = false;
+    for(int i = 0; i < NUM_SPHERES; i++) {
+        RaymarchResult thisRes = raymarchSphere(spheres[i], ro, rd);
 
-    // If we hit the sphere, calculate lighting
-    vec4 color = vec4(0.0);
+        if(thisRes.hit && (!res.hit || thisRes.tHit < res.tHit)) {
+            res = thisRes;
+        }
+    }
+
+    vec4 color;
     if(res.hit) {
+        // Simple Lambertian shading
         vec3 lightDir = normalize(LIGHT_POS - res.pos);
-        float NdotL = dot(res.normal, lightDir);
-        color = vec4(res.normal, 1.0);
+        float NdotL = max(0.0, dot(res.normal, lightDir));
+        color = vec4(res.material.color * NdotL, 1.0);
+    } else {
+        color = vec4(0.0, 0.0, 0.0, 1.0);
     }
 
     // Write the pixel color to the output image
