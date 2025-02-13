@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <raxel/core/config.h>
 #include <stdio.h>   // for printf()
 #include <stdlib.h>  // for exit()
 #include <string.h>  // for strrchr()

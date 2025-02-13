@@ -1,5 +1,4 @@
 #include <raxel/core/util.h>
-
 #include "raxel_surface.h"
 
 // #define GLFW_INCLUDE_VULKAN
@@ -14,7 +13,7 @@ raxel_surface_t *raxel_surface_create_glfw(raxel_allocator_t *allocator, raxel_s
 
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow *window = glfwCreateWindow(width, height, raxel_cstr(title), NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(width, height, raxel_string_to_cstr(&title), NULL, NULL);
     glfw_surface_context_t *context = (glfw_surface_context_t *)surface->surface_context;
     context->window = window;
 

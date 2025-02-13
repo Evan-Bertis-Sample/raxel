@@ -7,7 +7,7 @@ set(SOURCES
 )
 
 set(INCLUDES
-    ${RAXEL_PROJECT_ROOT_DIR}
+    ${RAXEL_PROJECT_ROOT_DIR}/tests
 )
 
 # add the sources and includes to PROJECT executable

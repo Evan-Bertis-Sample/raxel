@@ -10,6 +10,7 @@
  *------------------------------------------------------------------------**/
 
 typedef int raxel_surface_size_t;
+typedef struct raxel_surface raxel_surface_t;
 
 typedef struct raxel_surface_callbacks {
     void (*on_update)(raxel_surface_t *surface);
@@ -19,6 +20,7 @@ typedef struct raxel_surface_callbacks {
     void (*on_resize)(raxel_surface_t *surface, int width, int height);
 } raxel_surface_callbacks_t;
 
+
 typedef struct raxel_surface {
     void *surface_context;
     raxel_string_t title;
@@ -26,6 +28,8 @@ typedef struct raxel_surface {
     raxel_surface_size_t height;
     raxel_surface_callbacks_t callbacks;
 } raxel_surface_t;
+
+
 
 // Creating -- macro to choose between which surface to create
 #ifdef RAXEL_SURFACE_USE_GLFW
@@ -45,6 +49,8 @@ raxel_surface_t *raxel_surface_create_dummy(raxel_allocator_t *allocator, raxel_
 /**------------------------------------------------------------------------
  *                           GLFW Surface Implementation
  *------------------------------------------------------------------------**/
+
+#include <glfw/glfw3.h>
 
 typedef struct glfw_surface_context {
     GLFWwindow *window;
