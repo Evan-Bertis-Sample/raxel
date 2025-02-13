@@ -13,16 +13,16 @@ void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxe
     raxel_size_t data_size = size * stride;
     void *array = raxel_malloc(allocator, header_size + data_size);
     __raxel_array_header_t *header = array;
-    *header = (__raxel_array_header_t){
-        .__size = size,
-        .__stride = stride};
+    header->__size = size;
+    header->__stride = stride;
+    header->__allocator = allocator;
     // return the pointer to the data
     return (void *)((raxel_size_t *)array + header_size);
 }
 
-void __raxel_array_destroy(raxel_allocator_t *allocator, void *array) {
-    // get the header
-    raxel_free(allocator, (void *)((raxel_size_t *)array - sizeof(__raxel_array_header_t)));
+void __raxel_array_destroy(void *array) {
+    __raxel_array_header_t *header = (__raxel_array_header_t *)((raxel_size_t *)array - sizeof(__raxel_array_header_t));
+    raxel_free(header->__allocator, (void *)((raxel_size_t *)array - sizeof(__raxel_array_header_t)));
 }
 
 // iterators are implemented wrong rn

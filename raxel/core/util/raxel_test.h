@@ -39,8 +39,8 @@ static size_t __raxel_test_case_count = 0;
 #define RAXEL_TEST_LOG_ERROR RAXEL_CORE_LOG_ERROR
 #define RAXEL_TEST_FATAL RAXEL_CORE_LOG_ERROR
 
-#define RAXEL_TEST(name)                                           \
-    static void name(void);                                        \
+#define RAXEL_TEST(name)    \
+    static void name(void); \
     static void name(void)
 
 static void raxel_test_register(const char *test_name, raxel_test_fn_t fn) {
@@ -57,6 +57,13 @@ static void raxel_test_register(const char *test_name, raxel_test_fn_t fn) {
         }                                                             \
     } while (0)
 
+#define RAXEL_TEST_ASSERT_EQUAL_INT(a, b)                                                      \
+    do {                                                                                       \
+        if ((a) != (b)) {                                                                      \
+            RAXEL_TEST_FATAL("Assertion failed in test '%s': %d != %d\n", __func__, (a), (b)); \
+        }                                                                                      \
+    } while (0)
+
 static int raxel_test_run_all(void) {
     RAXEL_TEST_LOG("Running %zu test(s)...\n", __raxel_test_case_count);
 
@@ -70,7 +77,6 @@ static int raxel_test_run_all(void) {
 }
 
 #define RAXEL_TEST_REGISTER(test_name) raxel_test_register(#test_name, test_name)
-
 
 #ifdef __cplusplus
 }

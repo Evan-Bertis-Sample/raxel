@@ -26,11 +26,12 @@ typedef struct raxel_iterator {
  *------------------------------------------------------------------------**/
 
 void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxel_size_t stride);
-inline void __raxel_array_destroy(raxel_allocator_t *allocator, void *array);
+inline void __raxel_array_destroy(void *array);
 
 typedef struct __raxel_array_header {
     raxel_size_t __size;
     raxel_size_t __stride;
+    raxel_allocator_t *__allocator;
 } __raxel_array_header_t;
 
 #define raxel_array(__T) __T *
@@ -38,14 +39,17 @@ typedef struct __raxel_array_header {
 #define raxel_array_create(type, allocator, size) \
     (raxel_array(type)) __raxel_array_create(allocator, size, sizeof(type))
 
-#define raxel_array_destroy(allocator, array) \
-    __raxel_array_destroy(allocator, (void *)array)
+#define raxel_array_destroy(array) \
+    __raxel_array_destroy((void *)array)
+
+#define raxel_array_header(array) \
+    ((__raxel_array_header_t *)((char *)array - sizeof(__raxel_array_header_t)))
 
 #define raxel_array_size(array) \
-    ((__raxel_array_header_t *)((void *)array - sizeof(__raxel_array_header_t)))->__size
+    raxel_array_header(array)->__size
 
 #define raxel_array_stride(array) \
-    ((__raxel_array_header_t *)((void *)array - sizeof(__raxel_array_header_t)))->__stride
+    raxel_array_header(array)->__stride
 
 raxel_iterator_t raxel_array_iterator(void *array);
 

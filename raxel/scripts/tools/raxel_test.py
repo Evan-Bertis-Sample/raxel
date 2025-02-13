@@ -7,6 +7,14 @@ from tools.tool_util import RaxelToolUtil
 
 TEST_APPLICATION = "raxel-test"
 
+def register_subparser(subparser):
+    subparser.add_argument(
+        "--gdb",
+        action="store_true",
+        help="Run the project with gdb",
+    )
+
+
 def main(args):
     build_options = RaxelBuildOptions()
     build_options.set_build_type(RaxelBuildType.Debug)
@@ -19,4 +27,4 @@ def main(args):
 
     build_options.set_project_dir(project_dir)
     RaxelBuildUtil.build_project(build_options)
-    RaxelBuildUtil.run_project(build_options)
+    RaxelBuildUtil.run_project(build_options, use_gdb=args.gdb)
