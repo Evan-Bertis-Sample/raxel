@@ -5,15 +5,11 @@
 extern "C" {
 #endif
 
+#include <raxel/core/config.h>
 #include <stdio.h>   // for printf()
 #include <stdlib.h>  // for exit()
 #include <string.h>  // for strrchr()
 
-// Example toggles
-#define RAXEL_CORE_LOG_ENABLED
-#define RAXEL_CORE_ALLOW_FATAL_ERRORS  // if defined, will call exit() on fatal errors
-#define RAXEL_APP_LOG_ENABLED
-#define RAXEL_APP_ALLOW_FATAL_ERRORS
 
 #define RAXEL_STR_HELPER(x) #x
 #define RAXEL_STR(x) RAXEL_STR_HELPER(x)

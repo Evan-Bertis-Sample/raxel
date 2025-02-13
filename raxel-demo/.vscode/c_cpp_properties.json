@@ -3,7 +3,11 @@
         {
             "name": "raxel",
             "includePath": [
-                "D:\\Documents\\Code\\School\\raxel"
+                "D:\\Documents\\Code\\School\\raxel",
+                "D:\\Documents\\Code\\School\\raxel\\raxel\\vendor\\glfw\\include",
+                "D:\\Documents\\Code\\School\\raxel\\raxel\\vendor\\cglm\\include",
+                // path to vulkan
+                "C:\\VulkanSDK\\1.4.304.0\\Include"
             ],
             "defines": [],
             "intelliSenseMode": "windows-msvc-x64",
