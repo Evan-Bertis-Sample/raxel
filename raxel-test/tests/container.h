@@ -14,7 +14,8 @@
 // 1. Create an array, check size, fill it with data, etc.
 RAXEL_TEST(test_array_creation) {
     // Create an array of 5 ints
-    raxel_array(int) arr = raxel_array_create(int, NULL, 5);
+    raxel_allocator_t allocator = raxel_default_allocator();
+    raxel_array(int) arr = raxel_array_create(int, &allocator, 5);
 
     RAXEL_TEST_ASSERT(arr != NULL);
     RAXEL_TEST_ASSERT(raxel_array_size(arr) == 5);
@@ -33,7 +34,8 @@ RAXEL_TEST(test_array_creation) {
 
 // 2. Test array iteration with raxel_array_iterator
 RAXEL_TEST(test_array_iterator) {
-    raxel_array(int) arr = raxel_array_create(int, NULL, 3);
+    raxel_allocator_t allocator = raxel_default_allocator();
+    raxel_array(int) arr = raxel_array_create(int, &allocator, 3);
     arr[0] = 10; arr[1] = 20; arr[2] = 30;
 
     // simple usage of raxel_array_iterator
@@ -61,7 +63,8 @@ RAXEL_TEST(test_array_iterator) {
 // 1. Create a list, verify size, push back data
 RAXEL_TEST(test_list_creation_push_back) {
     // Create a list of ints with an initial size of 2
-    raxel_list(int) mylist = raxel_list_create(int, NULL, 2);
+    raxel_allocator_t allocator = raxel_default_allocator();
+    raxel_list(int) mylist = raxel_list_create(int, &allocator, 2);
 
     RAXEL_TEST_ASSERT(mylist != NULL);
     RAXEL_TEST_ASSERT(raxel_list_size(mylist) == 2);
@@ -88,7 +91,8 @@ RAXEL_TEST(test_list_creation_push_back) {
 
 // 2. Test list resizing
 RAXEL_TEST(test_list_resize) {
-    raxel_list(float) flist = raxel_list_create(float, NULL, 2);
+    raxel_allocator_t allocator = raxel_default_allocator();
+    raxel_list(float) flist = raxel_list_create(float, &allocator, 2);
     flist[0] = 1.1f;
     flist[1] = 2.2f;
 
@@ -113,7 +117,8 @@ RAXEL_TEST(test_list_resize) {
 
 // 1. Create string, push back chars, append
 RAXEL_TEST(test_string_basics) {
-    raxel_string_t s = raxel_string_create(NULL, 4);  // capacity 4 initially
+    raxel_allocator_t allocator = raxel_default_allocator();
+    raxel_string_t s = raxel_string_create(&allocator, 4);  // capacity 4 initially
     RAXEL_TEST_ASSERT(s.__data != NULL);
     RAXEL_TEST_ASSERT(s.__size == 0);
     RAXEL_TEST_ASSERT(s.__capacity >= 4);
@@ -136,7 +141,8 @@ RAXEL_TEST(test_string_basics) {
 // 2. String split
 RAXEL_TEST(test_string_split) {
     // "One,Two,Three"
-    raxel_string_t s = raxel_string_create(NULL, 0);
+    raxel_allocator_t allocator = raxel_default_allocator();
+    raxel_string_t s = raxel_string_create(&allocator, 0);
     raxel_string_append(&s, "One,Two,Three");
 
     raxel_array(raxel_string_t) parts = raxel_string_split(&s, ',');
@@ -151,7 +157,7 @@ RAXEL_TEST(test_string_split) {
     for (size_t i = 0; i < raxel_array_size(parts); i++) {
         raxel_string_destroy(&parts[i]);
     }
-    
+
     raxel_array_destroy(NULL, parts);
 
     raxel_string_destroy(&s);

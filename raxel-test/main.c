@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <raxel/core/util.h>
-#include <raxel/core/graphics.h>
 #include "tests/container.h"
 
 int main() {
