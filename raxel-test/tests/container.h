@@ -151,15 +151,17 @@ RAXEL_TEST(test_string_split) {
     for (size_t i = 0; i < raxel_array_size(parts); i++) {
         raxel_string_destroy(&parts[i]);
     }
-    // Then destroy the array
+    
     raxel_array_destroy(NULL, parts);
 
     raxel_string_destroy(&s);
 }
 
-/*------------------------------------------------------------------------
- * Run All Tests
- *-----------------------------------------------------------------------*/
-
-// Use the framework's provided main if you just want a standalone test binary:
-RAXEL_TEST_MAIN()
+void register_container_tests() {
+    RAXEL_TEST_REGISTER(test_array_creation);
+    RAXEL_TEST_REGISTER(test_array_iterator);
+    RAXEL_TEST_REGISTER(test_list_creation_push_back);
+    RAXEL_TEST_REGISTER(test_list_resize);
+    RAXEL_TEST_REGISTER(test_string_basics);
+    RAXEL_TEST_REGISTER(test_string_split);
+}
