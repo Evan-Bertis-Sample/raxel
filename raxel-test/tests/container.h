@@ -18,8 +18,20 @@ RAXEL_TEST(test_array_creation) {
     raxel_array(int) arr = raxel_array_create(int, &allocator, 5);
 
     RAXEL_TEST_ASSERT(arr != NULL);
-    RAXEL_TEST_ASSERT(raxel_array_size(arr) == 5);
-    RAXEL_TEST_ASSERT(raxel_array_stride(arr) == sizeof(int));
+
+    __raxel_array_header_t *header = raxel_array_header(arr);
+    // assert that the address of the header is before the array
+    RAXEL_TEST_ASSERT(header < arr);
+    // assert that it is sizeof(__raxel_array_header_t) bytes before the array
+    RAXEL_TEST_ASSERT((char *)arr - (char *)header == sizeof(__raxel_array_header_t));
+
+    RAXEL_TEST_ASSERT(header != NULL);
+    RAXEL_TEST_ASSERT_EQUAL_INT(header->__size, 5);
+    RAXEL_TEST_ASSERT_EQUAL_INT(header->__stride, sizeof(int));
+
+
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_size(arr), 5);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_stride(arr), sizeof(int));
 
     // Initialize and verify
     for (size_t i = 0; i < raxel_array_size(arr); i++) {
@@ -29,7 +41,7 @@ RAXEL_TEST(test_array_creation) {
         RAXEL_TEST_ASSERT(arr[i] == (int)i);
     }
 
-    raxel_array_destroy(NULL, arr);
+    raxel_array_destroy(arr);
 }
 
 // 2. Test array iteration with raxel_array_iterator
@@ -53,7 +65,7 @@ RAXEL_TEST(test_array_iterator) {
     // but the current code doesn't handle "end-of-iteration" logic well.
     // This is a known issue in the template, so we won't do a beyond-end check here.
 
-    raxel_array_destroy(NULL, arr);
+    raxel_array_destroy(arr);
 }
 
 /*------------------------------------------------------------------------
@@ -158,7 +170,7 @@ RAXEL_TEST(test_string_split) {
         raxel_string_destroy(&parts[i]);
     }
 
-    raxel_array_destroy(NULL, parts);
+    raxel_array_destroy(parts);
 
     raxel_string_destroy(&s);
 }
