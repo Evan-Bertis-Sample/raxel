@@ -4,6 +4,7 @@
         "*.ndjson": "jsonl",
         "*.dbclient-js": "javascript",
         "*.compute": "hlsl",
-        "exception": "cpp"
+        "exception": "cpp",
+        "list": "cpp"
     }
 }
