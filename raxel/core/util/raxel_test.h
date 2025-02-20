@@ -57,12 +57,18 @@ static void raxel_test_register(const char *test_name, raxel_test_fn_t fn) {
         }                                                             \
     } while (0)
 
-#define RAXEL_TEST_ASSERT_EQUAL_INT(a, b)                                                      \
+#define __RAXEL_TEST_ASSERT_EQUAL(a, b, fmt)                                                   \
     do {                                                                                       \
         if ((a) != (b)) {                                                                      \
-            RAXEL_TEST_FATAL("Assertion failed in test '%s': %d != %d\n", __func__, (a), (b)); \
+            RAXEL_TEST_FATAL("Assertion failed in test '%s': " fmt " != " fmt "\n", __func__, (a), (b)); \
         }                                                                                      \
     } while (0)
+
+#define RAXEL_TEST_ASSERT_EQUAL_INT(a, b) __RAXEL_TEST_ASSERT_EQUAL(a, b, "%d")
+#define RAXEL_TEST_ASSERT_EQUAL_UINT(a, b) __RAXEL_TEST_ASSERT_EQUAL(a, b, "%u")
+#define RAXEL_TEST_ASSERT_EQUAL_STR(a, b) __RAXEL_TEST_ASSERT_EQUAL(a, b, "%s")
+#define RAXEL_TEST_ASSERT_EQUAL_PTR(a, b) __RAXEL_TEST_ASSERT_EQUAL(a, b, "%p")
+#define RAXEL_TEST_ASSERT_EQUAL_FLOAT(a, b) __RAXEL_TEST_ASSERT_EQUAL(a, b, "%f")
 
 static int raxel_test_run_all(void) {
     RAXEL_TEST_LOG("Running %zu test(s)...\n", __raxel_test_case_count);
