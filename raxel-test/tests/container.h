@@ -277,7 +277,7 @@ RAXEL_TEST(test_string_split_edge_cases) {
     raxel_string_t s_empty = raxel_string_create(&allocator, 0);
     raxel_array(raxel_string_t) parts_empty = raxel_string_split(&s_empty, ',');
     // Expect one token: the empty string.
-    RAXEL_TEST_ASSERT(raxel_array_size(parts_empty) == 1);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_size(parts_empty), 1);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_empty[0]), "") == 0);
     raxel_string_destroy(&s_empty);
     raxel_array_destroy(parts_empty);
@@ -286,7 +286,7 @@ RAXEL_TEST(test_string_split_edge_cases) {
     raxel_string_t s_nodelem = raxel_string_create(&allocator, 0);
     raxel_string_append(&s_nodelem, "HelloWorld");
     raxel_array(raxel_string_t) parts_nodelem = raxel_string_split(&s_nodelem, ',');
-    RAXEL_TEST_ASSERT(raxel_array_size(parts_nodelem) == 1);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_size(parts_nodelem), 1);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_nodelem[0]), "HelloWorld") == 0);
     raxel_string_destroy(&s_nodelem);
     raxel_array_destroy(parts_nodelem);
@@ -295,7 +295,7 @@ RAXEL_TEST(test_string_split_edge_cases) {
     raxel_string_t s_lead = raxel_string_create(&allocator, 0);
     raxel_string_append(&s_lead, ",Hello,World");
     raxel_array(raxel_string_t) parts_lead = raxel_string_split(&s_lead, ',');
-    RAXEL_TEST_ASSERT(raxel_array_size(parts_lead) == 3);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_size(parts_lead), 3);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_lead[0]), "") == 0);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_lead[1]), "Hello") == 0);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_lead[2]), "World") == 0);
@@ -309,7 +309,7 @@ RAXEL_TEST(test_string_split_edge_cases) {
     raxel_string_t s_trail = raxel_string_create(&allocator, 0);
     raxel_string_append(&s_trail, "Hello,World,");
     raxel_array(raxel_string_t) parts_trail = raxel_string_split(&s_trail, ',');
-    RAXEL_TEST_ASSERT(raxel_array_size(parts_trail) == 3);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_size(parts_trail), 3);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_trail[0]), "Hello") == 0);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_trail[1]), "World") == 0);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_trail[2]), "") == 0);
@@ -323,7 +323,7 @@ RAXEL_TEST(test_string_split_edge_cases) {
     raxel_string_t s_consec = raxel_string_create(&allocator, 0);
     raxel_string_append(&s_consec, "Hello,,World");
     raxel_array(raxel_string_t) parts_consec = raxel_string_split(&s_consec, ',');
-    RAXEL_TEST_ASSERT(raxel_array_size(parts_consec) == 3);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_array_size(parts_consec), 3);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_consec[0]), "Hello") == 0);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_consec[1]), "") == 0);
     RAXEL_TEST_ASSERT(strcmp(raxel_string_data(&parts_consec[2]), "World") == 0);

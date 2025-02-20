@@ -1,8 +1,8 @@
 #include "raxel_container.h"
-#include "raxel_debug.h"
 
 #include <string.h>
 
+#include "raxel_debug.h"
 #include "raxel_mem.h"
 
 /**------------------------------------------------------------------------
@@ -78,7 +78,7 @@ void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
     void *new_list = __raxel_list_create(old_header->__allocator, new_capacity, copy_size, old_header->__stride);
     __raxel_list_header_t *new_header = raxel_list_header(new_list);
     // Copy old data to new list
-    
+
     new_header->__size = copy_size;
     memcpy(new_list, old_list, copy_size * old_header->__stride);
     __raxel_list_destroy(old_list);
@@ -122,24 +122,19 @@ raxel_iterator_t raxel_list_iterator(void *list) {
  *                           RAXEL STRINGS
  *------------------------------------------------------------------------**/
 
+// Ensure a minimum capacity of 1 so that __data is always non-NULL.
 static void __raxel_string_reserve(raxel_string_t *string, raxel_size_t new_capacity) {
     if (new_capacity <= string->__capacity) {
-        // Already have enough capacity
         return;
     }
-    // Allocate new buffer (plus one for the null terminator)
     char *new_data = (char *)raxel_malloc(string->__allocator, new_capacity + 1);
-    // Copy old data if any
     if (string->__data && string->__size > 0) {
         memcpy(new_data, string->__data, string->__size);
     }
-    // Null-terminate
     new_data[string->__size] = '\0';
-    // Free old buffer if allocated
     if (string->__data) {
         raxel_free(string->__allocator, string->__data);
     }
-    // Update string struct
     string->__data = new_data;
     string->__capacity = new_capacity;
 }
@@ -150,11 +145,12 @@ raxel_string_t raxel_string_create(raxel_allocator_t *allocator, raxel_size_t ca
     string.__size = 0;
     string.__capacity = 0;
     string.__data = NULL;
-    // Reserve initial capacity
-    __raxel_string_reserve(&string, capacity);
-    if (string.__data) {
-        string.__data[0] = '\0';
+    // Force a minimum capacity of 1.
+    if (capacity == 0) {
+        capacity = 1;
     }
+    __raxel_string_reserve(&string, capacity);
+    string.__data[0] = '\0';
     return string;
 }
 
@@ -215,9 +211,7 @@ char *raxel_string_data(raxel_string_t *string) {
 
 char *raxel_string_to_cstr(raxel_string_t *string) {
     if (!string) return NULL;
-    if (string->__data && string->__size <= string->__capacity) {
-        string->__data[string->__size] = '\0';
-    }
+    string->__data[string->__size] = '\0';
     return string->__data;
 }
 
@@ -233,17 +227,24 @@ void raxel_string_clear(raxel_string_t *string) {
  * Splits the given string by the specified delimiter and returns
  * a raxel_array(raxel_string_t) with each token.
  *
- * NOTE: Each raxel_string_t in the returned array is *independently* allocated.
- * The caller must call raxel_string_destroy() on each and then
+ * Each raxel_string_t in the returned array is independently allocated.
+ * The caller must call raxel_string_destroy() on each token and then
  * raxel_array_destroy(...) on the array when done.
  */
 raxel_array(raxel_string_t) raxel_string_split(raxel_string_t *string, char delim) {
-    if (!string || !string->__data) {
-        // Return an empty array
-        return raxel_array_create(raxel_string_t, string ? string->__allocator : NULL, 0);
+    // If string pointer is NULL, return an empty array.
+    if (!string) {
+        return raxel_array_create(raxel_string_t, NULL, 0);
     }
-
-    // First pass: count delimiters to determine number of substrings
+    // If the string is empty, return an array with one empty token.
+    if (string->__size == 0) {
+        raxel_array(raxel_string_t) result = raxel_array_create(raxel_string_t, string->__allocator, 1);
+        raxel_string_t empty_str = raxel_string_create(string->__allocator, 1);
+        empty_str.__data[0] = '\0';
+        result[0] = empty_str;
+        return result;
+    }
+    // First pass: count delimiters.
     raxel_size_t delim_count = 0;
     for (raxel_size_t i = 0; i < string->__size; i++) {
         if (string->__data[i] == delim) {
@@ -253,23 +254,28 @@ raxel_array(raxel_string_t) raxel_string_split(raxel_string_t *string, char deli
     raxel_size_t substring_count = delim_count + 1;
     raxel_array(raxel_string_t) result = raxel_array_create(raxel_string_t, string->__allocator, substring_count);
 
-    // Second pass: split into substrings
+    // Second pass: split into substrings.
     raxel_size_t start_idx = 0;
     raxel_size_t result_idx = 0;
     for (raxel_size_t i = 0; i < string->__size; i++) {
         if (string->__data[i] == delim) {
             raxel_size_t length = i - start_idx;
-            raxel_string_t s = raxel_string_create(string->__allocator, length);
-            raxel_string_append_n(&s, &string->__data[start_idx], length);
+            // Ensure non-zero capacity even for an empty token.
+            raxel_string_t s = raxel_string_create(string->__allocator, (length > 0 ? length : 1));
+            if (length > 0) {
+                raxel_string_append_n(&s, &string->__data[start_idx], length);
+            }
             result[result_idx++] = s;
             start_idx = i + 1;
         }
     }
-    // Final substring (from last delimiter to end)
+    // Final substring (after last delimiter).
     {
         raxel_size_t length = string->__size - start_idx;
-        raxel_string_t s = raxel_string_create(string->__allocator, length);
-        raxel_string_append_n(&s, &string->__data[start_idx], length);
+        raxel_string_t s = raxel_string_create(string->__allocator, (length > 0 ? length : 1));
+        if (length > 0) {
+            raxel_string_append_n(&s, &string->__data[start_idx], length);
+        }
         result[result_idx++] = s;
     }
     return result;
