@@ -50,15 +50,15 @@ raxel_iterator_t raxel_array_iterator(void *array) {
  *                           RAXEL LIST (continuous memory)
  *------------------------------------------------------------------------**/
 
-void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t size, raxel_size_t stride) {
-    RAXEL_CORE_LOG("Creating list of size %u, stride %u\n", size, stride);
+void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t capacity, raxel_size_t size, raxel_size_t stride) {
+    // RAXEL_CORE_LOG("Creating list of size %u, stride %u\n", size, stride);
     raxel_size_t header_size = sizeof(__raxel_list_header_t);
-    raxel_size_t data_size = size * stride;
+    raxel_size_t data_size = capacity * stride;
     void *block = raxel_malloc(allocator, header_size + data_size);
     __raxel_list_header_t *header = (__raxel_list_header_t *)block;
     header->__size = size;
     header->__stride = stride;
-    header->__capacity = size;
+    header->__capacity = capacity;
     header->__allocator = allocator;
     // Return pointer to data (right after header)
     return (void *)((char *)block + header_size);
@@ -74,11 +74,11 @@ void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
     if (!list_ptr || !(*list_ptr)) return;
     __raxel_list_header_t *old_header = raxel_list_header(*list_ptr);
     void *old_list = *list_ptr;
-    void *new_list = __raxel_list_create(old_header->__allocator, new_capacity, old_header->__stride);
+    raxel_size_t copy_size = (old_header->__size < new_capacity) ? old_header->__size : new_capacity;
+    void *new_list = __raxel_list_create(old_header->__allocator, new_capacity, copy_size, old_header->__stride);
     __raxel_list_header_t *new_header = raxel_list_header(new_list);
     // Copy old data to new list
     // be careful though, new_capacity might be less than old_header->__size
-    raxel_size_t copy_size = (old_header->__size < new_capacity) ? old_header->__size : new_capacity;
     new_header->__size = copy_size;
     memcpy(new_list, old_list, copy_size * old_header->__stride);
     __raxel_list_destroy(old_list);
@@ -92,13 +92,18 @@ void __raxel_list_push_back(void **list_ptr, void *data) {
         __raxel_list_resize(list_ptr, header->__capacity * 2);
         header = raxel_list_header(*list_ptr);
     }
-    memcpy((char *)*list_ptr + header->__size * header->__stride, data, header->__stride);
+    // Copy data to the end of the list
+    raxel_size_t offset = header->__size * header->__stride;
+    memcpy((char *)*list_ptr + offset, data, header->__stride);
+
     header->__size++;
 }
 
 static void *__raxel_list_it_next(raxel_iterator_t *it) {
-    __raxel_list_header_t *header = raxel_list_header(it->__data);
-    return (void *)((char *)it->__data + header->__stride);
+    __raxel_list_header_t *header = it->__ctx;
+    // moove the __data pointer by the stride
+    it->__data = (void *)((char *)it->__data + header->__stride);
+    return it->__data;
 }
 
 static void *__raxel_list_it_current(raxel_iterator_t *it) {
@@ -107,6 +112,7 @@ static void *__raxel_list_it_current(raxel_iterator_t *it) {
 
 raxel_iterator_t raxel_list_iterator(void *list) {
     return (raxel_iterator_t){
+        .__ctx = raxel_list_header(list),
         .__data = list,
         .next = __raxel_list_it_next,
         .current = __raxel_list_it_current};

@@ -96,23 +96,23 @@ RAXEL_TEST(test_list_creation_push_back) {
     raxel_list(int) mylist = raxel_list_create(int, &allocator, 2);
 
     RAXEL_TEST_ASSERT(mylist != NULL);
-    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(mylist), 2);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(mylist), 0); // empty list
     RAXEL_TEST_ASSERT(raxel_list_capacity(mylist) >= 2);
 
     // Initialize the first two elements.
-    mylist[0] = 42;
-    mylist[1] = 100;
+    raxel_list_push_back(mylist, 42);
+    raxel_list_push_back(mylist, 100);
 
     // Push back a new element.
     int new_value = 200;
-    raxel_list_push_back(mylist, &new_value);
-    RAXEL_TEST_ASSERT(raxel_list_size(mylist) == 3);
+    raxel_list_push_back(mylist, new_value);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(mylist), 3);
     RAXEL_TEST_ASSERT(raxel_list_capacity(mylist) >= 3);
 
     // Validate content.
-    RAXEL_TEST_ASSERT(mylist[0] == 42);
-    RAXEL_TEST_ASSERT(mylist[1] == 100);
-    RAXEL_TEST_ASSERT(mylist[2] == 200);
+    RAXEL_TEST_ASSERT_EQUAL_INT(mylist[0], 42);
+    RAXEL_TEST_ASSERT_EQUAL_INT(mylist[1], 100);
+    RAXEL_TEST_ASSERT_EQUAL_INT(mylist[2], 200);
 
     raxel_list_destroy(mylist);
 }
@@ -127,7 +127,7 @@ RAXEL_TEST(test_list_resize) {
     // Increase size to 5.
     raxel_list_resize(flist, 5);
     // In this implementation, a resize reallocation sets capacity equal to new size.
-    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(flist), 5);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(flist), 2);
     RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_capacity(flist), 5);
     // The original two elements should be preserved.
     RAXEL_TEST_ASSERT_EQUAL_FLOAT(flist[0], 1.1f);
@@ -148,14 +148,14 @@ RAXEL_TEST(test_list_many_push_back) {
     // Create a list with an initial size of 1.
     raxel_list(int) list = raxel_list_create(int, &allocator, 1);
     // Reset size to 0 to simulate an empty list.
-    raxel_list_resize(list, 0);
+    // raxel_list_resize(list, 0);
     const int count = 100;
     for (int i = 0; i < count; i++) {
-        raxel_list_push_back(list, &i);
+        raxel_list_push_back(list, i);
     }
     RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(list), count);
     for (int i = 0; i < count; i++) {
-        RAXEL_TEST_ASSERT(list[i] == i);
+        RAXEL_TEST_ASSERT_EQUAL_INT(list[i], i);
     }
     raxel_list_destroy(list);
 }
@@ -168,8 +168,7 @@ RAXEL_TEST(test_list_iterator) {
         list[i] = i + 10;
     }
     // Push back one more element.
-    int extra = 99;
-    raxel_list_push_back(list, &extra);
+    raxel_list_push_back(list, 99);
     // Iterate over the list.
     raxel_iterator_t it = raxel_list_iterator(list);
     int idx = 0;

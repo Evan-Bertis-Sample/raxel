@@ -58,7 +58,7 @@ raxel_iterator_t raxel_array_iterator(void *array);
  *                           RAXEL_LIST (continuous memory)
  *------------------------------------------------------------------------**/
 
-void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t size, raxel_size_t stride);
+void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t capacity, raxel_size_t size, raxel_size_t stride);
 inline void __raxel_list_destroy(void *list);
 void __raxel_list_resize(void **list, raxel_size_t size);
 void __raxel_list_push_back(void **list, void *data);
@@ -73,7 +73,7 @@ typedef struct __raxel_list_header {
 #define raxel_list(__T) __T *
 
 #define raxel_list_create(type, allocator, size) \
-    (raxel_list(type)) __raxel_list_create(allocator, size, sizeof(type))
+    (raxel_list(type)) __raxel_list_create(allocator, size, size, sizeof(type))
 
 #define raxel_list_destroy(list) \
     __raxel_list_destroy((void *)list)
@@ -93,8 +93,11 @@ typedef struct __raxel_list_header {
 #define raxel_list_resize(list, size) \
     __raxel_list_resize((void **)&list, size)
 
-#define raxel_list_push_back(list, data) \
-    __raxel_list_push_back((void **)&list, (void *)data)
+#define raxel_list_push_back(list, data)                         \
+    do {                                                         \
+        __typeof__(data) __data = data;                          \
+        __raxel_list_push_back((void **)&list, (void *)&__data); \
+    } while (0)
 
 raxel_iterator_t raxel_list_iterator(void *list);
 
