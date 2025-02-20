@@ -77,14 +77,17 @@ typedef struct __raxel_list_header {
 #define raxel_list_destroy(list) \
     __raxel_list_destroy((void *)list)
 
+#define raxel_list_header(list) \
+    ((__raxel_list_header_t *)((char *)list - sizeof(__raxel_list_header_t)))
+
 #define raxel_list_size(list) \
-    ((__raxel_list_header_t *)((void *)list - sizeof(__raxel_list_header_t)))->__size
+    raxel_list_header(list)->__size
 
 #define raxel_list_capacity(list) \
-    ((__raxel_list_header_t *)((void *)list - sizeof(__raxel_list_header_t)))->__capacity
+    raxel_list_header(list)->__capacity
 
 #define raxel_list_allocator(list) \
-    ((__raxel_list_header_t *)((void *)list - sizeof(__raxel_list_header_t)))->__allocator
+    raxel_list_header(list)->__allocator
 
 #define raxel_list_resize(list, size) \
     __raxel_list_resize((void **)&list, size)

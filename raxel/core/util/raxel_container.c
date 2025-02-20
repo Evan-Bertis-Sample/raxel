@@ -4,17 +4,6 @@
 
 #include "raxel_mem.h"
 
-/*---------------------------------------------------------------------------
-  Utility functions for header lookup (using char* arithmetic)
-  ---------------------------------------------------------------------------*/
-static inline __raxel_array_header_t *raxel_get_array_header(void *array_data) {
-    return (__raxel_array_header_t *)((char *)array_data - sizeof(__raxel_array_header_t));
-}
-
-static inline __raxel_list_header_t *raxel_get_list_header(void *list_data) {
-    return (__raxel_list_header_t *)((char *)list_data - sizeof(__raxel_list_header_t));
-}
-
 /**------------------------------------------------------------------------
  *                           RAXEL ARRAY
  *------------------------------------------------------------------------**/
@@ -33,12 +22,12 @@ void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxe
 
 void __raxel_array_destroy(void *array) {
     if (!array) return;
-    __raxel_array_header_t *header = raxel_get_array_header(array);
+    __raxel_array_header_t *header = raxel_array_header(array);
     raxel_free(header->__allocator, (void *)((char *)array - sizeof(__raxel_array_header_t)));
 }
 
 static void *__raxel_array_it_next(raxel_iterator_t *it) {
-    __raxel_array_header_t *header = raxel_get_array_header(it->__data);
+    __raxel_array_header_t *header = raxel_array_header(it->__data);
     return (void *)((char *)it->__data + header->__stride);
 }
 
@@ -72,13 +61,13 @@ void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t size, raxel
 
 void __raxel_list_destroy(void *list) {
     if (!list) return;
-    __raxel_list_header_t *header = raxel_get_list_header(list);
+    __raxel_list_header_t *header = raxel_list_header(list);
     raxel_free(header->__allocator, (void *)((char *)list - sizeof(__raxel_list_header_t)));
 }
 
 void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
     if (!list_ptr || !(*list_ptr)) return;
-    __raxel_list_header_t *old_header = raxel_get_list_header(*list_ptr);
+    __raxel_list_header_t *old_header = raxel_list_header(*list_ptr);
     raxel_size_t header_size = sizeof(__raxel_list_header_t);
     raxel_size_t data_size = new_capacity * old_header->__stride;
     void *new_block = raxel_malloc(old_header->__allocator, header_size + data_size);
@@ -94,17 +83,17 @@ void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
 
 void __raxel_list_push_back(void **list_ptr, void *data) {
     if (!list_ptr || !(*list_ptr)) return;
-    __raxel_list_header_t *header = raxel_get_list_header(*list_ptr);
+    __raxel_list_header_t *header = raxel_list_header(*list_ptr);
     if (header->__size == header->__capacity) {
         __raxel_list_resize(list_ptr, header->__capacity * 2);
-        header = raxel_get_list_header(*list_ptr);  // update header after resize
+        header = raxel_list_header(*list_ptr);
     }
     memcpy((char *)*list_ptr + header->__size * header->__stride, data, header->__stride);
     header->__size++;
 }
 
 static void *__raxel_list_it_next(raxel_iterator_t *it) {
-    __raxel_list_header_t *header = raxel_get_list_header(it->__data);
+    __raxel_list_header_t *header = raxel_list_header(it->__data);
     return (void *)((char *)it->__data + header->__stride);
 }
 
