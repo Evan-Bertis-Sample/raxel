@@ -3,9 +3,11 @@
 #include <stdio.h>
 #include <raxel/core/util.h>
 #include "tests/container.h"
+#include "tests/hashtable.h"
 
 int main() {
     register_container_tests();
+    register_hashtable_tests();
 
     return raxel_test_run_all();
 }
