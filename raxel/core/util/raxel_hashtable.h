@@ -59,6 +59,8 @@ int raxel_hashtable_get(raxel_hashtable_t *ht, const void *key, void *value_out)
  */
 int raxel_hashtable_remove(raxel_hashtable_t *ht, const void *key);
 
+raxel_iterator_t raxel_hashtable_iterator(raxel_hashtable_t *ht);
+
 #ifdef __cplusplus
 }
 #endif

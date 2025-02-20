@@ -18,8 +18,8 @@ typedef struct {
   Custom hash and equals for custom_key_t.
 ------------------------------------------------------------*/
 static uint64_t custom_key_hash(const void *key, raxel_size_t key_size) {
-    (void) key_size; // we know the structure's layout
-    const custom_key_t *ck = (const custom_key_t *) key;
+    (void)key_size;  // we know the structure's layout
+    const custom_key_t *ck = (const custom_key_t *)key;
     uint64_t hash = 1469598103934665603ULL;  // FNV-1a 64-bit offset basis
 
     // Incorporate the integer id.
@@ -39,9 +39,9 @@ static uint64_t custom_key_hash(const void *key, raxel_size_t key_size) {
 }
 
 static int custom_key_equals(const void *a, const void *b, raxel_size_t key_size) {
-    (void) key_size;
-    const custom_key_t *ak = (const custom_key_t *) a;
-    const custom_key_t *bk = (const custom_key_t *) b;
+    (void)key_size;
+    const custom_key_t *ak = (const custom_key_t *)a;
+    const custom_key_t *bk = (const custom_key_t *)b;
     if (ak->id != bk->id)
         return 0;
     return strcmp(ak->name, bk->name) == 0;
@@ -58,7 +58,7 @@ RAXEL_TEST(test_hashtable_basic) {
     int key = 42;
     int value = 100;
     int ret = raxel_hashtable_insert(ht, &key, &value);
-    RAXEL_TEST_ASSERT(ret == 1); // New insertion.
+    RAXEL_TEST_ASSERT(ret == 1);  // New insertion.
 
     int got = 0;
     RAXEL_TEST_ASSERT(raxel_hashtable_get(ht, &key, &got) == 1);
@@ -67,7 +67,7 @@ RAXEL_TEST(test_hashtable_basic) {
     // Update the existing key.
     value = 200;
     ret = raxel_hashtable_insert(ht, &key, &value);
-    RAXEL_TEST_ASSERT(ret == 0); // Updated existing key.
+    RAXEL_TEST_ASSERT(ret == 0);  // Updated existing key.
     RAXEL_TEST_ASSERT(raxel_hashtable_get(ht, &key, &got) == 1);
     RAXEL_TEST_ASSERT_EQUAL_INT(got, 200);
 
@@ -131,9 +131,9 @@ RAXEL_TEST(test_hashtable_rehash) {
   Test: Custom hash function (forcing collisions).
 ------------------------------------------------------------*/
 static uint64_t constant_hash(const void *key, raxel_size_t key_size) {
-    (void) key;
-    (void) key_size;
-    return 42; // constant hash forces collisions.
+    (void)key;
+    (void)key_size;
+    return 42;  // constant hash forces collisions.
 }
 
 RAXEL_TEST(test_hashtable_custom_hash) {
@@ -161,19 +161,19 @@ RAXEL_TEST(test_hashtable_custom_structs) {
     raxel_allocator_t allocator = raxel_default_allocator();
     // Create a hashtable mapping custom_key_t to custom_value_t with custom hash and equals.
     raxel_hashtable_t *ht = raxel_hashtable_create_custom(custom_key_t, custom_value_t, &allocator, 8,
-                                                            custom_key_hash, custom_key_equals);
+                                                          custom_key_hash, custom_key_equals);
 
-    custom_key_t key1 = { .id = 1 };
+    custom_key_t key1 = {.id = 1};
     strcpy(key1.name, "Alice");
-    custom_value_t value1 = { .score = 95.5, .rank = 1 };
+    custom_value_t value1 = {.score = 95.5, .rank = 1};
 
-    custom_key_t key2 = { .id = 2 };
+    custom_key_t key2 = {.id = 2};
     strcpy(key2.name, "Bob");
-    custom_value_t value2 = { .score = 87.0, .rank = 2 };
+    custom_value_t value2 = {.score = 87.0, .rank = 2};
 
-    custom_key_t key3 = { .id = 3 };
+    custom_key_t key3 = {.id = 3};
     strcpy(key3.name, "Charlie");
-    custom_value_t value3 = { .score = 78.3, .rank = 3 };
+    custom_value_t value3 = {.score = 78.3, .rank = 3};
 
     // Insert entries.
     RAXEL_TEST_ASSERT(raxel_hashtable_insert(ht, &key1, &value1) == 1);
@@ -209,6 +209,40 @@ RAXEL_TEST(test_hashtable_custom_structs) {
     raxel_hashtable_destroy(ht);
 }
 
+RAXEL_TEST(test_hashtable_iterator) {
+    raxel_allocator_t allocator = raxel_default_allocator();
+    // Create a hashtable with capacity 8 for int->int mappings.
+    raxel_hashtable_t *ht = raxel_hashtable_create(int, int, &allocator, 8);
+
+    const int num_entries = 10;
+    // Insert key i with value (i * 10) for 0 <= i < num_entries.
+    for (int i = 0; i < num_entries; i++) {
+        int value = i * 10;
+        raxel_hashtable_insert(ht, &i, &value);
+    }
+
+    // Use the iterator to count and check all entries.
+    int count = 0;
+    raxel_iterator_t it = raxel_hashtable_iterator(ht);
+    while (1) {
+        void *bucket = it.current(&it);
+        if (!bucket) break;  // No more occupied buckets.
+        int key, value;
+        // Recall: each bucket layout is:
+        // [ state (1 byte) ][ key (sizeof(int) bytes) ][ value (sizeof(int) bytes) ]
+        memcpy(&key, (char *)bucket + 1, sizeof(int));
+        memcpy(&value, (char *)bucket + 1 + ht->__key_size, sizeof(int));
+        // Verify the mapping: value should equal key * 10.
+        RAXEL_TEST_ASSERT_EQUAL_INT(value, key * 10);
+        count++;
+        it.next(&it);
+    }
+    // Check that we visited exactly num_entries buckets.
+    RAXEL_TEST_ASSERT_EQUAL_INT(count, num_entries);
+
+    raxel_hashtable_destroy(ht);
+}
+
 /*------------------------------------------------------------
   Registration of all tests.
 ------------------------------------------------------------*/
@@ -218,4 +252,5 @@ void register_hashtable_tests() {
     RAXEL_TEST_REGISTER(test_hashtable_rehash);
     RAXEL_TEST_REGISTER(test_hashtable_custom_hash);
     RAXEL_TEST_REGISTER(test_hashtable_custom_structs);
+    RAXEL_TEST_REGISTER(test_hashtable_iterator);
 }

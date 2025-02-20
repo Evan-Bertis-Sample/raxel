@@ -193,3 +193,51 @@ int raxel_hashtable_remove(raxel_hashtable_t *ht, const void *key) {
         index = (index + 1) % ht->__capacity;
     }
 }
+
+static void *ht_it_current(raxel_iterator_t *it) {
+    raxel_hashtable_t *ht = (raxel_hashtable_t *)it->__ctx;
+    uintptr_t idx = (uintptr_t)it->__data;
+    if (idx >= ht->__capacity) {
+        return NULL;
+    }
+    void *bucket = raxel_ht_get_bucket(ht, idx);
+    if (*(uint8_t *)bucket == 1) {
+        return bucket;
+    }
+    return NULL;
+}
+
+static void *ht_it_next(raxel_iterator_t *it) {
+    raxel_hashtable_t *ht = (raxel_hashtable_t *)it->__ctx;
+    uintptr_t idx = (uintptr_t)it->__data;
+    idx++;  // move to the next bucket
+    while (idx < ht->__capacity) {
+        void *bucket = raxel_ht_get_bucket(ht, idx);
+        if (*(uint8_t *)bucket == 1) {  // found an occupied bucket
+            it->__data = (void *)(uintptr_t)idx;
+            return bucket;
+        }
+        idx++;
+    }
+    // If no more entries, set iterator index to capacity and return NULL.
+    it->__data = (void *)(uintptr_t)ht->__capacity;
+    return NULL;
+}
+
+raxel_iterator_t raxel_hashtable_iterator(raxel_hashtable_t *ht) {
+    raxel_iterator_t it;
+    it.__ctx = ht;
+    // Start at the first occupied bucket.
+    uintptr_t idx = 0;
+    while (idx < ht->__capacity) {
+        void *bucket = raxel_ht_get_bucket(ht, idx);
+        if (*(uint8_t *)bucket == 1) {
+            break;
+        }
+        idx++;
+    }
+    it.__data = (void *)(uintptr_t)idx;
+    it.current = ht_it_current;
+    it.next = ht_it_next;
+    return it;
+}
