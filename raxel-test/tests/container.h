@@ -1,6 +1,7 @@
 // raxel_container_tests.c
 
 #include <raxel/core/util.h>
+#include <raxel/core/voxel.h>
 #include <string.h>  // for strcmp, memcpy, etc.
 
 /*------------------------------------------------------------------------
