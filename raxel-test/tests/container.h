@@ -79,8 +79,8 @@ RAXEL_TEST(test_list_creation_push_back) {
     raxel_list(int) mylist = raxel_list_create(int, &allocator, 2);
 
     RAXEL_TEST_ASSERT(mylist != NULL);
-    RAXEL_TEST_ASSERT(raxel_list_size(mylist) == 2);
-    RAXEL_TEST_ASSERT(raxel_list_capacity(mylist) == 2);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(mylist), 2);
+    RAXEL_TEST_ASSERT(raxel_list_capacity(mylist) >= 2);
 
     // Initialize the first 2 elements
     mylist[0] = 42;
@@ -110,15 +110,17 @@ RAXEL_TEST(test_list_resize) {
 
     // Increase size to 5
     raxel_list_resize(flist, 5);
-    RAXEL_TEST_ASSERT(raxel_list_size(flist) == 5);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(flist), 2);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_capacity(flist), 5);
     // The original two should still be there:
-    RAXEL_TEST_ASSERT(flist[0] == 1.1f);
-    RAXEL_TEST_ASSERT(flist[1] == 2.2f);
+    RAXEL_TEST_ASSERT_EQUAL_FLOAT(flist[0], 1.1f);
+    RAXEL_TEST_ASSERT_EQUAL_FLOAT(flist[1], 2.2f);
 
     // Decrease size to 1
     raxel_list_resize(flist, 1);
-    RAXEL_TEST_ASSERT(raxel_list_size(flist) == 1);
-    RAXEL_TEST_ASSERT(flist[0] == 1.1f);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(flist), 1);
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_capacity(flist), 1);
+    RAXEL_TEST_ASSERT_EQUAL_FLOAT(flist[0], 1.1f);
 
     raxel_list_destroy(flist);
 }

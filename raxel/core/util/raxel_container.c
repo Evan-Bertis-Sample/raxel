@@ -1,4 +1,5 @@
 #include "raxel_container.h"
+#include "raxel_debug.h"
 
 #include <string.h>
 
@@ -50,6 +51,7 @@ raxel_iterator_t raxel_array_iterator(void *array) {
  *------------------------------------------------------------------------**/
 
 void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t size, raxel_size_t stride) {
+    RAXEL_CORE_LOG("Creating list of size %u, stride %u\n", size, stride);
     raxel_size_t header_size = sizeof(__raxel_list_header_t);
     raxel_size_t data_size = size * stride;
     void *block = raxel_malloc(allocator, header_size + data_size);
@@ -71,17 +73,16 @@ void __raxel_list_destroy(void *list) {
 void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
     if (!list_ptr || !(*list_ptr)) return;
     __raxel_list_header_t *old_header = raxel_list_header(*list_ptr);
-    raxel_size_t header_size = sizeof(__raxel_list_header_t);
-    raxel_size_t data_size = new_capacity * old_header->__stride;
-    void *new_block = raxel_malloc(old_header->__allocator, header_size + data_size);
-    __raxel_list_header_t *new_header = (__raxel_list_header_t *)new_block;
-    /* Copy header information from old block */
-    memcpy(new_header, old_header, header_size);
-    /* Copy data from old block into new block */
-    memcpy((char *)new_block + header_size, *list_ptr, old_header->__size * old_header->__stride);
-    new_header->__capacity = new_capacity;  // update capacity field
-    raxel_free(old_header->__allocator, (void *)((char *)*list_ptr - header_size));
-    *list_ptr = (void *)((char *)new_block + header_size);
+    void *old_list = *list_ptr;
+    void *new_list = __raxel_list_create(old_header->__allocator, new_capacity, old_header->__stride);
+    __raxel_list_header_t *new_header = raxel_list_header(new_list);
+    // Copy old data to new list
+    // be careful though, new_capacity might be less than old_header->__size
+    raxel_size_t copy_size = (old_header->__size < new_capacity) ? old_header->__size : new_capacity;
+    new_header->__size = copy_size;
+    memcpy(new_list, old_list, copy_size * old_header->__stride);
+    __raxel_list_destroy(old_list);
+    *list_ptr = new_list;
 }
 
 void __raxel_list_push_back(void **list_ptr, void *data) {
