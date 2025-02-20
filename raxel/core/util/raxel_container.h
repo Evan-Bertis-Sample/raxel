@@ -12,6 +12,7 @@ typedef size_t raxel_size_t;
  *------------------------------------------------------------------------**/
 
 typedef struct raxel_iterator {
+    void *__ctx;
     void *__data;
     void *(*next)(struct raxel_iterator *it);
     void *(*current)(struct raxel_iterator *it);

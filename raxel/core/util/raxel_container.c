@@ -27,8 +27,10 @@ void __raxel_array_destroy(void *array) {
 }
 
 static void *__raxel_array_it_next(raxel_iterator_t *it) {
-    __raxel_array_header_t *header = raxel_array_header(it->__data);
-    return (void *)((char *)it->__data + header->__stride);
+    __raxel_array_header_t *header = it->__ctx;
+    // moove the __data pointer by the stride
+    it->__data = (void *)((char *)it->__data + header->__stride);
+    return it->__data;
 }
 
 static void *__raxel_array_it_current(raxel_iterator_t *it) {
@@ -37,6 +39,7 @@ static void *__raxel_array_it_current(raxel_iterator_t *it) {
 
 raxel_iterator_t raxel_array_iterator(void *array) {
     return (raxel_iterator_t){
+        .__ctx = raxel_array_header(array),
         .__data = array,
         .next = __raxel_array_it_next,
         .current = __raxel_array_it_current};
