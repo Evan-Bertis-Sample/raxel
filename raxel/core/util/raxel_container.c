@@ -78,7 +78,7 @@ void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
     void *new_list = __raxel_list_create(old_header->__allocator, new_capacity, copy_size, old_header->__stride);
     __raxel_list_header_t *new_header = raxel_list_header(new_list);
     // Copy old data to new list
-    // be careful though, new_capacity might be less than old_header->__size
+    
     new_header->__size = copy_size;
     memcpy(new_list, old_list, copy_size * old_header->__stride);
     __raxel_list_destroy(old_list);

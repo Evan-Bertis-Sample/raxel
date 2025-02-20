@@ -93,15 +93,15 @@ RAXEL_TEST(test_array_char) {
 RAXEL_TEST(test_list_creation_push_back) {
     // Create a list of ints with an initial size of 2.
     raxel_allocator_t allocator = raxel_default_allocator();
-    raxel_list(int) mylist = raxel_list_create(int, &allocator, 2);
+    raxel_list(int) mylist = raxel_list_create_size(int, &allocator, 2);
 
     RAXEL_TEST_ASSERT(mylist != NULL);
-    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(mylist), 0); // empty list
+    RAXEL_TEST_ASSERT_EQUAL_INT(raxel_list_size(mylist), 2); // empty list
     RAXEL_TEST_ASSERT(raxel_list_capacity(mylist) >= 2);
 
     // Initialize the first two elements.
-    raxel_list_push_back(mylist, 42);
-    raxel_list_push_back(mylist, 100);
+    mylist[0] = 42;
+    mylist[1] = 100;
 
     // Push back a new element.
     int new_value = 200;
@@ -120,7 +120,7 @@ RAXEL_TEST(test_list_creation_push_back) {
 // 2. Resize list: increasing and then decreasing size.
 RAXEL_TEST(test_list_resize) {
     raxel_allocator_t allocator = raxel_default_allocator();
-    raxel_list(float) flist = raxel_list_create(float, &allocator, 2);
+    raxel_list(float) flist = raxel_list_create_size(float, &allocator, 2);
     flist[0] = 1.1f;
     flist[1] = 2.2f;
 
@@ -146,9 +146,8 @@ RAXEL_TEST(test_list_resize) {
 RAXEL_TEST(test_list_many_push_back) {
     raxel_allocator_t allocator = raxel_default_allocator();
     // Create a list with an initial size of 1.
-    raxel_list(int) list = raxel_list_create(int, &allocator, 1);
+    raxel_list(int) list = raxel_list_create_reserve(int, &allocator, 1);
     // Reset size to 0 to simulate an empty list.
-    // raxel_list_resize(list, 0);
     const int count = 100;
     for (int i = 0; i < count; i++) {
         raxel_list_push_back(list, i);
@@ -163,7 +162,7 @@ RAXEL_TEST(test_list_many_push_back) {
 // 4. List iterator: iterate through list elements.
 RAXEL_TEST(test_list_iterator) {
     raxel_allocator_t allocator = raxel_default_allocator();
-    raxel_list(int) list = raxel_list_create(int, &allocator, 5);
+    raxel_list(int) list = raxel_list_create_size(int, &allocator, 5);
     for (int i = 0; i < 5; i++) {
         list[i] = i + 10;
     }

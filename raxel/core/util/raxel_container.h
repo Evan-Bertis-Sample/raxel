@@ -72,8 +72,12 @@ typedef struct __raxel_list_header {
 
 #define raxel_list(__T) __T *
 
-#define raxel_list_create(type, allocator, size) \
+#define raxel_list_create_size(type, allocator, size) \
     (raxel_list(type)) __raxel_list_create(allocator, size, size, sizeof(type))
+
+#define raxel_list_create_reserve(type, allocator, capacity) \
+    (raxel_list(type)) __raxel_list_create(allocator, capacity, 0, sizeof(type))
+
 
 #define raxel_list_destroy(list) \
     __raxel_list_destroy((void *)list)
