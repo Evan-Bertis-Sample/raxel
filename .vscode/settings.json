@@ -6,6 +6,8 @@
         "*.compute": "hlsl",
         "container.h": "c",
         "util.h": "c",
-        "raxel_pipeline.h": "c"
+        "raxel_pipeline.h": "c",
+        "raxel_voxel.h": "c",
+        "raxel_container.h": "c"
     }
 }
