@@ -2,7 +2,8 @@
 #define __RAXEL_PIPELINE_H__
 
 #include <vulkan.h>
-#include "<raxel/core/util.h>"    // for raxel_allocator_t, raxel_string_t, VK_CHECK, etc.
+
+#include "<raxel/core/util.h>"  // for raxel_allocator_t, raxel_string_t, VK_CHECK, etc.
 #include "raxel_container.h"    // for raxel_list macros
 #include "raxel_surface.h"      // for raxel_surface_t and its callbacks
 
@@ -15,22 +16,22 @@ extern "C" {
 // ----------------------------------------------------------------------------
 typedef struct raxel_pipeline_globals {
     raxel_allocator_t allocator;
-    
+
     // Vulkan objects.
-    VkInstance        instance;
-    VkPhysicalDevice  physicalDevice;
-    VkDevice          device;
-    VkQueue           graphicsQueue;
-    VkQueue           computeQueue;
-    uint32_t          graphicsQueueFamilyIndex;
-    uint32_t          computeQueueFamilyIndex;
-    
+    VkInstance instance;
+    VkPhysicalDevice physicalDevice;
+    VkDevice device;
+    VkQueue graphicsQueue;
+    VkQueue computeQueue;
+    uint32_t graphicsQueueFamilyIndex;
+    uint32_t computeQueueFamilyIndex;
+
     // The Vulkan surface created from the GLFW window.
-    raxel_surface_t  surface;
+    raxel_surface_t surface;
 
     // Command pools.
-    VkCommandPool     graphicsCommandPool;
-    VkCommandPool     computeCommandPool;
+    VkCommandPool graphicsCommandPool;
+    VkCommandPool computeCommandPool;
 
     // (Other global Vulkan objects such as swapchain, descriptor pools, etc.)
 } raxel_pipeline_globals;
@@ -40,7 +41,7 @@ typedef struct raxel_pipeline_globals {
 // ----------------------------------------------------------------------------
 typedef struct raxel_pipeline_pass_resources {
     // Generic resources for the pass that the pipeline manages.
-    VkCommandBuffer commandBuffer; // For example, a command buffer allocated from a pool.
+    VkCommandBuffer commandBuffer;  // For example, a command buffer allocated from a pool.
 } raxel_pipeline_pass_resources_t;
 
 typedef struct raxel_pipeline_pass {
@@ -106,4 +107,4 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline);
 }
 #endif
 
-#endif // __RAXEL_PIPELINE_H__
+#endif  // __RAXEL_PIPELINE_H__
