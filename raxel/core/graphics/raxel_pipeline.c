@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include <raxel/core/util.h>
 #include <raxel/core/graphics/vk.h>
@@ -105,25 +106,41 @@ static void __create_sync_objects(raxel_pipeline_globals *globals) {
 // Swapchain and target helpers
 // -----------------------------------------------------------------------------
 
-static int __create_swapchain(raxel_pipeline_t *pipeline, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
-    raxel_pipeline_globals *globals = &pipeline->resources;
+static int __create_swapchain(raxel_pipeline_globals *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
+    VkSurfaceCapabilitiesKHR surface_caps;
+    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical, globals->surface.context->vk_surface, &surface_caps));
+    
+    // Determine desired image count.
+    uint32_t desired_image_count = surface_caps.minImageCount + 1;
+    if (surface_caps.maxImageCount > 0 && desired_image_count > surface_caps.maxImageCount) {
+        desired_image_count = surface_caps.maxImageCount;
+    }
+    
+    // Use the current extent if provided.
+    VkExtent2D extent;
+    if (surface_caps.currentExtent.width != UINT32_MAX) {
+        extent = surface_caps.currentExtent;
+    } else {
+        extent.width = width;
+        extent.height = height;
+    }
+    
     VkSwapchainCreateInfoKHR create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = globals->surface.context->vk_surface;
-    create_info.minImageCount = 2;
+    create_info.minImageCount = desired_image_count;
     create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
     create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    create_info.imageExtent.width = width;
-    create_info.imageExtent.height = height;
+    create_info.imageExtent = extent;
     create_info.imageArrayLayers = 1;
     create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    create_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    create_info.preTransform = surface_caps.currentTransform;
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     create_info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     create_info.clipped = VK_TRUE;
     VK_CHECK(vkCreateSwapchainKHR(globals->device, &create_info, NULL, &swapchain->swapchain));
-    swapchain->image_count = RAXEL_PIPELINE_TARGET_COUNT;
+
     vkGetSwapchainImagesKHR(globals->device, swapchain->swapchain, &swapchain->image_count, NULL);
     VkImage *images = raxel_malloc(&globals->allocator, sizeof(VkImage) * swapchain->image_count);
     vkGetSwapchainImagesKHR(globals->device, swapchain->swapchain, &swapchain->image_count, images);
@@ -151,8 +168,7 @@ static int __create_swapchain(raxel_pipeline_t *pipeline, int width, int height,
     }
     raxel_free(&globals->allocator, images);
     swapchain->image_format = VK_FORMAT_B8G8R8A8_UNORM;
-    swapchain->extent.width = width;
-    swapchain->extent.height = height;
+    swapchain->extent = extent;
     return 0;
 }
 

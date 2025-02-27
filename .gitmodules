@@ -7,3 +7,6 @@
 [submodule "raxel/vendor/cglm"]
 	path = raxel/vendor/cglm
 	url = https://github.com/recp/cglm.git
+[submodule "raxel/vendor/vulkan-headers"]
+	path = raxel/vendor/vulkan-headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
