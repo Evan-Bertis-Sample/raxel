@@ -10,10 +10,10 @@ extern "C" {
 #endif
 
 // Minimal bounding-box type (using cglm’s vec3)
-typedef struct raxel_bounds3f {
+typedef struct raxel_bvh_bounds_t {
     vec3 min;
     vec3 max;
-} raxel_bounds3f;
+} raxel_bvh_bounds_t;
 
 // Ray structure.
 typedef struct raxel_ray {
@@ -26,7 +26,7 @@ typedef struct raxel_ray {
 // BVH Build Node (temporary tree structure)
 // ----------------------------------------------------------------------
 typedef struct raxel_bvh_build_node {
-    raxel_bounds3f bounds;
+    raxel_bvh_bounds_t bounds;
     int first_prim_offset;   // for leaf nodes
     int n_primitives;        // >0 for leaf, 0 for interior
     int split_axis;          // splitting axis: 0=x, 1=y, 2=z
@@ -37,7 +37,7 @@ typedef struct raxel_bvh_build_node {
 // Linear BVH Node (final, compact representation; 32 bytes each)
 // ----------------------------------------------------------------------
 typedef struct raxel_linear_bvh_node {
-    raxel_bounds3f bounds;
+    raxel_bvh_bounds_t bounds;
     union {
         int primitives_offset;    // for leaf nodes
         int second_child_offset;   // for interior nodes
@@ -65,7 +65,7 @@ typedef struct raxel_bvh_accel {
  * and an array of primitive indices. The BVH is built with a maximum of
  * max_leaf_size primitives per leaf.
  */
-raxel_bvh_accel *raxel_bvh_accel_build(raxel_bounds3f *primitive_bounds,
+raxel_bvh_accel *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
                                        int *primitive_indices,
                                        int n,
                                        int max_leaf_size,

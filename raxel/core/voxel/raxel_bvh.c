@@ -9,15 +9,15 @@
 // ----------------------------------------------------------------------
 // Utility functions for raxel_bounds3f
 // ----------------------------------------------------------------------
-static inline raxel_bounds3f raxel_bounds3f_empty(void) {
-    raxel_bounds3f b;
+static inline raxel_bvh_bounds_t raxel_bounds3f_empty(void) {
+    raxel_bvh_bounds_t b;
     b.min[0] = b.min[1] = b.min[2] = 1e30f;
     b.max[0] = b.max[1] = b.max[2] = -1e30f;
     return b;
 }
 
-static inline raxel_bounds3f raxel_bounds3f_union(const raxel_bounds3f *b, const raxel_bounds3f *c) {
-    raxel_bounds3f ret;
+static inline raxel_bvh_bounds_t raxel_bounds3f_union(const raxel_bvh_bounds_t *b, const raxel_bvh_bounds_t *c) {
+    raxel_bvh_bounds_t ret;
     ret.min[0] = (b->min[0] < c->min[0]) ? b->min[0] : c->min[0];
     ret.min[1] = (b->min[1] < c->min[1]) ? b->min[1] : c->min[1];
     ret.min[2] = (b->min[2] < c->min[2]) ? b->min[2] : c->min[2];
@@ -28,7 +28,7 @@ static inline raxel_bounds3f raxel_bounds3f_union(const raxel_bounds3f *b, const
 }
 
 // Fix: Instead of returning a vec3, we write the centroid into out_centroid.
-static inline void raxel_bounds3f_centroid(const raxel_bounds3f *b, vec3 out_centroid) {
+static inline void raxel_bounds3f_centroid(const raxel_bvh_bounds_t *b, vec3 out_centroid) {
     out_centroid[0] = 0.5f * (b->min[0] + b->max[0]);
     out_centroid[1] = 0.5f * (b->min[1] + b->max[1]);
     out_centroid[2] = 0.5f * (b->min[2] + b->max[2]);
@@ -54,11 +54,11 @@ static void free_raxel_bvh_build_tree(raxel_bvh_build_node *node, raxel_allocato
     raxel_free(allocator, node);
 }
 
-static raxel_bvh_build_node *build_raxel_bvh(raxel_bounds3f *primitive_bounds, int *primitive_indices,
+static raxel_bvh_build_node *build_raxel_bvh(raxel_bvh_bounds_t *primitive_bounds, int *primitive_indices,
                                              int start, int end, int max_leaf_size,
                                              raxel_allocator_t *allocator) {
     raxel_bvh_build_node *node = new_raxel_bvh_build_node(allocator);
-    raxel_bounds3f bounds = raxel_bounds3f_empty();
+    raxel_bvh_bounds_t bounds = raxel_bounds3f_empty();
     for (int i = start; i < end; i++) {
         bounds = raxel_bounds3f_union(&bounds, &primitive_bounds[primitive_indices[i]]);
     }
@@ -71,11 +71,11 @@ static raxel_bvh_build_node *build_raxel_bvh(raxel_bounds3f *primitive_bounds, i
         return node;
     } else {
         // Compute centroid bounds.
-        raxel_bounds3f centroid_bounds = raxel_bounds3f_empty();
+        raxel_bvh_bounds_t centroid_bounds = raxel_bounds3f_empty();
         for (int i = start; i < end; i++) {
             vec3 centroid;
             raxel_bounds3f_centroid(&primitive_bounds[primitive_indices[i]], centroid);
-            raxel_bounds3f tmp;
+            raxel_bvh_bounds_t tmp;
             glm_vec3_copy(centroid, tmp.min);
             glm_vec3_copy(centroid, tmp.max);
             centroid_bounds = raxel_bounds3f_union(&centroid_bounds, &tmp);
@@ -135,7 +135,7 @@ static int flatten_bvh_tree(raxel_bvh_build_node *node, int *offset, raxel_linea
 // ----------------------------------------------------------------------
 // Public BVH Accelerator API
 // ----------------------------------------------------------------------
-raxel_bvh_accel *raxel_bvh_accel_build(raxel_bounds3f *primitive_bounds, int *primitive_indices, int n, int max_leaf_size, raxel_allocator_t *allocator) {
+raxel_bvh_accel *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds, int *primitive_indices, int n, int max_leaf_size, raxel_allocator_t *allocator) {
     raxel_bvh_accel *bvh = (raxel_bvh_accel *)raxel_malloc(allocator, sizeof(raxel_bvh_accel));
     bvh->max_leaf_size = max_leaf_size;
     raxel_bvh_build_node *root = build_raxel_bvh(primitive_bounds, primitive_indices, 0, n, max_leaf_size, allocator);
@@ -147,7 +147,7 @@ raxel_bvh_accel *raxel_bvh_accel_build(raxel_bounds3f *primitive_bounds, int *pr
     return bvh;
 }
 
-static int raxel_bounds3f_intersect_p(const raxel_bounds3f *b, const raxel_ray *ray, const vec3 inv_dir, const int dir_is_neg[3]) {
+static int raxel_bounds3f_intersect_p(const raxel_bvh_bounds_t *b, const raxel_ray *ray, const vec3 inv_dir, const int dir_is_neg[3]) {
     float tmin = ((dir_is_neg[0] ? b->max[0] : b->min[0]) - ray->o[0]) * inv_dir[0];
     float tmax = ((dir_is_neg[0] ? b->min[0] : b->max[0]) - ray->o[0]) * inv_dir[0];
     float tymin = ((dir_is_neg[1] ? b->max[1] : b->min[1]) - ray->o[1]) * inv_dir[1];
