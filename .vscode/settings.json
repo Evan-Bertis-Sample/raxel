@@ -5,6 +5,7 @@
         "*.dbclient-js": "javascript",
         "*.compute": "hlsl",
         "container.h": "c",
-        "util.h": "c"
+        "util.h": "c",
+        "raxel_pipeline.h": "c"
     }
 }

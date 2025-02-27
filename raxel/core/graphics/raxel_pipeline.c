@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "raxel_container.h"  // for raxel_list_create, raxel_list_push_back, etc.
-#include "raxel_core/util.h"  // for raxel_default_allocator(), VK_CHECK, etc.
+#include <raxel/core/util.h>  // for raxel_default_allocator(), VK_CHECK, etc.
 #include "raxel_surface.h"    // for raxel_surface_create, raxel_surface_update, raxel_surface_destroy
 
 #ifndef VK_CHECK

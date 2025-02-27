@@ -2,7 +2,7 @@
 #define __RAXEL_PIPELINE_H__
 
 #include <vulkan/vulkan.h>
-#include "raxel_core/util.h"    // for raxel_allocator_t, raxel_string_t, VK_CHECK, etc.
+#include <raxel/core/util.h>    // for raxel_allocator_t, raxel_string_t, VK_CHECK, etc.
 #include "raxel_container.h"    // for raxel_list macros
 #include "raxel_surface.h"      // for raxel_surface_t and its callbacks
 
@@ -100,10 +100,6 @@ inline raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);
 inline raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index);
 inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name);
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline);
-int raxel_pipeline_create_swapchain(raxel_pipeline_t *pipeline, int width, int height);
-void __raxel_pipeline_destroy_swapchain(raxel_pipeline_t *pipeline);
-int raxel_pipeline_create_targets(raxel_pipeline_t *pipeline, int width, int height);
-void __raxel_pipeline_destroy_targets(raxel_pipeline_t *pipeline);
 void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_target_type_t target);
 void raxel_pipeline_present(raxel_pipeline_t *pipeline);
 void raxel_pipeline_run(raxel_pipeline_t *pipeline);
