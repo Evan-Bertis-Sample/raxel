@@ -96,15 +96,9 @@ typedef struct raxel_pipeline {
 
 raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surface_t surface);
 void raxel_pipeline_destroy(raxel_pipeline_t *pipeline);
-inline void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass) {
-    raxel_list_push_back(pipeline->passes, pass);
-}
-inline raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline) {
-    return raxel_list_size(pipeline->passes);
-}
-inline raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index) {
-    return &pipeline->passes[index];
-}
+void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass);
+raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);
+raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index);
 inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name);
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline);
 void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_target_type_t target);

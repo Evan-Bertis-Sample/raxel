@@ -19,9 +19,20 @@ static void __create_instance(raxel_pipeline_globals *globals) {
     app_info.pApplicationName = "raxel_pipeline_renderer";
     app_info.apiVersion = VK_API_VERSION_1_2;
 
+    // Query required extensions from GLFW.
+    uint32_t glfw_extension_count = 0;
+    const char **glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
+    if (!glfw_extensions) {
+        fprintf(stderr, "Failed to get required GLFW extensions\n");
+        exit(EXIT_FAILURE);
+    }
+
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &app_info;
+    create_info.enabledExtensionCount = glfw_extension_count;
+    create_info.ppEnabledExtensionNames = glfw_extensions;
+    
     VK_CHECK(vkCreateInstance(&create_info, NULL, &globals->instance));
 }
 
@@ -300,7 +311,7 @@ raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surf
     pipeline->resources.cmd_pool_graphics = VK_NULL_HANDLE;
     pipeline->resources.cmd_pool_compute = VK_NULL_HANDLE;
     pipeline->resources.surface = surface;
-    pipeline->passes = raxel_list_create_reserve(raxel_pipeline_t, &pipeline->resources.allocator, 4);
+    pipeline->passes = raxel_list_create_reserve(raxel_pipeline_pass_t, &pipeline->resources.allocator, 4);
     pipeline->surface = surface;
     return pipeline;
 }
@@ -310,6 +321,17 @@ void raxel_pipeline_destroy(raxel_pipeline_t *pipeline) {
     raxel_free(&pipeline->resources.allocator, pipeline);
 }
 
+void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass) {
+    raxel_list_push_back(pipeline->passes, pass);
+}
+
+raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline) {
+    return raxel_list_size(pipeline->passes);
+}
+
+raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_index(raxel_pipeline_t *pipeline, raxel_size_t index) {
+    return &pipeline->passes[index];
+}
 
 raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name) {
     size_t num = raxel_list_size(pipeline->passes);
@@ -329,7 +351,8 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __create_command_pools(&pipeline->resources);
     __create_sync_objects(&pipeline->resources);
     // Create swapchain using surface dimensions.
-    __create_swapchain(&pipeline->resources, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
+    raxel_surface_initialize(&pipeline->surface, pipeline->resources.instance);
+    __create_swapchain(pipeline, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
     __create_targets(&pipeline->resources, &pipeline->targets, pipeline->surface.width, pipeline->surface.height);
     return 0;
 }

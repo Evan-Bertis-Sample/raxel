@@ -19,7 +19,7 @@ static VkSurfaceKHR __create_vk_surface(GLFWwindow *window, VkInstance instance)
     return vk_surface;
 }
 
-raxel_surface_t raxel_surface_create(const char *title, int width, int height, VkInstance instance) {
+raxel_surface_t raxel_surface_create(const char *title, int width, int height) {
     raxel_surface_t surface = {0};
 
     // Allocate and initialize the context.
@@ -29,7 +29,7 @@ raxel_surface_t raxel_surface_create(const char *title, int width, int height, V
         exit(EXIT_FAILURE);
     }
     surface.context->window = __create_glfw_window(width, height, title);
-    surface.context->vk_surface = __create_vk_surface(surface.context->window, instance);
+    surface.context->vk_surface = VK_NULL_HANDLE;
     surface.width = width;
     surface.height = height;
     surface.allocator = raxel_default_allocator();
@@ -42,6 +42,11 @@ raxel_surface_t raxel_surface_create(const char *title, int width, int height, V
     memset(&surface.callbacks, 0, sizeof(surface.callbacks));
 
     return surface;
+}
+
+void raxel_surface_initialize(raxel_surface_t *surface, VkInstance instance) {
+    // Initialize the Vulkan surface.
+    surface->context->vk_surface = __create_vk_surface(surface->context->window, instance);
 }
 
 int raxel_surface_update(raxel_surface_t *surface) {

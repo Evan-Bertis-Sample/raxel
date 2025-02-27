@@ -1,6 +1,7 @@
 #ifndef __RAXEL_SURFACE_H__
 #define __RAXEL_SURFACE_H__
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <raxel/core/graphics/vk.h>
 #include <raxel/core/util.h>
@@ -34,9 +35,9 @@ struct raxel_surface {
 };
 
 // Create a surface.
-// This function creates a GLFW window (with no client API) and then uses it to create a Vulkan surface.
-// 'instance' must be a valid VkInstance.
-raxel_surface_t raxel_surface_create(const char *title, int width, int height, VkInstance instance);
+raxel_surface_t raxel_surface_create(const char *title, int width, int height);
+
+void raxel_surface_initialize(raxel_surface_t *surface, VkInstance instance);
 
 // Update the surface (poll events and invoke callbacks, if set).
 // Returns 0 on success.

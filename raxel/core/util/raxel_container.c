@@ -146,6 +146,7 @@ raxel_string_t raxel_string_create(raxel_allocator_t *allocator, raxel_size_t ca
     string.__capacity = 0;
     string.__data = NULL;
     // Force a minimum capacity of 1.
+
     if (capacity == 0) {
         capacity = 1;
     }

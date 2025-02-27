@@ -5,7 +5,7 @@
 
 int main(void) {
     // Create a surface (for example, with a 800x600 window).
-    raxel_surface_t surface = raxel_surface_create("Red Screen", 800, 600, /*VkInstance*/ NULL);
+    raxel_surface_t surface = raxel_surface_create("Red Screen", 800, 600);
     // In a real app, you would create the VkInstance first and pass it in.
     // Here, we assume raxel_surface_create internally creates the VkSurfaceKHR
     // based on an externally created instance.
