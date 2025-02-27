@@ -126,5 +126,6 @@ char *raxel_string_data(raxel_string_t *string);
 char *raxel_string_to_cstr(raxel_string_t *string);
 void raxel_string_clear(raxel_string_t *string);
 raxel_array(raxel_string_t) raxel_string_split(raxel_string_t *string, char delim);
+#define raxel_string_compare(s1, s2) strcmp(raxel_string_data(s1), raxel_string_data(s2))
 
 #endif  // __RAXEL_CONTAINER_H__

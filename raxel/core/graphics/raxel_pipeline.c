@@ -6,18 +6,8 @@
 #include <string.h>
 
 #include <raxel/core/util.h>
+#include <raxel/core/graphics/vk.h>
 #include "raxel_surface.h"
-
-#ifndef VK_CHECK
-#define VK_CHECK(x)                                     \
-    do {                                                \
-        VkResult err = x;                               \
-        if (err != VK_SUCCESS) {                        \
-            fprintf(stderr, "Vulkan error: %d\n", err); \
-            exit(EXIT_FAILURE);                         \
-        }                                               \
-    } while (0)
-#endif
 
 // -----------------------------------------------------------------------------
 // Internal helper functions (static, snake_case)
@@ -320,23 +310,12 @@ void raxel_pipeline_destroy(raxel_pipeline_t *pipeline) {
     raxel_free(&pipeline->resources.allocator, pipeline);
 }
 
-inline void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass) {
-    raxel_list_push_back(pipeline->passes, pass);
-}
 
-inline raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline) {
-    return raxel_list_size(pipeline->passes);
-}
-
-inline raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index) {
-    return &pipeline->passes[index];
-}
-
-inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name) {
+raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name) {
     size_t num = raxel_list_size(pipeline->passes);
     for (size_t i = 0; i < num; i++) {
         raxel_pipeline_pass_t *pass = &pipeline->passes[i];
-        if (raxel_string_compare(&pass->name, name) == 0) {
+        if (raxel_string_compare(&pass->name, &name) == 0) {
             return pass;
         }
     }
@@ -391,7 +370,7 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
         vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_graphics, NULL);
 
     if (pipeline->resources.swapchain.swapchain)
-        raxel_pipeline_destroy_swapchain(pipeline);
+        __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
 
     if (pipeline->surface.context && pipeline->surface.context->vk_surface)
         vkDestroySurfaceKHR(pipeline->resources.instance, pipeline->surface.context->vk_surface, NULL);

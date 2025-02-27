@@ -1,7 +1,7 @@
 #include "red_pass.h"
 #include <stdlib.h>
 #include <string.h>
-#include <vulkan/vulkan.h>
+#include <raxel/core/graphics/vk.h>
 #include <raxel/core/util.h>
 
 // This pass simply clears the image at swapchain.targets[0] to red.
