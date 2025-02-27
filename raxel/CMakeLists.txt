@@ -109,6 +109,7 @@ add_subdirectory(${RAXEL_ENGINE_VENDOR_DIR}/cglm)
 # Include directories
 target_include_directories(raxel 
     PUBLIC ${RAXEL_PARENT_DIR}
+    PUBLIC ${RAXEL_PARENT_DIR}/include
     PRIVATE ${Vulkan_INCLUDE_DIRS} libs/glfw/include
 )
 

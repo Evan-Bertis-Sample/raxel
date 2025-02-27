@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "raxel_container.h"
-#include "raxel_core/util.h"
+#include <raxel/core/util.h>
 #include "raxel_surface.h"
 
 #ifndef VK_CHECK
@@ -123,7 +122,7 @@ static int __create_swapchain(raxel_pipeline_t *pipeline, int width, int height,
     create_info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     create_info.clipped = VK_TRUE;
     VK_CHECK(vkCreateSwapchainKHR(globals->device, &create_info, NULL, &swapchain->swapchain));
-
+    swapchain->image_count = RAXEL_PIPELINE_TARGET_COUNT;
     vkGetSwapchainImagesKHR(globals->device, swapchain->swapchain, &swapchain->image_count, NULL);
     VkImage *images = raxel_malloc(&globals->allocator, sizeof(VkImage) * swapchain->image_count);
     vkGetSwapchainImagesKHR(globals->device, swapchain->swapchain, &swapchain->image_count, images);
@@ -145,7 +144,7 @@ static int __create_swapchain(raxel_pipeline_t *pipeline, int width, int height,
         view_info.subresourceRange.baseArrayLayer = 0;
         view_info.subresourceRange.layerCount = 1;
         VK_CHECK(vkCreateImageView(globals->device, &view_info, NULL, &swapchain->targets[i].view));
-        swapchain->targets[i].type = RAXEL_PIPELINE_TARGET_SWAPCHAIN;
+        swapchain->targets[i].type = (raxel_pipeline_target_type_t)i;
         swapchain->targets[i].image = images[i];
         swapchain->targets[i].memory = VK_NULL_HANDLE;
     }
@@ -311,32 +310,32 @@ raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surf
     pipeline->resources.cmd_pool_graphics = VK_NULL_HANDLE;
     pipeline->resources.cmd_pool_compute = VK_NULL_HANDLE;
     pipeline->resources.surface = surface;
-    pipeline->__passes = raxel_list_create(raxel_pipeline_pass_t, allocator, 0);
+    pipeline->passes = raxel_list_create_reserve(raxel_pipeline_t, &pipeline->resources.allocator, 4);
     pipeline->surface = surface;
     return pipeline;
 }
 
 void raxel_pipeline_destroy(raxel_pipeline_t *pipeline) {
-    raxel_list_destroy(pipeline->resources.allocator, pipeline->__passes);
-    raxel_free(pipeline->resources.allocator, pipeline);
+    raxel_list_destroy(pipeline->passes);
+    raxel_free(&pipeline->resources.allocator, pipeline);
 }
 
 inline void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass) {
-    raxel_list_push_back(pipeline->__passes, pass);
+    raxel_list_push_back(pipeline->passes, pass);
 }
 
 inline raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline) {
-    return raxel_list_size(pipeline->__passes);
+    return raxel_list_size(pipeline->passes);
 }
 
 inline raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index) {
-    return &pipeline->__passes[index];
+    return &pipeline->passes[index];
 }
 
 inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name) {
-    size_t num = raxel_list_size(pipeline->__passes);
+    size_t num = raxel_list_size(pipeline->passes);
     for (size_t i = 0; i < num; i++) {
-        raxel_pipeline_pass_t *pass = &pipeline->__passes[i];
+        raxel_pipeline_pass_t *pass = &pipeline->passes[i];
         if (raxel_string_compare(&pass->name, name) == 0) {
             return pass;
         }
@@ -370,9 +369,9 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
         if (raxel_surface_update(&pipeline->surface) != 0) {
             break;
         }
-        size_t num_passes = raxel_list_size(pipeline->__passes);
+        size_t num_passes = raxel_list_size(pipeline->passes);
         for (size_t i = 0; i < num_passes; i++) {
-            raxel_pipeline_pass_t *pass = &pipeline->__passes[i];
+            raxel_pipeline_pass_t *pass = &pipeline->passes[i];
             if (pass->on_begin) {
                 pass->on_begin(pass, &pipeline->resources);
             }
@@ -386,8 +385,6 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
 }
 
 void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
-    raxel_array_destroy(&pipeline->resources.allocator, pipeline->__passes);
-
     if (pipeline->resources.cmd_pool_compute)
         vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_compute, NULL);
     if (pipeline->resources.cmd_pool_graphics)
@@ -407,7 +404,7 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
     __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
     __destroy_targets(pipeline);
 
-    raxel_pipeline_destroy(pipeline);
     raxel_surface_destroy(&pipeline->surface);
+    raxel_pipeline_destroy(pipeline);
     free(pipeline->surface.context);
 }

@@ -2,8 +2,7 @@
 #define __RAXEL_PIPELINE_H__
 
 #include <vulkan/vulkan.h>
-#include <raxel/core/util.h>    // for raxel_allocator_t, raxel_string_t, VK_CHECK, etc.
-#include "raxel_container.h"    // for raxel_list macros
+#include <raxel/core/util.h>
 #include "raxel_surface.h"      // for raxel_surface_t and its callbacks
 
 #ifdef __cplusplus
@@ -52,7 +51,6 @@ typedef struct raxel_pipeline_globals {
     VkCommandPool cmd_pool_graphics;
     VkCommandPool cmd_pool_compute;
     raxel_pipeline_swapchain_t swapchain;
-
     VkSemaphore image_available_semaphore;
     VkSemaphore render_finished_semaphore;
 } raxel_pipeline_globals;

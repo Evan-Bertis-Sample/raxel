@@ -2,7 +2,7 @@
 #define __RAXEL_SURFACE_H__
 
 #include <GLFW/glfw3.h>
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 #include <raxel/core/util.h>
 #include <raxel/core/input.h>
 
