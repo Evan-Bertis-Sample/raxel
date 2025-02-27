@@ -17,9 +17,9 @@
     } while (0)
 #endif
 
-// -----------------------------------------------------------------------------
-// Internal helper functions (static, snake_case, __-prefixed)
-// -----------------------------------------------------------------------------
+/**------------------------------------------------------------------------
+ *                           Utility Functions
+ *------------------------------------------------------------------------**/
 
 // Create a Vulkan instance.
 static void __create_instance(raxel_pipeline_globals *globals) {
@@ -45,23 +45,23 @@ static void __pick_physical_device(raxel_pipeline_globals *globals) {
     }
     VkPhysicalDevice *devices = malloc(sizeof(VkPhysicalDevice) * device_count);
     vkEnumeratePhysicalDevices(globals->instance, &device_count, devices);
-    globals->physicalDevice = devices[0];
+    globals->device_physical = devices[0];
     free(devices);
 }
 
 // Create a logical device and retrieve graphics and compute queues.
 static void __create_logical_device(raxel_pipeline_globals *globals) {
     uint32_t queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(globals->physicalDevice, &queue_family_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, NULL);
     VkQueueFamilyProperties *queue_families = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(globals->physicalDevice, &queue_family_count, queue_families);
-    globals->graphicsQueueFamilyIndex = 0;
-    globals->computeQueueFamilyIndex = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, queue_families);
+    globals->index_graphics_queue_family = 0;
+    globals->index_compute_queue_family = 0;
     for (uint32_t i = 0; i < queue_family_count; i++) {
         if ((queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
             (queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
-            globals->graphicsQueueFamilyIndex = i;
-            globals->computeQueueFamilyIndex = i;
+            globals->index_graphics_queue_family = i;
+            globals->index_compute_queue_family = i;
             break;
         }
     }
@@ -70,7 +70,7 @@ static void __create_logical_device(raxel_pipeline_globals *globals) {
     float queue_priority = 1.0f;
     VkDeviceQueueCreateInfo queue_info = {0};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_info.queueFamilyIndex = globals->graphicsQueueFamilyIndex;
+    queue_info.queueFamilyIndex = globals->index_graphics_queue_family;
     queue_info.queueCount = 1;
     queue_info.pQueuePriorities = &queue_priority;
 
@@ -79,47 +79,54 @@ static void __create_logical_device(raxel_pipeline_globals *globals) {
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
     // (Device extensions are omitted for brevity.)
-    VK_CHECK(vkCreateDevice(globals->physicalDevice, &device_info, NULL, &globals->device));
+    VK_CHECK(vkCreateDevice(globals->device_physical, &device_info, NULL, &globals->device));
 
-    vkGetDeviceQueue(globals->device, globals->graphicsQueueFamilyIndex, 0, &globals->graphicsQueue);
-    vkGetDeviceQueue(globals->device, globals->computeQueueFamilyIndex, 0, &globals->computeQueue);
+    vkGetDeviceQueue(globals->device, globals->index_graphics_queue_family, 0, &globals->queue_graphics);
+    vkGetDeviceQueue(globals->device, globals->index_compute_queue_family, 0, &globals->queue_compute);
 }
 
 // Create command pools for graphics and compute.
 static void __create_command_pools(raxel_pipeline_globals *globals) {
     VkCommandPoolCreateInfo pool_info = {0};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_info.queueFamilyIndex = globals->graphicsQueueFamilyIndex;
-    VK_CHECK(vkCreateCommandPool(globals->device, &pool_info, NULL, &globals->graphicsCommandPool));
+    pool_info.queueFamilyIndex = globals->index_graphics_queue_family;
+    VK_CHECK(vkCreateCommandPool(globals->device, &pool_info, NULL, &globals->cmd_pool_grpahics));
 
-    pool_info.queueFamilyIndex = globals->computeQueueFamilyIndex;
-    VK_CHECK(vkCreateCommandPool(globals->device, &pool_info, NULL, &globals->computeCommandPool));
+    pool_info.queueFamilyIndex = globals->index_compute_queue_family;
+    VK_CHECK(vkCreateCommandPool(globals->device, &pool_info, NULL, &globals->cmd_pool_compute));
 }
 
-// -----------------------------------------------------------------------------
-// Global API implementation
-// -----------------------------------------------------------------------------
+/**------------------------------------------------------------------------
+ *                           Public API
+ *------------------------------------------------------------------------**/
 
-int raxel_pipeline_initialize(raxel_pipeline_t *pipeline, const char *surface_title, int width, int height) {
-    // Initialize the allocator.
-    pipeline->resources.allocator = raxel_default_allocator();
+raxel_pipeline_t *raxel_pipeline_create(raxel_acllocator_t *allocator, raxel_surface_t surface) {
+    raxel_pipeline_t *pipeline = raxel_malloc(allocator, sizeof(raxel_pipeline_t));
+    pipeline->resources.allocator = *allocator;
+    pipeline->resources.instance = VK_NULL_HANDLE;
+    pipeline->resources.device_physical = VK_NULL_HANDLE;
+    pipeline->resources.device = VK_NULL_HANDLE;
+    pipeline->resources.queue_graphics = VK_NULL_HANDLE;
+    pipeline->resources.queue_compute = VK_NULL_HANDLE;
+    pipeline->resources.index_graphics_queue_family = 0;
+    pipeline->resources.index_compute_queue_family = 0;
+    pipeline->resources.surface = surface;
+    pipeline->resources.cmd_pool_grpahics = VK_NULL_HANDLE;
+    pipeline->resources.cmd_pool_compute = VK_NULL_HANDLE;
+    pipeline->__passes = raxel_list_create(raxel_pipeline_pass_t, allocator, 0);
+    return pipeline;
+}
 
-    // Initialize Vulkan: create instance, physical device, logical device, and command pools.
+void raxel_pipeline_destroy(raxel_pipeline_t *pipeline) {
+    raxel_list_destroy(pipeline->resources.allocator, pipeline->__passes);
+    raxel_free(pipeline->resources.allocator, pipeline);
+}
+
+int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __create_instance(&pipeline->resources);
     __pick_physical_device(&pipeline->resources);
     __create_logical_device(&pipeline->resources);
     __create_command_pools(&pipeline->resources);
-
-    // Create the surface abstraction.
-    // raxel_surface_create returns a raxel_surface_t that contains a GLFW window and a VkSurfaceKHR.
-    pipeline->surface = raxel_surface_create(surface_title, width, height, pipeline->resources.instance);
-    // Also store the surface in globals.
-    pipeline->resources.surface = pipeline->surface;
-
-    // Initialize the passes list (using your container API).
-    pipeline->passes = raxel_list_create(raxel_pipeline_pass_t, &pipeline->resources.allocator, 0);
-
-    return 0;
 }
 
 void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
@@ -132,9 +139,9 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
             break;
         }
 
-        size_t pass_count = raxel_list_size(pipeline->passes);
+        size_t pass_count = raxel_list_size(pipeline->__passes);
         for (size_t i = 0; i < pass_count; i++) {
-            raxel_pipeline_pass_t *pass = &pipeline->passes[i];
+            raxel_pipeline_pass_t *pass = &pipeline->__passes[i];
             if (pass->on_begin) {
                 pass->on_begin(pass);
             }
@@ -149,13 +156,13 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
 
 void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
     // Clean up passes.
-    raxel_array_destroy(&pipeline->resources.allocator, pipeline->passes);
+    raxel_array_destroy(&pipeline->resources.allocator, pipeline->__passes);
 
     // Destroy command pools.
-    if (pipeline->resources.computeCommandPool)
-        vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.computeCommandPool, NULL);
-    if (pipeline->resources.graphicsCommandPool)
-        vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.graphicsCommandPool, NULL);
+    if (pipeline->resources.cmd_pool_compute)
+        vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_compute, NULL);
+    if (pipeline->resources.cmd_pool_grpahics)
+        vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_grpahics, NULL);
 
     // Destroy the Vulkan surface stored in the surface abstraction.
     if (pipeline->resources.surface.context && pipeline->resources.surface.context->vk_surface)

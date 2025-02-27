@@ -11,34 +11,26 @@
 extern "C" {
 #endif
 
-// ----------------------------------------------------------------------------
-// Global pipeline resources: Vulkan objects and other shared resources.
-// ----------------------------------------------------------------------------
 typedef struct raxel_pipeline_globals {
     raxel_allocator_t allocator;
-
-    // Vulkan objects.
+    // Vulkan resources
     VkInstance instance;
-    VkPhysicalDevice physicalDevice;
+    VkPhysicalDevice device_physical;
     VkDevice device;
-    VkQueue graphicsQueue;
-    VkQueue computeQueue;
-    uint32_t graphicsQueueFamilyIndex;
-    uint32_t computeQueueFamilyIndex;
 
-    // The Vulkan surface created from the GLFW window.
-    raxel_surface_t surface;
+    // Queues
+    VkQueue queue_graphics;
+    VkQueue queue_compute;
+    uint32_t index_graphics_queue_family;
+    uint32_t index_compute_queue_family;
 
-    // Command pools.
-    VkCommandPool graphicsCommandPool;
-    VkCommandPool computeCommandPool;
+    // command pools
+    VkCommandPool cmd_pool_grpahics;
+    VkCommandPool cmd_pool_compute;
 
-    // (Other global Vulkan objects such as swapchain, descriptor pools, etc.)
 } raxel_pipeline_globals;
 
-// ----------------------------------------------------------------------------
-// Base pass structures.
-// ----------------------------------------------------------------------------
+
 typedef struct raxel_pipeline_pass_resources {
     // Generic resources for the pass that the pipeline manages.
     VkCommandBuffer commandBuffer;  // For example, a command buffer allocated from a pool.
@@ -55,52 +47,25 @@ typedef struct raxel_pipeline_pass {
     void (*on_end)(struct raxel_pipeline_pass *pass);
 } raxel_pipeline_pass_t;
 
-// ----------------------------------------------------------------------------
-// Pipeline abstraction: A list of passes and global resources.
-// ----------------------------------------------------------------------------
+
 typedef struct raxel_pipeline {
     raxel_pipeline_globals resources;
-    raxel_list(raxel_pipeline_pass_t) passes;
+    raxel_list(raxel_pipeline_pass_t) __passes;
     // The surface abstraction used for windowing and input.
     raxel_surface_t surface;
 } raxel_pipeline_t;
 
-// ----------------------------------------------------------------------------
-// Global API for the pipeline.
-// ----------------------------------------------------------------------------
 
-/**
- * Initialize the pipeline.
- *
- * This function will:
- *   - Initialize Vulkan (instance, physical device, logical device, queues).
- *   - Create command pools.
- *   - Create the surface using the raxel_surface abstraction.
- *     (The raxel_surface_t is kept in the pipeline; the Vulkan surface is
- *      stored in the globals.)
- *
- * @param pipeline Pointer to a pipeline object to initialize.
- * @param surfaceTitle Title of the window/surface.
- * @param width, height Dimensions for the surface.
- * @return 0 on success, non-zero on failure.
- */
-int raxel_pipeline_initialize(raxel_pipeline_t *pipeline, const char *surfaceTitle, int width, int height);
+raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surface_t surface);
+void raxel_pipeline_destroy(raxel_pipeline_t *pipeline);
 
-/**
- * Run the pipeline.
- *
- * This function polls the surface events (via raxel_surface_update) and
- * iterates over the list of passes calling their callbacks.
- *
- * @param pipeline Pointer to an initialized pipeline.
- */
+inline void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass);
+inline void raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);
+inline void raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index);
+inline void raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, const char *name);
+
+int raxel_pipeline_initialize(raxel_pipeline_t *pipeline);
 void raxel_pipeline_run(raxel_pipeline_t *pipeline);
-
-/**
- * Clean up and destroy the pipeline and all associated Vulkan objects.
- *
- * @param pipeline Pointer to the pipeline to clean up.
- */
 void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline);
 
 #ifdef __cplusplus
