@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <raxel/core/util.h>  // for raxel_default_allocator(), VK_CHECK, etc.
-#include "raxel_surface.h"    // for raxel_surface_create, raxel_surface_update, raxel_surface_destroy
+#include "raxel_container.h"
+#include "raxel_core/util.h"
+#include "raxel_surface.h"
 
 #ifndef VK_CHECK
 #define VK_CHECK(x)                                     \
@@ -20,7 +21,7 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// Internal helper functions (static, snake_case, prefixed with __)
+// Internal helper functions (static, snake_case)
 // -----------------------------------------------------------------------------
 
 static void __create_instance(raxel_pipeline_globals *globals) {
@@ -92,12 +93,20 @@ static void __create_command_pools(raxel_pipeline_globals *globals) {
     VK_CHECK(vkCreateCommandPool(globals->device, &pool_info, NULL, &globals->cmd_pool_compute));
 }
 
+// Create synchronization objects (semaphores) for presentation.
+static void __create_sync_objects(raxel_pipeline_globals *globals) {
+    VkSemaphoreCreateInfo sem_info = {0};
+    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    VK_CHECK(vkCreateSemaphore(globals->device, &sem_info, NULL, &globals->image_available_semaphore));
+    VK_CHECK(vkCreateSemaphore(globals->device, &sem_info, NULL, &globals->render_finished_semaphore));
+}
+
 // -----------------------------------------------------------------------------
 // Swapchain and target helpers
 // -----------------------------------------------------------------------------
 
-// Wrap swapchain images and views into a struct.
-static int __create_swapchain(raxel_pipeline_globals *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
+static int __create_swapchain(raxel_pipeline_t *pipeline, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
+    raxel_pipeline_globals *globals = &pipeline->resources;
     VkSwapchainCreateInfoKHR create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = globals->surface.context->vk_surface;
@@ -116,7 +125,7 @@ static int __create_swapchain(raxel_pipeline_globals *globals, int width, int he
     VK_CHECK(vkCreateSwapchainKHR(globals->device, &create_info, NULL, &swapchain->swapchain));
 
     vkGetSwapchainImagesKHR(globals->device, swapchain->swapchain, &swapchain->image_count, NULL);
-    VkImage *images = malloc(sizeof(VkImage) * swapchain->image_count);
+    VkImage *images = raxel_malloc(&globals->allocator, sizeof(VkImage) * swapchain->image_count);
     vkGetSwapchainImagesKHR(globals->device, swapchain->swapchain, &swapchain->image_count, images);
 
     swapchain->targets = malloc(sizeof(raxel_pipeline_target_t) * swapchain->image_count);
@@ -136,13 +145,11 @@ static int __create_swapchain(raxel_pipeline_globals *globals, int width, int he
         view_info.subresourceRange.baseArrayLayer = 0;
         view_info.subresourceRange.layerCount = 1;
         VK_CHECK(vkCreateImageView(globals->device, &view_info, NULL, &swapchain->targets[i].view));
-        // Set the target type.
         swapchain->targets[i].type = RAXEL_PIPELINE_TARGET_SWAPCHAIN;
-        // Store the image; we don't allocate memory since it's owned by the swapchain.
         swapchain->targets[i].image = images[i];
         swapchain->targets[i].memory = VK_NULL_HANDLE;
     }
-    free(images);
+    raxel_free(&globals->allocator, images);
     swapchain->image_format = VK_FORMAT_B8G8R8A8_UNORM;
     swapchain->extent.width = width;
     swapchain->extent.height = height;
@@ -157,9 +164,9 @@ static void __destroy_swapchain(raxel_pipeline_globals *globals, raxel_pipeline_
     vkDestroySwapchainKHR(globals->device, swapchain->swapchain, NULL);
 }
 
-// Create internal pipeline targets (e.g., color and depth targets).
-static int __create_targets(raxel_pipeline_globals *globals, raxel_pipeline_targets_t *targets, int width, int height) {
-    // Create color target.
+// Create internal pipeline targets.
+static int __create_targets(raxel_pipeline_globals *globals, raxel_pipeline_targets *targets, int width, int height) {
+    // Create the color target.
     VkImageCreateInfo image_info = {0};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -173,18 +180,18 @@ static int __create_targets(raxel_pipeline_globals *globals, raxel_pipeline_targ
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VK_CHECK(vkCreateImage(globals->device, &image_info, NULL, &targets->internal[0].image));
+    VK_CHECK(vkCreateImage(globals->device, &image_info, NULL, &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image));
     VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(globals->device, targets->internal[0].image, &mem_reqs);
+    vkGetImageMemoryRequirements(globals->device, targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image, &mem_reqs);
     VkMemoryAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = mem_reqs.size;
-    alloc_info.memoryTypeIndex = 0;  // WARNING: Naive; select a proper memory type in production.
-    VK_CHECK(vkAllocateMemory(globals->device, &alloc_info, NULL, &targets->internal[0].memory));
-    VK_CHECK(vkBindImageMemory(globals->device, targets->internal[0].image, targets->internal[0].memory, 0));
+    alloc_info.memoryTypeIndex = 0;  // WARNING: This is naive!
+    VK_CHECK(vkAllocateMemory(globals->device, &alloc_info, NULL, &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory));
+    VK_CHECK(vkBindImageMemory(globals->device, targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image, targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory, 0));
     VkImageViewCreateInfo view_info = {0};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = targets->internal[0].image;
+    view_info.image = targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image;
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -192,36 +199,99 @@ static int __create_targets(raxel_pipeline_globals *globals, raxel_pipeline_targ
     view_info.subresourceRange.levelCount = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.layerCount = 1;
-    VK_CHECK(vkCreateImageView(globals->device, &view_info, NULL, &targets->internal[0].view));
-    targets->internal[0].type = RAXEL_PIPELINE_TARGET_COLOR;
+    VK_CHECK(vkCreateImageView(globals->device, &view_info, NULL, &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].view));
+    targets->internal[RAXEL_PIPELINE_TARGET_COLOR].type = RAXEL_PIPELINE_TARGET_COLOR;
 
-    // Create depth target similarly; omitted for brevity.
-    targets->internal[1].image = VK_NULL_HANDLE;
-    targets->internal[1].memory = VK_NULL_HANDLE;
-    targets->internal[1].view = VK_NULL_HANDLE;
-    targets->internal[1].type = RAXEL_PIPELINE_TARGET_DEPTH;
+    // Create depth target similarly (omitted for brevity).
+    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image = VK_NULL_HANDLE;
+    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].memory = VK_NULL_HANDLE;
+    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].view = VK_NULL_HANDLE;
+    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].type = RAXEL_PIPELINE_TARGET_DEPTH;
 
-    // Default debug target is the color target.
     targets->debug_target = RAXEL_PIPELINE_TARGET_COLOR;
     return 0;
 }
 
-static void __present_target(raxel_pipeline_globals *globals, raxel_pipeline_targets_t *targets, raxel_pipeline_swapchain_t *swapchain) {
-    // Choose the source image based on debug_target.
+// Record and submit a command buffer to blit the selected target to a swapchain image.
+static void __present_target(raxel_pipeline_globals *globals, raxel_pipeline_targets *targets, raxel_pipeline_swapchain_t *swapchain) {
     VkImage src_image = targets->internal[targets->debug_target].image;
-    // For brevity, we assume we acquire the first swapchain image.
-    VkSemaphore image_available_semaphore = VK_NULL_HANDLE;  // Should be created properly.
-    uint32_t image_index;
-    VK_CHECK(vkAcquireNextImageKHR(globals->device, swapchain->swapchain, UINT64_MAX,
-                                   image_available_semaphore, VK_NULL_HANDLE, &image_index));
-    // Record and submit a command buffer to blit/copy src_image to the swapchain target.
-    // (The actual blit code is omitted for brevity.)
+
+    // Create a temporary command buffer from the graphics command pool.
+    VkCommandBufferAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = globals->cmd_pool_graphics;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+    VkCommandBuffer cmd_buf;
+    VK_CHECK(vkAllocateCommandBuffers(globals->device, &alloc_info, &cmd_buf));
+
+    // Begin recording.
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
+
+    // (Transition src_image and the swapchain image to proper layouts, then blit.)
+    // For simplicity, assume the images are already in TRANSFER_SRC and TRANSFER_DST layouts.
+    // Record a blit command:
+    VkImageBlit blit = {0};
+    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit.srcSubresource.baseArrayLayer = 0;
+    blit.srcSubresource.layerCount = 1;
+    blit.srcSubresource.mipLevel = 0;
+    blit.srcOffsets[0] = (VkOffset3D){0, 0, 0};
+    blit.srcOffsets[1] = (VkOffset3D){(int32_t)swapchain->extent.width, (int32_t)swapchain->extent.height, 1};
+    blit.dstSubresource = blit.srcSubresource;
+    blit.dstOffsets[0] = (VkOffset3D){0, 0, 0};
+    blit.dstOffsets[1] = (VkOffset3D){(int32_t)swapchain->extent.width, (int32_t)swapchain->extent.height, 1};
+
+    // For brevity, we assume one swapchain image.
+    // In production, you should acquire an image index via vkAcquireNextImageKHR.
+    uint32_t image_index = 0;
+
+    // Transition swapchain image to TRANSFER_DST layout (omitted: add barriers).
+    vkCmdBlitImage(cmd_buf, src_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   swapchain->targets[image_index].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                   1, &blit, VK_FILTER_LINEAR);
+    // Transition swapchain image back to PRESENT_SRC layout (omitted: add barriers).
+
+    VK_CHECK(vkEndCommandBuffer(cmd_buf));
+
+    // Submit the command buffer.
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &cmd_buf;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &globals->image_available_semaphore;
+    VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    submit_info.pWaitDstStageMask = &wait_stages;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = &globals->render_finished_semaphore;
+    VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
+    vkQueueWaitIdle(globals->queue_graphics);
+    vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
+
+    // Present the image.
     VkPresentInfoKHR present_info = {0};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &globals->render_finished_semaphore;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &swapchain->swapchain;
     present_info.pImageIndices = &image_index;
     VK_CHECK(vkQueuePresentKHR(globals->queue_graphics, &present_info));
+}
+
+static void __destroy_targets(raxel_pipeline_t *pipeline) {
+    for (raxel_size_t i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
+        if (pipeline->targets.internal[i].view)
+            vkDestroyImageView(pipeline->resources.device, pipeline->targets.internal[i].view, NULL);
+        if (pipeline->targets.internal[i].image)
+            vkDestroyImage(pipeline->resources.device, pipeline->targets.internal[i].image, NULL);
+        if (pipeline->targets.internal[i].memory)
+            vkFreeMemory(pipeline->resources.device, pipeline->targets.internal[i].memory, NULL);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -279,25 +349,11 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __pick_physical_device(&pipeline->resources);
     __create_logical_device(&pipeline->resources);
     __create_command_pools(&pipeline->resources);
+    __create_sync_objects(&pipeline->resources);
+    // Create swapchain using surface dimensions.
     __create_swapchain(&pipeline->resources, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
     __create_targets(&pipeline->resources, &pipeline->targets, pipeline->surface.width, pipeline->surface.height);
-
     return 0;
-}
-
-
-void __raxel_pipeline_destroy_targets(raxel_pipeline_t *pipeline) {
-    for (raxel_size_t i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
-        if (pipeline->targets.internal[i].image) {
-            vkDestroyImage(pipeline->resources.device, pipeline->targets.internal[i].image, NULL);
-        }
-        if (pipeline->targets.internal[i].memory) {
-            vkFreeMemory(pipeline->resources.device, pipeline->targets.internal[i].memory, NULL);
-        }
-        if (pipeline->targets.internal[i].view) {
-            vkDestroyImageView(pipeline->resources.device, pipeline->targets.internal[i].view, NULL);
-        }
-    }
 }
 
 void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_target_type_t target) {
@@ -338,7 +394,7 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
         vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_graphics, NULL);
 
     if (pipeline->resources.swapchain.swapchain)
-        __raxel_pipeline_destroy_swapchain(pipeline);
+        raxel_pipeline_destroy_swapchain(pipeline);
 
     if (pipeline->surface.context && pipeline->surface.context->vk_surface)
         vkDestroySurfaceKHR(pipeline->resources.instance, pipeline->surface.context->vk_surface, NULL);
@@ -348,8 +404,8 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
     if (pipeline->resources.instance)
         vkDestroyInstance(pipeline->resources.instance, NULL);
 
-    __raxel_pipeline_destroy_swapchain(pipeline);
-    __raxel_pipeline_destroy_targets(pipeline);
+    __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
+    __destroy_targets(pipeline);
 
     raxel_pipeline_destroy(pipeline);
     raxel_surface_destroy(&pipeline->surface);

@@ -52,6 +52,9 @@ typedef struct raxel_pipeline_globals {
     VkCommandPool cmd_pool_graphics;
     VkCommandPool cmd_pool_compute;
     raxel_pipeline_swapchain_t swapchain;
+
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
 } raxel_pipeline_globals;
 
 // -----------------------------------------------------------------------------
