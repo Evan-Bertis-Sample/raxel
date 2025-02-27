@@ -122,6 +122,29 @@ void raxel_pipeline_destroy(raxel_pipeline_t *pipeline) {
     raxel_free(pipeline->resources.allocator, pipeline);
 }
 
+inline void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass) {
+    raxel_list_push_back(pipeline->__passes, pass);
+}
+
+inline raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline) {
+    return raxel_list_size(pipeline->__passes);
+}
+
+inline raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index) {
+    return pipeline->__passes[index];
+}
+
+inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name) {
+    size_t pass_count = raxel_list_size(pipeline->__passes);
+    for (size_t i = 0; i < pass_count; i++) {
+        raxel_pipeline_pass_t *pass = &pipeline->__passes[i];
+        if (raxel_string_compare(&pass->name, name) == 0) {
+            return pass;
+        }
+    }
+    return NULL;
+}
+
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __create_instance(&pipeline->resources);
     __pick_physical_device(&pipeline->resources);

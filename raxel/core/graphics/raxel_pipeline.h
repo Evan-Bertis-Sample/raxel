@@ -60,9 +60,9 @@ raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surf
 void raxel_pipeline_destroy(raxel_pipeline_t *pipeline);
 
 inline void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass);
-inline void raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);
-inline void raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index);
-inline void raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, const char *name);
+inline raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);
+inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name);
+inline raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index);
 
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline);
 void raxel_pipeline_run(raxel_pipeline_t *pipeline);
