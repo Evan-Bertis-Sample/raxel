@@ -26,7 +26,7 @@ int main(void) {
     // Create a compute shader using our compute shader abstraction.
     // For this example, we use a shader that outputs UV coordinates (normalized pixel coordinates).
     // We set the push constant size to 80 bytes (matching our earlier example).
-    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/uv.comp.spv");
+    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/compute.comp.spv");
     
     // Create a compute pass context.
     raxel_compute_pass_context_t compute_ctx = {0};
