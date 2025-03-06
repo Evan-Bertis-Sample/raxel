@@ -76,6 +76,7 @@ typedef struct raxel_pipeline_pass {
     raxel_string_t name;
     raxel_pipeline_pass_resources_t resources;
     void *pass_data;
+    void (*initialize)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals *globals);
     void (*on_begin)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals *globals);
     void (*on_end)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals *globals);
 } raxel_pipeline_pass_t;

@@ -357,7 +357,7 @@ raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_index(raxel_pipeline_t *pipeli
 }
 
 raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name) {
-    size_t num = raxel_list_size(pipeline->passes);
+    raxel_size_t num = raxel_list_size(pipeline->passes);
     for (size_t i = 0; i < num; i++) {
         raxel_pipeline_pass_t *pass = &pipeline->passes[i];
         if (raxel_string_compare(&pass->name, &name) == 0) {
@@ -389,18 +389,29 @@ void raxel_pipeline_present(raxel_pipeline_t *pipeline) {
 }
 
 void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
+    // initialize all passes
+    raxel_size_t num_passes = raxel_list_size(pipeline->passes);
+    for (size_t i = 0; i < num_passes; i++) {
+        raxel_pipeline_pass_t *pass = &pipeline->passes[i];
+        if (pass->initialize) {
+            pass->initialize(pass, &pipeline->resources);
+        }
+    }
+
     while (!glfwWindowShouldClose(pipeline->surface.context->window)) {
         glfwPollEvents();
         if (raxel_surface_update(&pipeline->surface) != 0) {
             break;
         }
-        size_t num_passes = raxel_list_size(pipeline->passes);
+        raxel_size_t num_passes = raxel_list_size(pipeline->passes);
         for (size_t i = 0; i < num_passes; i++) {
             raxel_pipeline_pass_t *pass = &pipeline->passes[i];
             if (pass->on_begin) {
+                // RAXEL_CORE_LOG("Running pass %s\n", raxel_string_to_cstr(&pass->name));
                 pass->on_begin(pass, &pipeline->resources);
             }
             if (pass->on_end) {
+                // RAXEL_CORE_LOG("Ending pass %s\n", raxel_string_to_cstr(&pass->name));
                 pass->on_end(pass, &pipeline->resources);
             }
         }
