@@ -1,0 +1,16 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+
+// Our storage image for output (set=0, binding=0).
+layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
+
+void main() {
+    // Get the size of the image
+    ivec2 imageSize = imageSize(outImage);
+    // Get the current pixel position
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    // Get the normalized pixel position
+    vec2 uv = vec2(pixelCoords) / vec2(imageSize);
+    // Write the pixel color
+    imageStore(outImage, pixelCoords, vec4(uv, 0.0, 1.0));
+}
