@@ -36,9 +36,10 @@ int main(void) {
     compute_ctx.dispatch_y = (HEIGHT + 15) / 16;
     compute_ctx.dispatch_z = 1;
     // Set the blit target to the color target.
-    compute_ctx.blit_target = RAXEL_PIPELINE_TARGET_COLOR;
-    // Use default on_dispatch_finished (which calls raxel_pipeline_present)
-    compute_ctx.on_dispatch_finished = NULL;
+    compute_ctx.targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
+    compute_ctx.targets[1] = -1;
+
+    compute_ctx.on_dispatch_finished = raxel_compute_pass_blit;
     
     // Create the compute pass.
     raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(&compute_ctx);
@@ -47,7 +48,7 @@ int main(void) {
     
     // Optionally, you might add a clear color pass to initialize the internal buffer to a known state.
     // For example:
-    // raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.0f, 0.0f, 1.0f});
+    // raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.0f, 1.0f, 1.0f});
     // raxel_pipeline_add_pass(pipeline, clear_pass);
     
     // Run the pipeline main loop.
