@@ -68,7 +68,7 @@ class RaxelBuildOptions:
         subparser.add_argument(
             "--build-type",
             choices=RaxelBuildType.options_as_strings(),
-            default=str(RaxelBuildType.Release),
+            default=str(RaxelBuildType.Debug),
             help="The build type",
         )
         subparser.add_argument(

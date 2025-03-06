@@ -74,15 +74,22 @@ static void __create_logical_device(raxel_pipeline_globals *globals) {
     queue_info.queueCount = 1;
     queue_info.pQueuePriorities = &queue_priority;
 
+    // Enable the swapchain extension.
+    const char* device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
     VkDeviceCreateInfo device_info = {0};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
+    device_info.enabledExtensionCount = 1;
+    device_info.ppEnabledExtensionNames = device_extensions;
+
     VK_CHECK(vkCreateDevice(globals->device_physical, &device_info, NULL, &globals->device));
 
     vkGetDeviceQueue(globals->device, globals->index_graphics_queue_family, 0, &globals->queue_graphics);
     vkGetDeviceQueue(globals->device, globals->index_compute_queue_family, 0, &globals->queue_compute);
 }
+
 
 static void __create_command_pools(raxel_pipeline_globals *globals) {
     VkCommandPoolCreateInfo pool_info = {0};

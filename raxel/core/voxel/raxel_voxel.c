@@ -54,7 +54,7 @@ raxel_allocator_t raxel_voxel_world_allocator(raxel_size_t max_chunks) {
 
     ctx->list_allocator = raxel_default_allocator();
     // Create free_chunks list with initial capacity max_chunks.
-    ctx->free_chunks = raxel_list_create_reserve(raxel_size_t, &ctx->list_allocator max_chunks);
+    ctx->free_chunks = raxel_list_create_reserve(raxel_size_t, &ctx->list_allocator, max_chunks);
     ctx->used_chunks = raxel_list_create_reserve(raxel_size_t, &ctx->list_allocator, 0);
     // Initially, all chunk indices are free.
     for (raxel_size_t i = 0; i < max_chunks; i++) {
@@ -73,8 +73,8 @@ raxel_allocator_t raxel_voxel_world_allocator(raxel_size_t max_chunks) {
 void raxel_voxel_world_allocator_destroy(raxel_allocator_t *allocator) {
     if (!allocator || !allocator->ctx) return;
     __raxel_voxel_world_allocator_ctx_t *ctx = (__raxel_voxel_world_allocator_ctx_t *)allocator->ctx;
-    raxel_list_destroy(raxel_default_allocator(), ctx->free_chunks);
-    raxel_list_destroy(raxel_default_allocator(), ctx->used_chunks);
+    raxel_list_destroy(ctx->free_chunks);
+    raxel_list_destroy(ctx->used_chunks);
     free(ctx->buffer);
     free(ctx);
     allocator->ctx = NULL;

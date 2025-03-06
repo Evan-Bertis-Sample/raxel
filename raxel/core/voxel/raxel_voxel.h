@@ -2,11 +2,11 @@
 #define __RAXEL_VOXEL_H__
 
 #include <cglm/cglm.h>
+#include <raxel/core/util.h>  // for raxel_allocator_t, raxel_string_t, etc.
 #include <stdint.h>
-#include <raxel/core/util.h>   // for raxel_allocator_t, raxel_string_t, etc.
-#include "raxel_container.h"   // for raxel_list macros
 
 typedef uint8_t raxel_material_handle_t;
+typedef int32_t raxel_chunk_coord_t;
 
 typedef struct raxel_voxel {
     raxel_material_handle_t material;
@@ -15,6 +15,7 @@ typedef struct raxel_voxel {
 #define RAXEL_VOXEL_CHUNK_SIZE 32
 
 typedef struct raxel_voxel_chunk {
+    raxel_chunk_coord_t x, y;
     raxel_voxel_t voxels[RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE];
 } raxel_voxel_chunk_t;
 
@@ -25,14 +26,14 @@ typedef struct raxel_voxel_material {
 
 typedef struct raxel_voxel_world {
     raxel_allocator_t world_allocator;
-    raxel_list(raxel_voxel_chunk_t *) loaded_chunks;    
+    raxel_list(raxel_voxel_chunk_t *) loaded_chunks;
     raxel_list(raxel_voxel_material_t) materials;
 } raxel_voxel_world_t;
 
 // The internal context for our voxel-world allocator.
 typedef struct __raxel_voxel_world_allocator_ctx {
     raxel_size_t max_chunks;
-    void *buffer; // A contiguous block for max_chunks * sizeof(raxel_voxel_chunk_t)
+    void *buffer;  // A contiguous block for max_chunks * sizeof(raxel_voxel_chunk_t)
     raxel_list(raxel_size_t) free_chunks;
     raxel_list(raxel_size_t) used_chunks;
     raxel_allocator_t list_allocator;
@@ -54,4 +55,4 @@ raxel_allocator_t raxel_voxel_world_allocator(raxel_size_t max_chunks);
  */
 void raxel_voxel_world_allocator_destroy(raxel_allocator_t *allocator);
 
-#endif // __RAXEL_VOXEL_H__
+#endif  // __RAXEL_VOXEL_H__
