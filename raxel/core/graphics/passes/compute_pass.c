@@ -76,16 +76,13 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     
     vkDestroyShaderModule(device, comp_module, NULL);
     
-    // Allocate the descriptor set for the compute shader.
     VkDescriptorSetAllocateInfo ds_alloc = {0};
     ds_alloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    // Assume the pipeline has a valid descriptor pool in its resources.
-    // (You may need to add a descriptorPool member to raxel_pipeline_globals.)
-    ds_alloc.descriptorPool = pipeline->resources.allocator.ctx; // For illustration only.
+    ds_alloc.descriptorPool = pipeline->resources.descriptor_pool; // Use the valid descriptor pool.
     ds_alloc.descriptorSetCount = 1;
-    // We need the descriptor set layout; we can reuse desc_set_layout.
     ds_alloc.pSetLayouts = &desc_set_layout;
     VK_CHECK(vkAllocateDescriptorSets(device, &ds_alloc, &shader->descriptor_set));
+    
     
     // Clean up the temporary descriptor set layout.
     vkDestroyDescriptorSetLayout(device, desc_set_layout, NULL);

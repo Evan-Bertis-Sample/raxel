@@ -235,6 +235,23 @@ static int __create_targets(raxel_pipeline_globals *globals, raxel_pipeline_targ
     return 0;
 }
 
+static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
+    VkDescriptorPoolSize poolSizes[2] = {0};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes[0].descriptorCount = RAXEL_PIPELINE_TARGET_COUNT;
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount = 1;
+    
+    VkDescriptorPoolCreateInfo poolInfo = {0};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.maxSets = 2;
+    poolInfo.poolSizeCount = 2;
+    poolInfo.pPoolSizes = poolSizes;
+    VK_CHECK(vkCreateDescriptorPool(pipeline->resources.device, &poolInfo, NULL,
+                                    &pipeline->resources.descriptor_pool));
+    
+}
+
 // Record and submit a command buffer to blit the selected target to a swapchain image.
 static void __present_target(raxel_pipeline_globals *globals, raxel_pipeline_targets *targets, raxel_pipeline_swapchain_t *swapchain) {
     VkImage src_image = targets->internal[targets->debug_target].image;
@@ -377,6 +394,7 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     raxel_surface_initialize(&pipeline->surface, pipeline->resources.instance);
     __create_swapchain(pipeline, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
     __create_targets(&pipeline->resources, &pipeline->targets, pipeline->surface.width, pipeline->surface.height);
+    __create_descriptor_pool(&pipeline);
     return 0;
 }
 
