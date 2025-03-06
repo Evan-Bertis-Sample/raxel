@@ -12,5 +12,5 @@ void main() {
     // Get the normalized pixel position
     vec2 uv = vec2(pixelCoords) / vec2(imageSize);
     // Write the pixel color
-    imageStore(outImage, pixelCoords, vec4(1.0, 1.0, 0.0, 1.0));
+    imageStore(outImage, pixelCoords, vec4(uv, 0.0, 1.0));
 }

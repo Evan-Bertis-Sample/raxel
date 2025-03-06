@@ -102,7 +102,7 @@ typedef struct __raxel_list_header {
         __typeof__(data) __data = data;                          \
         __raxel_list_push_back((void **)&list, (void *)&__data); \
     } while (0)
-
+        
 raxel_iterator_t raxel_list_iterator(void *list);
 
 /**------------------------------------------------------------------------
