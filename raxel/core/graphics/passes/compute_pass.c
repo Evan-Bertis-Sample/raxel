@@ -3,12 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <vulkan/vulkan.h>
-#include <raxel/core/util.h>
 #include <raxel/core/graphics.h>
-
-// -----------------------------------------------------------------------------
-// Compute Shader Implementation
-// -----------------------------------------------------------------------------
 
 // Internal helper: load a shader module from a SPIR-V file.
 static VkShaderModule __load_shader_module(VkDevice device, const char *path) {
@@ -38,7 +33,7 @@ static VkShaderModule __load_shader_module(VkDevice device, const char *path) {
     return shader_module;
 }
 
-raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path, size_t push_data_size) {
+raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path) {
     VkDevice device = pipeline->resources.device;
     raxel_compute_shader_t *shader = malloc(sizeof(raxel_compute_shader_t));
     if (!shader) {
@@ -47,15 +42,24 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     }
     VkShaderModule comp_module = __load_shader_module(device, shader_path);
     
-    VkPushConstantRange pc_range = {0};
-    pc_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    pc_range.offset = 0;
-    pc_range.size = push_data_size;
+    // Create a descriptor set layout for a storage image (set=0, binding=0).
+    VkDescriptorSetLayoutBinding binding = {0};
+    binding.binding = 0;
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    VkDescriptorSetLayoutCreateInfo layout_info = {0};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 1;
+    layout_info.pBindings = &binding;
+    VkDescriptorSetLayout desc_set_layout;
+    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &desc_set_layout));
     
+    // Create a pipeline layout with the descriptor set layout.
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &pc_range;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &desc_set_layout;
     VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, NULL, &shader->pipeline_layout));
     
     VkPipelineShaderStageCreateInfo stage_info = {0};
@@ -71,18 +75,12 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &shader->pipeline));
     
     vkDestroyShaderModule(device, comp_module, NULL);
-    
-    shader->__push_layout = raxel_list_create_size(raxel_push_constant_entry_t, &pipeline->resources.allocator, 0);
-    // For demonstration, add two entries: "view" (offset 0, size 64) and "fov" (offset 64, size 4).
-    raxel_push_constant_entry_t entry_view = { "view", 0, 64 };
-    raxel_list_push_back(shader->__push_layout, entry_view);
-    raxel_push_constant_entry_t entry_fov = { "fov", 64, 4 };
-    raxel_list_push_back(shader->__push_layout, entry_fov);
-    
-    shader->push_data_size = push_data_size;
-    // shader->push_data = malloc(push_data_size);
-    // memset(shader->push_data, 0, push_data_size);
+    // (In a full implementation you would allocate and update a descriptor set.
+    // For now, we assume that will be done externally.)
     shader->descriptor_set = VK_NULL_HANDLE;
+    
+    // Clean up the descriptor set layout if not needed further.
+    vkDestroyDescriptorSetLayout(device, desc_set_layout, NULL);
     return shader;
 }
 
@@ -90,21 +88,14 @@ void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline
     VkDevice device = pipeline->resources.device;
     vkDestroyPipeline(device, shader->pipeline, NULL);
     vkDestroyPipelineLayout(device, shader->pipeline_layout, NULL);
-    free(shader->push_data);
-    raxel_list_destroy(shader->__push_layout);
     free(shader);
 }
 
 void raxel_compute_shader_push_constant(raxel_compute_shader_t *shader, const char *name, const void *data) {
-    size_t count = raxel_list_size(shader->__push_layout);
-    for (size_t i = 0; i < count; i++) {
-        raxel_push_constant_entry_t *entry = &shader->__push_layout[i];
-        if (strcmp(entry->name, name) == 0) {
-            memcpy((char *)shader->push_data + entry->offset, data, entry->size);
-            return;
-        }
-    }
-    RAXEL_CORE_LOG_ERROR("Push constant not found: %s\n", name);
+    // Not used in this minimal version.
+    (void)shader;
+    (void)name;
+    (void)data;
 }
 
 // -----------------------------------------------------------------------------
@@ -114,6 +105,7 @@ void raxel_compute_shader_push_constant(raxel_compute_shader_t *shader, const ch
 static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = pipeline->resources.device;
+    
     VkCommandBufferAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.commandPool = pipeline->resources.cmd_pool_compute;
@@ -128,15 +120,14 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t 
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
     
+    // Bind the compute pipeline.
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, ctx->compute_shader->pipeline);
     if (ctx->compute_shader->descriptor_set != VK_NULL_HANDLE) {
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, ctx->compute_shader->pipeline_layout,
                                 0, 1, &ctx->compute_shader->descriptor_set, 0, NULL);
     }
-
-    // vkCmdPushConstants(cmd_buf, ctx->compute_shader->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
-    //                    0, ctx->compute_shader->push_data_size, ctx->compute_shader->push_data);
     
+    // Dispatch compute work.
     vkCmdDispatch(cmd_buf, ctx->dispatch_x, ctx->dispatch_y, ctx->dispatch_z);
     
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
@@ -158,19 +149,22 @@ static void compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_t *p
     if (ctx->on_dispatch_finished) {
         ctx->on_dispatch_finished(ctx, pipeline);
     } else {
+        // Default: blit the computed result into the pipeline target.
         raxel_compute_pass_blit(ctx, pipeline);
     }
 }
 
+// Default blit callback: Copy (blit) the computed output into the pipeline target image.
 void raxel_compute_pass_blit(raxel_compute_pass_context_t *context, raxel_pipeline_t *pipeline) {
     VkDevice device = pipeline->resources.device;
-    // Determine source image: use context->output_image if provided; otherwise, use the internal target.
+    // Determine the source image: if context->output_image is provided, use it;
+    // otherwise use the internal target indicated by blit_target.
     VkImage src_image = (context->output_image != VK_NULL_HANDLE) ?
                         context->output_image :
                         pipeline->targets.internal[context->blit_target].image;
-    // The destination is the pipeline target image.
+    // Destination: update the pipeline target (for instance, the color target).
     VkImage dst_image = pipeline->targets.internal[context->blit_target].image;
-
+    
     // Allocate a temporary command buffer from the graphics command pool.
     VkCommandBufferAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -179,15 +173,13 @@ void raxel_compute_pass_blit(raxel_compute_pass_context_t *context, raxel_pipeli
     alloc_info.commandBufferCount = 1;
     VkCommandBuffer cmd_buf;
     VK_CHECK(vkAllocateCommandBuffers(device, &alloc_info, &cmd_buf));
-
-    // Begin recording the command buffer.
+    
     VkCommandBufferBeginInfo begin_info = {0};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
-
-    // For simplicity, assume both images are already in the appropriate transfer layouts.
-    // Here we blit the entire image.
+    
+    // Setup a blit from the computed result (src_image) to the pipeline target (dst_image).
     VkExtent2D extent = pipeline->resources.swapchain.extent;
     VkImageBlit blit = {0};
     blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -196,31 +188,31 @@ void raxel_compute_pass_blit(raxel_compute_pass_context_t *context, raxel_pipeli
     blit.srcSubresource.layerCount = 1;
     blit.srcOffsets[0] = (VkOffset3D){0, 0, 0};
     blit.srcOffsets[1] = (VkOffset3D){(int32_t)extent.width, (int32_t)extent.height, 1};
-
+    
     blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit.dstSubresource.mipLevel = 0;
     blit.dstSubresource.baseArrayLayer = 0;
     blit.dstSubresource.layerCount = 1;
     blit.dstOffsets[0] = (VkOffset3D){0, 0, 0};
     blit.dstOffsets[1] = (VkOffset3D){(int32_t)extent.width, (int32_t)extent.height, 1};
-
+    
+    // Record the blit command.
+    // (Assume both src_image and dst_image are already in appropriate transfer layouts.)
     vkCmdBlitImage(cmd_buf, src_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                    dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                    1, &blit, VK_FILTER_LINEAR);
-
+    
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
-
+    
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &cmd_buf;
-    // We assume synchronization (and proper layout transitions) is handled elsewhere.
     VK_CHECK(vkQueueSubmit(pipeline->resources.queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
     vkQueueWaitIdle(pipeline->resources.queue_graphics);
     vkFreeCommandBuffers(device, pipeline->resources.cmd_pool_graphics, 1, &cmd_buf);
-
-    // Do not call vkQueuePresentKHR here.
-    // The pipeline's present() function will use the target image to present on screen.
+    
+    // Do not call present here; the pipeline's main loop later will call raxel_pipeline_present().
 }
 
 raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *context) {
@@ -231,5 +223,6 @@ raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *co
     pass.pass_data = context;
     pass.on_begin = compute_pass_on_begin;
     pass.on_end = compute_pass_on_end;
+    pass.allocator = allocator;
     return pass;
 }

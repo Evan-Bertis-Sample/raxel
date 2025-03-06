@@ -5,34 +5,23 @@
 #include <cglm/cglm.h>
 
 // -----------------------------------------------------------------------------
-// Compute Shader Abstraction
+// Compute Shader Abstraction (no push constants for now)
 // -----------------------------------------------------------------------------
-
-typedef struct raxel_push_constant_entry {
-    char *name;      // e.g. "view" or "fov"
-    size_t offset;   // Offset into the push constant buffer.
-    size_t size;     // Size of this constant.
-} raxel_push_constant_entry_t;
-
 typedef struct raxel_compute_shader {
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
-    VkDescriptorSet descriptor_set; // Optional.
-    raxel_list(raxel_push_constant_entry_t) __push_layout; // Private push constant layout.
-    void *push_data;      // Buffer holding push constant data.
-    size_t push_data_size; // Total size.
+    VkDescriptorSet descriptor_set; // Bound to a storage image (set=0, binding=0)
 } raxel_compute_shader_t;
 
 /**
  * Create a compute shader from a SPIR-V binary.
- * The pipeline pointer is used to get Vulkan resources.
+ * Uses the pipeline’s device.
  *
  * @param pipeline Pointer to the pipeline.
  * @param shader_path File path to the SPIR-V compute shader.
- * @param push_data_size Total size for the push constant buffer.
  * @return Pointer to a newly created compute shader.
  */
-raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path, size_t push_data_size);
+raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path);
 
 /**
  * Destroy a compute shader.
@@ -42,15 +31,6 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
  */
 void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline);
 
-/**
- * Push a constant value by name into the compute shader’s push constant buffer.
- *
- * @param shader Pointer to the compute shader.
- * @param name The name of the push constant.
- * @param data Pointer to the data.
- */
-void raxel_compute_shader_push_constant(raxel_compute_shader_t *shader, const char *name, const void *data);
-
 // -----------------------------------------------------------------------------
 // Compute Pass Context
 // -----------------------------------------------------------------------------
@@ -59,16 +39,20 @@ typedef struct raxel_compute_pass_context {
     uint32_t dispatch_x;
     uint32_t dispatch_y;
     uint32_t dispatch_z;
-    // Which target to blit from; for example, RAXEL_PIPELINE_TARGET_COLOR.
+    // Which internal target to use for blitting the compute result.
     raxel_pipeline_target_type_t blit_target;
-    // Optional output image from the compute shader. If VK_NULL_HANDLE, then use the internal target.
+    // Optional: if non-null, use this image as the computed result.
     VkImage output_image;
-    // Callback invoked after dispatch finishes. If NULL, the default blit is used.
+    // Callback invoked after dispatch finishes.
+    // If NULL, the default blit callback is used.
     void (*on_dispatch_finished)(struct raxel_compute_pass_context *context, raxel_pipeline_t *pipeline);
 } raxel_compute_pass_context_t;
 
 /**
- * Default blit callback: Copies the computed result (source image) into the pipeline target.
+ * Default blit callback: Blit the computed result into the pipeline target.
+ * This function copies from the compute output (either context->output_image, or the
+ * internal target specified by blit_target) into the pipeline's target image.
+ * Presentation is handled later by the pipeline's present() function.
  */
 void raxel_compute_pass_blit(raxel_compute_pass_context_t *context, raxel_pipeline_t *pipeline);
 
