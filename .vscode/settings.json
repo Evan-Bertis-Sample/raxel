@@ -8,6 +8,8 @@
         "util.h": "c",
         "raxel_pipeline.h": "c",
         "raxel_voxel.h": "c",
-        "raxel_container.h": "c"
+        "raxel_container.h": "c",
+        "vulkan.h": "c",
+        "vk.h": "c"
     }
 }

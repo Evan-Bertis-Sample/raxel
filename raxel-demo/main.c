@@ -1,6 +1,6 @@
 #include <raxel/core/util.h>
 #include <raxel/core/graphics.h>
-#include <raxel/core/graphics/passes/red_pass.h>
+#include <raxel/core/graphics/passes/clear_color_pass.h>
 
 
 int main(void) {
@@ -26,7 +26,9 @@ int main(void) {
     raxel_pipeline_set_debug_target(pipeline, RAXEL_PIPELINE_TARGET_COLOR);
 
     // Add our red pass to the pipeline.
-    raxel_pipeline_add_pass(pipeline, red_pass_create());
+    raxel_pipeline_pass_t color_pass = clear_color_pass_create((vec4){1.0f, 0.0f, 0.0f, 1.0f});
+    
+    raxel_pipeline_add_pass(pipeline, color_pass);
 
     // Run the pipeline main loop.
     raxel_pipeline_run(pipeline);
