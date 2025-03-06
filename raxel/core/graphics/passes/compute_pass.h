@@ -40,7 +40,7 @@ typedef struct raxel_compute_pass_context {
     uint32_t dispatch_y;
     uint32_t dispatch_z;
     // Which internal target to use for blitting the compute result.
-    raxel_pipeline_target_type_t blit_target;
+    raxel_pipeline_target_type_t targets[RAXEL_PIPELINE_TARGET_COUNT];
     // Optional: if non-null, use this image as the computed result.
     VkImage output_image;
     // Callback invoked after dispatch finishes.
