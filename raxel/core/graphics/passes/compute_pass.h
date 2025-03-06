@@ -4,13 +4,12 @@
 #include <raxel/core/graphics.h>
 #include <cglm/cglm.h>
 
-// -----------------------------------------------------------------------------
-// Compute Shader Abstraction (no push constants for now)
-// -----------------------------------------------------------------------------
+
 typedef struct raxel_compute_shader {
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
     VkDescriptorSet descriptor_set; // Bound to a storage image (set=0, binding=0)
+    raxel_pc_buffer_t push_constants;
 } raxel_compute_shader_t;
 
 /**
@@ -41,6 +40,7 @@ typedef struct raxel_compute_pass_context {
     uint32_t dispatch_z;
     // Which internal target to use for blitting the compute result.
     raxel_pipeline_target_type_t targets[RAXEL_PIPELINE_TARGET_COUNT];
+    raxel_pc_buffer_desc_t pc_desc;
     // Optional: if non-null, use this image as the computed result.
     VkImage output_image;
     // Callback invoked after dispatch finishes.

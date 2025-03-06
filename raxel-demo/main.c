@@ -26,7 +26,7 @@ int main(void) {
     // Create a compute shader using our compute shader abstraction.
     // For this example, we use a shader that outputs UV coordinates (normalized pixel coordinates).
     // We set the push constant size to 80 bytes (matching our earlier example).
-    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/compute.comp.spv");
+    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/uv.comp.spv");
     
     // Create a compute pass context.
     raxel_compute_pass_context_t compute_ctx = {0};
@@ -38,6 +38,19 @@ int main(void) {
     // Set the blit target to the color target.
     compute_ctx.targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
     compute_ctx.targets[1] = -1;
+
+    compute_ctx.pc_desc = RAXEL_PC_DESC(
+        (raxel_pc_entry_t){
+            .name = "view",
+            .offset = 0,
+            .size = 16 * sizeof(float),
+        },
+        (raxel_pc_entry_t){
+            .name = "fov",
+            .offset = 16 * sizeof(float),
+            .size = sizeof(float),
+        }       
+    );
 
     compute_ctx.on_dispatch_finished = raxel_compute_pass_blit;
     
