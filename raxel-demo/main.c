@@ -29,17 +29,17 @@ int main(void) {
     raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/uv.comp.spv");
     
     // Create a compute pass context.
-    raxel_compute_pass_context_t compute_ctx = {0};
+    raxel_compute_pass_context_t *compute_ctx = raxel_malloc(&allocator, sizeof(raxel_compute_pass_context_t));
 
-    compute_ctx.dispatch_x = (WIDTH + 15) / 16;
-    compute_ctx.compute_shader = compute_shader;
-    compute_ctx.dispatch_y = (HEIGHT + 15) / 16;
-    compute_ctx.dispatch_z = 1;
+    compute_ctx->dispatch_x = (WIDTH + 15) / 16;
+    compute_ctx->compute_shader = compute_shader;
+    compute_ctx->dispatch_y = (HEIGHT + 15) / 16;
+    compute_ctx->dispatch_z = 1;
     // Set the blit target to the color target.
-    compute_ctx.targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
-    compute_ctx.targets[1] = -1;
+    compute_ctx->targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
+    compute_ctx->targets[1] = -1;
 
-    compute_ctx.pc_desc = RAXEL_PC_DESC(
+    compute_ctx->pc_desc = RAXEL_PC_DESC(
         (raxel_pc_entry_t){
             .name = "view",
             .offset = 0,
@@ -52,10 +52,10 @@ int main(void) {
         }       
     );
 
-    compute_ctx.on_dispatch_finished = raxel_compute_pass_blit;
+    compute_ctx->on_dispatch_finished = raxel_compute_pass_blit;
     
-    // Create the compute pass.
-    raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(&compute_ctx);
+    // Create the compute pass.rax
+    raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(compute_ctx);
     // Add the compute pass to the pipeline.
     raxel_pipeline_add_pass(pipeline, compute_pass);
     
