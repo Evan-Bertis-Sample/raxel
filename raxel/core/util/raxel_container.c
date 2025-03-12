@@ -21,6 +21,7 @@ void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxe
     return (void *)((char *)block + header_size);
 }
 
+
 void __raxel_array_destroy(void *array) {
     if (!array) return;
     __raxel_array_header_t *header = raxel_array_header(array);

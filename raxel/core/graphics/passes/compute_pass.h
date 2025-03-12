@@ -2,6 +2,7 @@
 #define __COMPUTE_PASS_H__
 
 #include <raxel/core/graphics.h>
+#include <raxel/core/util.h>
 #include <cglm/cglm.h>
 
 
@@ -45,6 +46,8 @@ typedef struct raxel_compute_pass_context {
     VkImage output_image;
     // Callback invoked after dispatch finishes.
     // If NULL, the default blit callback is used.
+    VkDescriptorImageInfo *image_infos;
+    raxel_size_t num_image_infos;
     void (*on_dispatch_finished)(struct raxel_compute_pass_context *context, raxel_pipeline_t *pipeline);
 } raxel_compute_pass_context_t;
 

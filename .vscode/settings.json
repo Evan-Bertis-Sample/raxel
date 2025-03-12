@@ -11,6 +11,7 @@
         "raxel_container.h": "c",
         "vulkan.h": "c",
         "vk.h": "c",
-        "graphics.h": "c"
+        "graphics.h": "c",
+        "array": "c"
     }
 }

@@ -27,7 +27,7 @@ typedef struct raxel_iterator {
  *------------------------------------------------------------------------**/
 
 void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxel_size_t stride);
-inline void __raxel_array_destroy(void *array);
+void __raxel_array_destroy(void *array);
 
 typedef struct __raxel_array_header {
     raxel_size_t __size;
@@ -59,7 +59,7 @@ raxel_iterator_t raxel_array_iterator(void *array);
  *------------------------------------------------------------------------**/
 
 void *__raxel_list_create(raxel_allocator_t *allocator, raxel_size_t capacity, raxel_size_t size, raxel_size_t stride);
-inline void __raxel_list_destroy(void *list);
+void __raxel_list_destroy(void *list);
 void __raxel_list_resize(void **list, raxel_size_t size);
 void __raxel_list_push_back(void **list, void *data);
 

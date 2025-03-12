@@ -1,10 +1,10 @@
 #include "compute_pass.h"
 
 #include <raxel/core/graphics.h>
+#include <raxel/core/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <vulkan/vulkan.h>
 
 // Internal helper: load a shader module from a SPIR-V file.
 static VkShaderModule __load_shader_module(VkDevice device, const char *path) {
@@ -108,38 +108,45 @@ void raxel_compute_shader_push_constant(raxel_compute_shader_t *shader, const ch
 // Compute Pass Implementation
 // -----------------------------------------------------------------------------
 
-// In on_begin, update the compute shader's descriptor set based on the compute context targets.
-static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
+static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = pipeline->resources.device;
 
     // Count valid targets in the context's targets array.
     int valid_count = 0;
     for (int i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
-        if (ctx->targets[i] == -1)
+        RAXEL_CORE_LOG("ctx->targets[%d]: %d\n", i, ctx->targets[i]);
+        if (ctx->targets[i] < 0)
             break;
         valid_count++;
     }
+    valid_count -= 1;  // Exclude the sentinel value.
 
     // Build an array of descriptor image infos from the pipeline's targets.
-    VkDescriptorImageInfo *imageInfos = malloc(valid_count * sizeof(VkDescriptorImageInfo));
+    ctx->image_infos = raxel_malloc(&pipeline->resources.allocator, valid_count * sizeof(VkDescriptorImageInfo));
+    RAXEL_CORE_LOG("valid_count: %d\n", valid_count);
     for (int i = 0; i < valid_count; i++) {
         int target_index = ctx->targets[i];
-        imageInfos[i].imageView = pipeline->targets.internal[target_index].view;
-        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageInfos[i].sampler = VK_NULL_HANDLE;
+        ctx->image_infos[i].imageView = pipeline->targets.internal[target_index].view;
+        ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
+}
+
+// In on_begin, update the compute shader's descriptor set based on the compute context targets.
+static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
+    raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
+    VkDevice device = pipeline->resources.device;
 
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = ctx->compute_shader->descriptor_set;
     write.dstBinding = 0;
     write.dstArrayElement = 0;
-    write.descriptorCount = valid_count;
+    write.descriptorCount = ctx->num_image_infos;
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    write.pImageInfo = imageInfos;
+    write.pImageInfo = ctx->image_infos;
     vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-    free(imageInfos);
 
     // Allocate a command buffer.
     VkCommandBufferAllocateInfo alloc_info = {0};
@@ -250,6 +257,7 @@ raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *co
     pass.name = raxel_string_create(&allocator, strlen("compute_pass") + 1);
     raxel_string_append(&pass.name, "compute_pass");
     pass.pass_data = context;
+    pass.initialize = compute_pass_initialize;
     pass.on_begin = compute_pass_on_begin;
     pass.on_end = compute_pass_on_end;
     pass.allocator = allocator;
