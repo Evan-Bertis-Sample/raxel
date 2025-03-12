@@ -7,7 +7,6 @@
 #include <raxel/core/util.h>
 #include <raxel/core/input.h>
 
-// Use snake_case for everything.
 typedef int raxel_surface_size_t;
 typedef struct raxel_surface raxel_surface_t;
 
@@ -21,8 +20,7 @@ typedef struct raxel_surface_callbacks {
 
 typedef struct raxel_surface_context {
     GLFWwindow *window;
-    VkSurfaceKHR vk_surface;  // Vulkan surface is now a part of the context.
-    // You can add additional Vulkan-specific members if needed.
+    VkSurfaceKHR vk_surface;
 } raxel_surface_context_t;
 
 struct raxel_surface {

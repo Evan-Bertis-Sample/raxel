@@ -14,7 +14,7 @@
 // Internal helper functions (static, snake_case)
 // -----------------------------------------------------------------------------
 
-static void __create_instance(raxel_pipeline_globals *globals) {
+static void __create_instance(raxel_pipeline_globals_t *globals) {
     VkApplicationInfo app_info = {0};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName = "raxel_pipeline_renderer";
@@ -37,7 +37,7 @@ static void __create_instance(raxel_pipeline_globals *globals) {
     VK_CHECK(vkCreateInstance(&create_info, NULL, &globals->instance));
 }
 
-static void __pick_physical_device(raxel_pipeline_globals *globals) {
+static void __pick_physical_device(raxel_pipeline_globals_t *globals) {
     uint32_t device_count = 0;
     vkEnumeratePhysicalDevices(globals->instance, &device_count, NULL);
     if (device_count == 0) {
@@ -50,7 +50,7 @@ static void __pick_physical_device(raxel_pipeline_globals *globals) {
     free(devices);
 }
 
-static void __create_logical_device(raxel_pipeline_globals *globals) {
+static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, NULL);
     VkQueueFamilyProperties *queue_families = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
@@ -91,7 +91,7 @@ static void __create_logical_device(raxel_pipeline_globals *globals) {
 }
 
 
-static void __create_command_pools(raxel_pipeline_globals *globals) {
+static void __create_command_pools(raxel_pipeline_globals_t *globals) {
     VkCommandPoolCreateInfo pool_info = {0};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_info.queueFamilyIndex = globals->index_graphics_queue_family;
@@ -102,7 +102,7 @@ static void __create_command_pools(raxel_pipeline_globals *globals) {
 }
 
 // Create synchronization objects (semaphores) for presentation.
-static void __create_sync_objects(raxel_pipeline_globals *globals) {
+static void __create_sync_objects(raxel_pipeline_globals_t *globals) {
     VkSemaphoreCreateInfo sem_info = {0};
     sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     VK_CHECK(vkCreateSemaphore(globals->device, &sem_info, NULL, &globals->image_available_semaphore));
@@ -113,7 +113,7 @@ static void __create_sync_objects(raxel_pipeline_globals *globals) {
 // Swapchain and target helpers
 // -----------------------------------------------------------------------------
 
-static int __create_swapchain(raxel_pipeline_globals *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
+static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
     VkSurfaceCapabilitiesKHR surface_caps;
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical, globals->surface.context->vk_surface, &surface_caps));
     
@@ -179,7 +179,7 @@ static int __create_swapchain(raxel_pipeline_globals *globals, int width, int he
     return 0;
 }
 
-static void __destroy_swapchain(raxel_pipeline_globals *globals, raxel_pipeline_swapchain_t *swapchain) {
+static void __destroy_swapchain(raxel_pipeline_globals_t *globals, raxel_pipeline_swapchain_t *swapchain) {
     for (uint32_t i = 0; i < swapchain->image_count; i++) {
         vkDestroyImageView(globals->device, swapchain->targets[i].view, NULL);
     }
@@ -188,7 +188,7 @@ static void __destroy_swapchain(raxel_pipeline_globals *globals, raxel_pipeline_
 }
 
 // Create internal pipeline targets.
-static int __create_targets(raxel_pipeline_globals *globals, raxel_pipeline_targets *targets, int width, int height) {
+static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_targets_t *targets, int width, int height) {
     // Create the color target.
     VkImageCreateInfo image_info = {0};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -251,7 +251,7 @@ static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
 }
 
 // Record and submit a command buffer to blit the selected target to a swapchain image.
-static void __present_target(raxel_pipeline_globals *globals, raxel_pipeline_targets *targets, raxel_pipeline_swapchain_t *swapchain) {
+static void __present_target(raxel_pipeline_globals_t *globals, raxel_pipeline_targets_t *targets, raxel_pipeline_swapchain_t *swapchain) {
     VkImage src_image = targets->internal[targets->debug_target].image;
 
     // Create a temporary command buffer from the graphics command pool.
@@ -323,12 +323,12 @@ static void __present_target(raxel_pipeline_globals *globals, raxel_pipeline_tar
 
 static void __destroy_targets(raxel_pipeline_t *pipeline) {
     for (raxel_size_t i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
-        if (pipeline->targets.internal[i].view)
-            vkDestroyImageView(pipeline->resources.device, pipeline->targets.internal[i].view, NULL);
-        if (pipeline->targets.internal[i].image)
-            vkDestroyImage(pipeline->resources.device, pipeline->targets.internal[i].image, NULL);
-        if (pipeline->targets.internal[i].memory)
-            vkFreeMemory(pipeline->resources.device, pipeline->targets.internal[i].memory, NULL);
+        if (pipeline->resources.targets.internal[i].view)
+            vkDestroyImageView(pipeline->resources.device, pipeline->resources.targets.internal[i].view, NULL);
+        if (pipeline->resources.targets.internal[i].image)
+            vkDestroyImage(pipeline->resources.device, pipeline->resources.targets.internal[i].image, NULL);
+        if (pipeline->resources.targets.internal[i].memory)
+            vkFreeMemory(pipeline->resources.device, pipeline->resources.targets.internal[i].memory, NULL);
     }
 }
 
@@ -390,18 +390,18 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __create_sync_objects(&pipeline->resources);
     // Create swapchain using surface dimensions.
     raxel_surface_initialize(&pipeline->surface, pipeline->resources.instance);
-    __create_swapchain(pipeline, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
-    __create_targets(&pipeline->resources, &pipeline->targets, pipeline->surface.width, pipeline->surface.height);
+    __create_swapchain(&pipeline->resources, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
+    __create_targets(&pipeline->resources, &pipeline->resources.targets, pipeline->surface.width, pipeline->surface.height);
     __create_descriptor_pool(pipeline);
     return 0;
 }
 
 void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_target_type_t target) {
-    pipeline->targets.debug_target = target;
+    pipeline->resources.targets.debug_target = target;
 }
 
 void raxel_pipeline_present(raxel_pipeline_t *pipeline) {
-    __present_target(&pipeline->resources, &pipeline->targets, &pipeline->resources.swapchain);
+    __present_target(&pipeline->resources, &pipeline->resources.targets, &pipeline->resources.swapchain);
 }
 
 void raxel_pipeline_run(raxel_pipeline_t *pipeline) {

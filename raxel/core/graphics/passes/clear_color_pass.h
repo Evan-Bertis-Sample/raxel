@@ -3,6 +3,7 @@
 
 #include <cglm/cglm.h>
 #include <raxel/core/graphics.h>
+#include <raxel/core/util.h>
 
 /**
  * Create a clear-color pass that clears the internal color target to the specified color.

@@ -1,7 +1,7 @@
 #include "clear_color_pass.h"
 
 
-#include <raxel/core/graphics/vk.h>
+#include <raxel/core/graphics.h>
 #include <raxel/core/util.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,20 +12,20 @@ typedef struct __clear_color_pass_data {
 } __clear_color_pass_data_t;
 
 // Helper to allocate a temporary command buffer; can be called in on_begin.
-static void __clear_color_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
+static void __clear_color_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     VkCommandBufferAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = pipeline->resources.cmd_pool_graphics;
+    alloc_info.commandPool = globals->cmd_pool_graphics;
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
     VkCommandBuffer cmd_buf;
-    VK_CHECK(vkAllocateCommandBuffers(pipeline->resources.device, &alloc_info, &cmd_buf));
+    VK_CHECK(vkAllocateCommandBuffers(globals->device, &alloc_info, &cmd_buf));
     pass->resources.command_buffer = cmd_buf;
 }
 
 // on_begin callback: record commands to clear the internal color target.
-static void clear_color_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
-    __clear_color_pass_initialize(pass, pipeline);
+static void clear_color_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+    __clear_color_pass_initialize(pass, globals);
     
     VkCommandBuffer cmd_buf = pass->resources.command_buffer;
     VkCommandBufferBeginInfo begin_info = {0};
@@ -44,7 +44,7 @@ static void clear_color_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipelin
     range.layerCount = 1;
     
     // Clear the internal color target.
-    VkImage target_image = pipeline->targets.internal[RAXEL_PIPELINE_TARGET_COLOR].image;
+    VkImage target_image = globals->targets.internal[RAXEL_PIPELINE_TARGET_COLOR].image;
     // Assuming the image is in VK_IMAGE_LAYOUT_GENERAL.
     vkCmdClearColorImage(cmd_buf, target_image, VK_IMAGE_LAYOUT_GENERAL, &data->clear_color, 1, &range);
     
@@ -52,16 +52,16 @@ static void clear_color_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipelin
 }
 
 // on_end callback: submit the command buffer and free it.
-static void clear_color_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
+static void clear_color_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &pass->resources.command_buffer;
     
-    VK_CHECK(vkQueueSubmit(pipeline->resources.queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
-    vkQueueWaitIdle(pipeline->resources.queue_graphics);
+    VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
+    vkQueueWaitIdle(globals->queue_graphics);
     
-    vkFreeCommandBuffers(pipeline->resources.device, pipeline->resources.cmd_pool_graphics, 1, &pass->resources.command_buffer);
+    vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &pass->resources.command_buffer);
 }
 
 // Public API: create a clear-color pass using a cglm vec4.

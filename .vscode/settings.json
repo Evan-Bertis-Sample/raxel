@@ -12,6 +12,10 @@
         "vulkan.h": "c",
         "vk.h": "c",
         "graphics.h": "c",
-        "array": "c"
+        "array": "c",
+        "raxel_surface.h": "c",
+        "raxel_pc_buffer.h": "c",
+        "input.h": "c",
+        "clear_color_pass.h": "c"
     }
 }

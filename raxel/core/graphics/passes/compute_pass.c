@@ -79,7 +79,7 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
 
     VkDescriptorSetAllocateInfo ds_alloc = {0};
     ds_alloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    ds_alloc.descriptorPool = pipeline->resources.descriptor_pool;  // Use the valid descriptor pool.
+    ds_alloc.descriptorPool = pipeline->resources.descriptor_pool;
     ds_alloc.descriptorSetCount = 1;
     ds_alloc.pSetLayouts = &desc_set_layout;
     VK_CHECK(vkAllocateDescriptorSets(device, &ds_alloc, &shader->descriptor_set));
@@ -108,9 +108,9 @@ void raxel_compute_shader_push_constant(raxel_compute_shader_t *shader, const ch
 // Compute Pass Implementation
 // -----------------------------------------------------------------------------
 
-static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
+static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
-    VkDevice device = pipeline->resources.device;
+    VkDevice device = globals->device;
 
     // Count valid targets in the context's targets array.
     int valid_count = 0;
@@ -123,11 +123,11 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
     valid_count -= 1;  // Exclude the sentinel value.
 
     // Build an array of descriptor image infos from the pipeline's targets.
-    ctx->image_infos = raxel_malloc(&pipeline->resources.allocator, valid_count * sizeof(VkDescriptorImageInfo));
+    ctx->image_infos = raxel_malloc(&globals->allocator, valid_count * sizeof(VkDescriptorImageInfo));
     RAXEL_CORE_LOG("valid_count: %d\n", valid_count);
     for (int i = 0; i < valid_count; i++) {
         int target_index = ctx->targets[i];
-        ctx->image_infos[i].imageView = pipeline->targets.internal[target_index].view;
+        ctx->image_infos[i].imageView = globals->targets.internal[target_index].view;
         ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
@@ -135,9 +135,9 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
 }
 
 // In on_begin, update the compute shader's descriptor set based on the compute context targets.
-static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
+static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
-    VkDevice device = pipeline->resources.device;
+    VkDevice device = globals->device;
 
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -152,7 +152,7 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t 
     // Allocate a command buffer.
     VkCommandBufferAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = pipeline->resources.cmd_pool_compute;
+    alloc_info.commandPool = globals->cmd_pool_compute;
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
     VkCommandBuffer cmd_buf;
@@ -175,81 +175,22 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_t 
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 }
 
-static void compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_t *pipeline) {
-    VkDevice device = pipeline->resources.device;
+static void compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+    VkDevice device = globals->device;
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &pass->resources.command_buffer;
 
-    VK_CHECK(vkQueueSubmit(pipeline->resources.queue_compute, 1, &submit_info, VK_NULL_HANDLE));
-    vkQueueWaitIdle(pipeline->resources.queue_compute);
+    VK_CHECK(vkQueueSubmit(globals->queue_compute, 1, &submit_info, VK_NULL_HANDLE));
+    vkQueueWaitIdle(globals->queue_compute);
 
-    vkFreeCommandBuffers(device, pipeline->resources.cmd_pool_compute, 1, &pass->resources.command_buffer);
+    vkFreeCommandBuffers(device, globals->cmd_pool_compute, 1, &pass->resources.command_buffer);
 
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     if (ctx->on_dispatch_finished) {
-        ctx->on_dispatch_finished(ctx, pipeline);
-    } else {
-        raxel_compute_pass_blit(ctx, pipeline);
+        ctx->on_dispatch_finished(ctx, globals);
     }
-}
-
-// Default blit callback: Blit the computed result into the pipeline target.
-// This function copies from the compute shader's output (if context->output_image is provided)
-// or from the internal target indicated by ctx->blit_target into the pipeline's target image.
-// (Image layout transitions are assumed to be handled elsewhere.)
-void raxel_compute_pass_blit(raxel_compute_pass_context_t *context, raxel_pipeline_t *pipeline) {
-    // VkDevice device = pipeline->resources.device;
-    // VkImage src_image = (context->output_image != VK_NULL_HANDLE) ?
-    //                     context->output_image :
-    //                     pipeline->targets.internal[context].image;
-    // VkImage dst_image = pipeline->targets.internal[context->blit_target].image;
-
-    // VkCommandBufferAllocateInfo alloc_info = {0};
-    // alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    // alloc_info.commandPool = pipeline->resources.cmd_pool_graphics;
-    // alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    // alloc_info.commandBufferCount = 1;
-    // VkCommandBuffer cmd_buf;
-    // VK_CHECK(vkAllocateCommandBuffers(device, &alloc_info, &cmd_buf));
-
-    // VkCommandBufferBeginInfo begin_info = {0};
-    // begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    // begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    // VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
-
-    // VkExtent2D extent = pipeline->resources.swapchain.extent;
-    // VkImageBlit blit = {0};
-    // blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    // blit.srcSubresource.mipLevel = 0;
-    // blit.srcSubresource.baseArrayLayer = 0;
-    // blit.srcSubresource.layerCount = 1;
-    // blit.srcOffsets[0] = (VkOffset3D){0, 0, 0};
-    // blit.srcOffsets[1] = (VkOffset3D){(int32_t)extent.width, (int32_t)extent.height, 1};
-
-    // blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    // blit.dstSubresource.mipLevel = 0;
-    // blit.dstSubresource.baseArrayLayer = 0;
-    // blit.dstSubresource.layerCount = 1;
-    // blit.dstOffsets[0] = (VkOffset3D){0, 0, 0};
-    // blit.dstOffsets[1] = (VkOffset3D){(int32_t)extent.width, (int32_t)extent.height, 1};
-
-    // vkCmdBlitImage(cmd_buf, src_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    //                dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    //                1, &blit, VK_FILTER_LINEAR);
-
-    // VK_CHECK(vkEndCommandBuffer(cmd_buf));
-
-    // VkSubmitInfo submit_info = {0};
-    // submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    // submit_info.commandBufferCount = 1;
-    // submit_info.pCommandBuffers = &cmd_buf;
-    // VK_CHECK(vkQueueSubmit(pipeline->resources.queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
-    // vkQueueWaitIdle(pipeline->resources.queue_graphics);
-    // vkFreeCommandBuffers(device, pipeline->resources.cmd_pool_graphics, 1, &cmd_buf);
-
-    // // Do not call present() here. The pipeline's main loop calls present().
 }
 
 raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *context) {

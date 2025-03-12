@@ -48,16 +48,8 @@ typedef struct raxel_compute_pass_context {
     // If NULL, the default blit callback is used.
     VkDescriptorImageInfo *image_infos;
     raxel_size_t num_image_infos;
-    void (*on_dispatch_finished)(struct raxel_compute_pass_context *context, raxel_pipeline_t *pipeline);
+    void (*on_dispatch_finished)(struct raxel_compute_pass_context *context, raxel_pipeline_globals_t *globals);
 } raxel_compute_pass_context_t;
-
-/**
- * Default blit callback: Blit the computed result into the pipeline target.
- * This function copies from the compute output (either context->output_image, or the
- * internal target specified by blit_target) into the pipeline's target image.
- * Presentation is handled later by the pipeline's present() function.
- */
-void raxel_compute_pass_blit(raxel_compute_pass_context_t *context, raxel_pipeline_t *pipeline);
 
 // -----------------------------------------------------------------------------
 // Compute Pass API

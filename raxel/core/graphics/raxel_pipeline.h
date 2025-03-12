@@ -36,8 +36,22 @@ typedef struct raxel_pipeline_swapchain {
 } raxel_pipeline_swapchain_t;
 
 // -----------------------------------------------------------------------------
+// Pipeline targets: persistent GPU buffers shared between passes.
+// -----------------------------------------------------------------------------
+typedef struct raxel_pipeline_targets {
+    // Internal targets stored as an array indexed by raxel_pipeline_target_type_t.
+    raxel_pipeline_target_t internal[RAXEL_PIPELINE_TARGET_COUNT];
+    // Which target (by index) should be used for presentation/debugging.
+    raxel_pipeline_target_type_t debug_target;
+} raxel_pipeline_targets_t;
+
+
+// -----------------------------------------------------------------------------
 // Global pipeline resources: Vulkan objects and other shared resources.
 // -----------------------------------------------------------------------------
+
+typedef struct raxel_surface raxel_surface_t;
+
 typedef struct raxel_pipeline_globals {
     raxel_allocator_t allocator;
     VkInstance instance;
@@ -54,17 +68,9 @@ typedef struct raxel_pipeline_globals {
     VkSemaphore image_available_semaphore;
     VkSemaphore render_finished_semaphore;
     VkDescriptorPool descriptor_pool;
-} raxel_pipeline_globals;
+    raxel_pipeline_targets_t targets;
+} raxel_pipeline_globals_t;
 
-// -----------------------------------------------------------------------------
-// Pipeline targets: persistent GPU buffers shared between passes.
-// -----------------------------------------------------------------------------
-typedef struct raxel_pipeline_targets {
-    // Internal targets stored as an array indexed by raxel_pipeline_target_type_t.
-    raxel_pipeline_target_t internal[RAXEL_PIPELINE_TARGET_COUNT];
-    // Which target (by index) should be used for presentation/debugging.
-    raxel_pipeline_target_type_t debug_target;
-} raxel_pipeline_targets;
 
 // -----------------------------------------------------------------------------
 // Base pass structures.
@@ -78,17 +84,16 @@ typedef struct raxel_pipeline_pass {
     raxel_pipeline_pass_resources_t resources;
     raxel_allocator_t allocator;
     void *pass_data;
-    void (*initialize)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals *globals);
-    void (*on_begin)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals *globals);
-    void (*on_end)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals *globals);
+    void (*initialize)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals_t *globals);
+    void (*on_begin)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals_t *globals);
+    void (*on_end)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals_t *globals);
 } raxel_pipeline_pass_t;
 
 // -----------------------------------------------------------------------------
 // Pipeline abstraction: A list of passes, global resources, and targets.
 // -----------------------------------------------------------------------------
 typedef struct raxel_pipeline {
-    raxel_pipeline_globals resources;
-    raxel_pipeline_targets targets;
+    raxel_pipeline_globals_t resources;
     raxel_list(raxel_pipeline_pass_t) passes;
     raxel_surface_t surface;
 } raxel_pipeline_t;
@@ -102,7 +107,7 @@ void raxel_pipeline_destroy(raxel_pipeline_t *pipeline);
 void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass);
 raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);
 raxel_pipeline_pass_t *raxel_pipeline_get_pass(raxel_pipeline_t *pipeline, size_t index);
-inline raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name);
+raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipeline, raxel_string_t name);
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline);
 void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_target_type_t target);
 void raxel_pipeline_present(raxel_pipeline_t *pipeline);

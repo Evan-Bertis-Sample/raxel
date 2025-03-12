@@ -1,6 +1,9 @@
 #ifndef __RAXEL_INPUT_H__
 #define __RAXEL_INPUT_H__
 
+#include <raxel/core/graphics.h>
+#include <raxel/core/util.h>
+
 typedef enum raxel_keys {
     /* Printable keys */
     RAXEL_KEY_SPACE = 32,
@@ -123,7 +126,18 @@ typedef enum raxel_keys {
     RAXEL_KEY_RIGHT_ALT = 346,
     RAXEL_KEY_RIGHT_SUPER = 347,
     RAXEL_KEY_MENU = 348,
+    RAXEL_KEY_COUNT = 349,
 } raxel_keys_t;
+
+typedef struct raxel_mouse_event {
+    double x;
+    double y;
+    double dx;
+    double dy;
+    int button;
+    int action;
+    int mods;
+} raxel_mouse_event_t;
 
 typedef struct raxel_key_event {
     raxel_keys_t key;
@@ -131,5 +145,30 @@ typedef struct raxel_key_event {
     int action;
     int mods;
 } raxel_key_event_t;
+
+
+typedef struct raxel_key_callback {
+    void (*on_button)(raxel_key_event_t event);
+} raxel_key_callback_t;
+
+typedef struct raxel_mouse_callback {
+    void (*on_mouse)(raxel_mouse_event_t event);
+} raxel_mouse_callback_t;
+
+typedef struct raxel_surface raxel_surface_t;
+
+typedef struct raxel_input_manager {
+    raxel_surface_t *__surface;
+    raxel_allocator_t *__allocator;
+    raxel_list(raxel_key_callback_t) key_callbacks;
+    raxel_list(raxel_mouse_callback_t) mouse_callbacks;
+} raxel_input_manager_t;
+
+raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, raxel_surface_t *surface);
+void raxel_input_manager_destroy(raxel_input_manager_t *manager);
+
+void raxel_input_manager_add_button_callback(raxel_input_manager_t *manager, raxel_key_callback_t callback);
+void raxel_input_manager_add_mouse_callback(raxel_input_manager_t *manager, raxel_mouse_callback_t callback);
+
 
 #endif  // __RAXEL_INPUT_H__
