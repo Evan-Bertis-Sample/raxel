@@ -4,12 +4,15 @@
 #include <raxel/core/util.h>
 
 static void __raxel_surface_callback_handler(raxel_surface_t *surface, raxel_key_event_t event) {
-    raxel_input_manager_t *manager = (raxel_input_manager_t *)surface->callbacks.ctx;
+    raxel_input_manager_t *manager = (raxel_input_manager_t *)surface->context->input_manager;
     raxel_size_t num_callbacks = raxel_list_size(manager->key_callbacks);
     for (size_t i = 0; i < num_callbacks; i++) {
         raxel_key_callback_t callback = manager->key_callbacks[i];
-        callback(event);
+        if (callback.key == event.key) {
+            callback.on_button(event);
+        }
     }
+
 }
 
 raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, raxel_surface_t *surface) {
@@ -25,9 +28,11 @@ raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, 
 
     if (surface->callbacks.on_key) {
         RAXEL_CORE_LOG_ERROR("raxel_input_manager_create: surface already has a key callback, overwritting...\n");
-        surface->callbacks.on_key = __raxel_surface_callback_handler;
     }
-
+    
+    surface->callbacks.on_key = __raxel_surface_callback_handler;
+    surface->context->input_manager = manager;
+    
     return manager;
 }
 
@@ -37,18 +42,10 @@ void raxel_input_manager_destroy(raxel_input_manager_t *manager) {
     raxel_free(manager->__allocator, manager);
 }
 
-void raxel_input_manager_add_button_callback(raxel_input_manager_t *manager, (void *callback)(raxel_key_event_t)) {
-    raxel_key_callback_t key_callback = {
-        .on_button = callback
-    };
-
-    raxel_list_push_back(manager->key_callbacks, key_callback);
+void raxel_input_manager_add_button_callback(raxel_input_manager_t *manager, raxel_key_callback_t callback) {
+    raxel_list_push_back(manager->key_callbacks, callback);
 }
 
-void raxel_input_manager_add_mouse_callback(raxel_input_manager_t *manager, (void *callback)(raxel_mouse_event_t)) {
-    raxel_mouse_callback_t mouse_callback = {
-        .on_mouse = callback
-    };
-
-    raxel_list_push_back(manager->mouse_callbacks, mouse_callback);
+void raxel_input_manager_add_mouse_callback(raxel_input_manager_t *manager, raxel_mouse_callback_t callback) {
+    raxel_list_push_back(manager->mouse_callbacks, callback);
 }

@@ -21,6 +21,7 @@ typedef struct raxel_surface_callbacks {
 typedef struct raxel_surface_context {
     GLFWwindow *window;
     VkSurfaceKHR vk_surface;
+    raxel_input_manager_t *input_manager;
 } raxel_surface_context_t;
 
 struct raxel_surface {

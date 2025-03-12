@@ -4,12 +4,37 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void __key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
+    raxel_surface_t *surface = (raxel_surface_t *)glfwGetWindowUserPointer(window);
+    raxel_key_event_t event = {
+        .key = key,
+        .scancode = scancode,
+        .action = action,
+        .mods = mods,
+    };
+    if (surface->callbacks.on_key) {
+        RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
+        surface->callbacks.on_key(surface, event);
+    }
+}
+
+
 // Internal helper to create a GLFW window.
 // Static functions use the __ prefix.
-static GLFWwindow *__create_glfw_window(int width, int height, const char *title) {
+static GLFWwindow *__create_glfw_window(raxel_surface_t *surface, int width, int height, const char *title) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    return glfwCreateWindow(width, height, title, NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(width, height, title, NULL, NULL);
+    if (!window) {
+        RAXEL_CORE_FATAL_ERROR("Failed to create GLFW window\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set the key callback.
+    glfwSetKeyCallback(window, __key_callback);
+    // Set the user pointer to the surface.
+    glfwSetWindowUserPointer(window, surface);
 }
 
 // Internal helper to create a Vulkan surface from a GLFW window.
@@ -25,10 +50,10 @@ raxel_surface_t raxel_surface_create(const char *title, int width, int height) {
     // Allocate and initialize the context.
     surface.context = malloc(sizeof(raxel_surface_context_t));
     if (!surface.context) {
-        fprintf(stderr, "Failed to allocate raxel_surface_context_t\n");
+        RAXEL_CORE_FATAL_ERROR("Failed to allocate surface context\n");
         exit(EXIT_FAILURE);
     }
-    surface.context->window = __create_glfw_window(width, height, title);
+    surface.context->window = __create_glfw_window(&surface, width, height, title);
     surface.context->vk_surface = VK_NULL_HANDLE;
     surface.width = width;
     surface.height = height;
@@ -54,7 +79,10 @@ int raxel_surface_update(raxel_surface_t *surface) {
     if (surface->callbacks.on_update) {
         surface->callbacks.on_update(surface);
     }
-    // For now, simply return 0 to indicate success.
+
+    // Poll events.
+    RAXEL_CORE_LOG("Polling events\n");
+    glfwPollEvents();
     return 0;
 }
 

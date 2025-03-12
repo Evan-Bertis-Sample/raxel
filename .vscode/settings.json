@@ -16,6 +16,7 @@
         "raxel_surface.h": "c",
         "raxel_pc_buffer.h": "c",
         "input.h": "c",
-        "clear_color_pass.h": "c"
+        "clear_color_pass.h": "c",
+        "raxel_input.h": "c"
     }
 }

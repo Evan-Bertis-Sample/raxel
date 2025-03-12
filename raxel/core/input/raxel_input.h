@@ -1,8 +1,9 @@
 #ifndef __RAXEL_INPUT_H__
 #define __RAXEL_INPUT_H__
 
-#include <raxel/core/graphics.h>
 #include <raxel/core/util.h>
+typedef struct raxel_surface raxel_surface_t;
+
 
 typedef enum raxel_keys {
     /* Printable keys */
@@ -146,8 +147,15 @@ typedef struct raxel_key_event {
     int mods;
 } raxel_key_event_t;
 
+typedef enum raxel_key_state {
+    RAXEL_KEY_STATE_UP = 0,
+    RAXEL_KEY_STATE_DOWN_THIS_FRAME = 1,
+    RAXEL_KEY_STATE_DOWN = 2,
+    RAXEL_KEY_STATE_UP_THIS_FRAME = 3,
+} raxel_key_state_t;
 
 typedef struct raxel_key_callback {
+    raxel_keys_t key;
     void (*on_button)(raxel_key_event_t event);
 } raxel_key_callback_t;
 
@@ -160,6 +168,7 @@ typedef struct raxel_surface raxel_surface_t;
 typedef struct raxel_input_manager {
     raxel_surface_t *__surface;
     raxel_allocator_t *__allocator;
+    raxel_key_state_t __key_state[RAXEL_KEY_COUNT];
     raxel_list(raxel_key_callback_t) key_callbacks;
     raxel_list(raxel_mouse_callback_t) mouse_callbacks;
 } raxel_input_manager_t;

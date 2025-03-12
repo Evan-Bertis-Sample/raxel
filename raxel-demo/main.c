@@ -1,5 +1,6 @@
 #include <raxel/core/util.h>
 #include <raxel/core/graphics.h>
+#include <raxel/core/input.h>
 #include <raxel/core/graphics/passes/clear_color_pass.h>
 #include <raxel/core/graphics/passes/compute_pass.h>
 #include <cglm/cglm.h>
@@ -7,9 +8,20 @@
 #define WIDTH  800
 #define HEIGHT 600
 
+static void on_key(raxel_key_event_t event) {
+    RAXEL_CORE_LOG("PUshed key %d\n", event.key);
+}
+
 int main(void) {
     // Create a surface (this call creates a window and the associated Vulkan surface).
-    raxel_surface_t surface = raxel_surface_create("UV Compute", WIDTH, HEIGHT);    
+    raxel_surface_t surface = raxel_surface_create("UV Compute", WIDTH, HEIGHT);
+    raxel_input_manager_t *input_manager = raxel_input_manager_create(&surface.allocator, &surface);
+    raxel_key_callback_t key_callback = {
+        .key = RAXEL_KEY_A,
+        .on_button = on_key,
+    };
+    raxel_input_manager_add_button_callback(input_manager, key_callback);
+
     // Get a default allocator.
     raxel_allocator_t allocator = raxel_default_allocator();
     // Create the pipeline with the surface.

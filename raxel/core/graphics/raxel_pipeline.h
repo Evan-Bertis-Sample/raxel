@@ -2,8 +2,8 @@
 #define __RAXEL_PIPELINE_H__
 
 #include <raxel/core/graphics/vk.h>
-#include <raxel/core/util.h>
 #include "raxel_surface.h"      // for raxel_surface_t and its callbacks
+#include <raxel/core/util.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,8 +49,6 @@ typedef struct raxel_pipeline_targets {
 // -----------------------------------------------------------------------------
 // Global pipeline resources: Vulkan objects and other shared resources.
 // -----------------------------------------------------------------------------
-
-typedef struct raxel_surface raxel_surface_t;
 
 typedef struct raxel_pipeline_globals {
     raxel_allocator_t allocator;
