@@ -131,6 +131,7 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
         ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
+    ctx->num_image_infos = valid_count;
 }
 
 // In on_begin, update the compute shader's descriptor set based on the compute context targets.

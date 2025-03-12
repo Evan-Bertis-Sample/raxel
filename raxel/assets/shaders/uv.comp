@@ -11,6 +11,18 @@ void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
     // Get the normalized pixel position
     vec2 uv = vec2(pixelCoords) / vec2(imageSize);
+
+    if (uv.x > 0.5 || uv.y > 0.5) {
+        if (uv.x < 0.75 || uv.y < 0.75) {
+            // blend the current color in the output image with the uv color
+            vec4 currentColor = imageLoad(outImage, pixelCoords);
+            vec4 newColor = vec4(uv, 0.0, 1.0);
+            vec4 finalColor = mix(currentColor, newColor, 0.5);
+            imageStore(outImage, pixelCoords, finalColor);
+        }
+        return;
+    }
+
     // Write the pixel color
     imageStore(outImage, pixelCoords, vec4(uv, 0.0, 1.0));
 }

@@ -22,6 +22,13 @@ int main(void) {
     
     // Set the debug target to the internal color target.
     raxel_pipeline_set_debug_target(pipeline, RAXEL_PIPELINE_TARGET_COLOR);
+
+        
+    // Optionally, you might add a clear color pass to initialize the internal buffer to a known state.
+    // For example:
+    raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.0f, 1.0f, 1.0f});
+    raxel_pipeline_add_pass(pipeline, clear_pass);
+    
     
     // Create a compute shader using our compute shader abstraction.
     // For this example, we use a shader that outputs UV coordinates (normalized pixel coordinates).
@@ -58,12 +65,7 @@ int main(void) {
     raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(compute_ctx);
     // Add the compute pass to the pipeline.
     raxel_pipeline_add_pass(pipeline, compute_pass);
-    
-    // Optionally, you might add a clear color pass to initialize the internal buffer to a known state.
-    // For example:
-    // raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.0f, 1.0f, 1.0f});
-    // raxel_pipeline_add_pass(pipeline, clear_pass);
-    
+
     // Run the pipeline main loop.
     raxel_pipeline_run(pipeline);
     
