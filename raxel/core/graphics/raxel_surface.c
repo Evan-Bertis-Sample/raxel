@@ -50,7 +50,7 @@ raxel_surface_t *raxel_surface_create(raxel_allocator_t *allocator, const char *
         exit(EXIT_FAILURE);
     }
 
-    surface->context.window = __create_glfw_window(&surface, width, height, title);
+    surface->context.window = __create_glfw_window(surface, width, height, title);
     surface->context.vk_surface = VK_NULL_HANDLE;
     surface->width = width;
     surface->height = height;
@@ -79,7 +79,7 @@ int raxel_surface_update(raxel_surface_t *surface) {
     }
 
     // Poll events.
-    RAXEL_CORE_LOG("Polling events\n");
+    // RAXEL_CORE_LOG("Polling events\n");
     glfwPollEvents();
     return 0;
 }

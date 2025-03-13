@@ -414,7 +414,6 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
     }
 
     while (!glfwWindowShouldClose(pipeline->resources.surface->context.window)) {
-        glfwPollEvents();
         if (raxel_surface_update(pipeline->resources.surface) != 0) {
             break;
         }
