@@ -25,8 +25,6 @@ int main(void) {
     // Create a surface (this call creates a window and the associated Vulkan surface).
     raxel_surface_t *surface = raxel_surface_create(&allocator, "UV Compute", WIDTH, HEIGHT);
 
-    surface->callbacks.on_destroy = on_destroy;
-
     RAXEL_APP_LOG("Creating input manager\n");
     raxel_input_manager_t *input_manager = raxel_input_manager_create(&allocator, surface);
     raxel_key_callback_t key_callback = {

@@ -1,13 +1,13 @@
 #include "raxel_pipeline.h"
 
 #include <GLFW/glfw3.h>
+#include <limits.h>
+#include <raxel/core/graphics/vk.h>
+#include <raxel/core/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
-#include <raxel/core/util.h>
-#include <raxel/core/graphics/vk.h>
 #include "raxel_surface.h"
 
 // -----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
     create_info.pApplicationInfo = &app_info;
     create_info.enabledExtensionCount = glfw_extension_count;
     create_info.ppEnabledExtensionNames = glfw_extensions;
-    
+
     VK_CHECK(vkCreateInstance(&create_info, NULL, &globals->instance));
 }
 
@@ -75,7 +75,7 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     queue_info.pQueuePriorities = &queue_priority;
 
     // Enable the swapchain extension.
-    const char* device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    const char *device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     VkDeviceCreateInfo device_info = {0};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -89,7 +89,6 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     vkGetDeviceQueue(globals->device, globals->index_graphics_queue_family, 0, &globals->queue_graphics);
     vkGetDeviceQueue(globals->device, globals->index_compute_queue_family, 0, &globals->queue_compute);
 }
-
 
 static void __create_command_pools(raxel_pipeline_globals_t *globals) {
     VkCommandPoolCreateInfo pool_info = {0};
@@ -116,13 +115,13 @@ static void __create_sync_objects(raxel_pipeline_globals_t *globals) {
 static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
     VkSurfaceCapabilitiesKHR surface_caps;
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical, globals->surface->context.vk_surface, &surface_caps));
-    
+
     // Determine desired image count.
     uint32_t desired_image_count = surface_caps.minImageCount + 1;
     if (surface_caps.maxImageCount > 0 && desired_image_count > surface_caps.maxImageCount) {
         desired_image_count = surface_caps.maxImageCount;
     }
-    
+
     // Use the current extent if provided.
     VkExtent2D extent;
     if (surface_caps.currentExtent.width != UINT32_MAX) {
@@ -131,7 +130,7 @@ static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int 
         extent.width = width;
         extent.height = height;
     }
-    
+
     VkSwapchainCreateInfoKHR create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = globals->surface->context.vk_surface;
@@ -180,58 +179,204 @@ static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int 
 }
 
 static void __destroy_swapchain(raxel_pipeline_globals_t *globals, raxel_pipeline_swapchain_t *swapchain) {
-    for (uint32_t i = 0; i < swapchain->image_count; i++) {
-        vkDestroyImageView(globals->device, swapchain->targets[i].view, NULL);
+    if (swapchain->targets) {  // Only proceed if targets have been allocated.
+        for (uint32_t i = 0; i < swapchain->image_count; i++) {
+            if (swapchain->targets[i].view != VK_NULL_HANDLE) {
+                vkDestroyImageView(globals->device, swapchain->targets[i].view, NULL);
+                swapchain->targets[i].view = VK_NULL_HANDLE; // Mark as destroyed.
+            }
+        }
+        free(swapchain->targets);
+        swapchain->targets = NULL;  // Prevent double free.
     }
-    free(swapchain->targets);
-    vkDestroySwapchainKHR(globals->device, swapchain->swapchain, NULL);
+    if (swapchain->swapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(globals->device, swapchain->swapchain, NULL);
+        swapchain->swapchain = VK_NULL_HANDLE;
+    }
 }
 
-// Create internal pipeline targets.
+
 static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_targets_t *targets, int width, int height) {
-    // Create the color target.
-    VkImageCreateInfo image_info = {0};
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = VK_IMAGE_TYPE_2D;
-    image_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    image_info.extent.width = width;
-    image_info.extent.height = height;
-    image_info.extent.depth = 1;
-    image_info.mipLevels = 1;
-    image_info.arrayLayers = 1;
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VK_CHECK(vkCreateImage(globals->device, &image_info, NULL, &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image));
-    VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(globals->device, targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image, &mem_reqs);
-    VkMemoryAllocateInfo alloc_info = {0};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = mem_reqs.size;
-    alloc_info.memoryTypeIndex = 0;  // WARNING: This is naive!
-    VK_CHECK(vkAllocateMemory(globals->device, &alloc_info, NULL, &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory));
-    VK_CHECK(vkBindImageMemory(globals->device, targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image, targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory, 0));
-    VkImageViewCreateInfo view_info = {0};
-    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image;
-    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = 1;
-    view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
-    VK_CHECK(vkCreateImageView(globals->device, &view_info, NULL, &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].view));
-    targets->internal[RAXEL_PIPELINE_TARGET_COLOR].type = RAXEL_PIPELINE_TARGET_COLOR;
+    // ----------------------------------------------------------
+    // 1) Create a color image (R32G32B32A32_SFLOAT)
+    // ----------------------------------------------------------
+    {
+        VkImageCreateInfo image_info = {0};
+        image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_info.imageType = VK_IMAGE_TYPE_2D;
+        image_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        image_info.extent.width = width;
+        image_info.extent.height = height;
+        image_info.extent.depth = 1;
+        image_info.mipLevels = 1;
+        image_info.arrayLayers = 1;
+        image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_info.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    // Create depth target similarly (omitted for brevity).
-    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image = VK_NULL_HANDLE;
-    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].memory = VK_NULL_HANDLE;
-    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].view = VK_NULL_HANDLE;
-    targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].type = RAXEL_PIPELINE_TARGET_DEPTH;
+        VK_CHECK(vkCreateImage(
+            globals->device,
+            &image_info,
+            NULL,
+            &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image));
 
+        // Figure out memory requirements.
+        VkMemoryRequirements mem_reqs;
+        vkGetImageMemoryRequirements(
+            globals->device,
+            targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image,
+            &mem_reqs);
+
+        // Query memory properties from our physical device.
+        VkPhysicalDeviceMemoryProperties mem_props;
+        vkGetPhysicalDeviceMemoryProperties(globals->device_physical, &mem_props);
+
+        // Find a memory type that is allowed and device-local.
+        uint32_t memoryTypeIndex = UINT32_MAX;
+        for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+            VkMemoryPropertyFlags flags = mem_props.memoryTypes[i].propertyFlags;
+            if ((mem_reqs.memoryTypeBits & (1 << i)) &&
+                (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                memoryTypeIndex = i;
+                break;
+            }
+        }
+        if (memoryTypeIndex == UINT32_MAX) {
+            fprintf(stderr, "Failed to find a device-local memory type for color image.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Allocate and bind memory to the image.
+        VkMemoryAllocateInfo alloc_info = {0};
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.allocationSize = mem_reqs.size;
+        alloc_info.memoryTypeIndex = memoryTypeIndex;
+        VK_CHECK(vkAllocateMemory(
+            globals->device,
+            &alloc_info,
+            NULL,
+            &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory));
+
+        VK_CHECK(vkBindImageMemory(
+            globals->device,
+            targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image,
+            targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory,
+            0));
+
+        // Create an ImageView for the color image.
+        VkImageViewCreateInfo view_info = {0};
+        view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_info.image = targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image;
+        view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        view_info.subresourceRange.baseMipLevel = 0;
+        view_info.subresourceRange.levelCount = 1;
+        view_info.subresourceRange.baseArrayLayer = 0;
+        view_info.subresourceRange.layerCount = 1;
+        VK_CHECK(vkCreateImageView(
+            globals->device,
+            &view_info,
+            NULL,
+            &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].view));
+
+        targets->internal[RAXEL_PIPELINE_TARGET_COLOR].type =
+            RAXEL_PIPELINE_TARGET_COLOR;
+    }
+
+    // ----------------------------------------------------------
+    // 2) Create a depth image (D32_SFLOAT)
+    // ----------------------------------------------------------
+    {
+        VkImageCreateInfo image_info = {0};
+        image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_info.imageType = VK_IMAGE_TYPE_2D;
+        image_info.format = VK_FORMAT_D32_SFLOAT;  // typical depth-only format
+        image_info.extent.width = width;
+        image_info.extent.height = height;
+        image_info.extent.depth = 1;
+        image_info.mipLevels = 1;
+        image_info.arrayLayers = 1;
+        image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VK_CHECK(vkCreateImage(
+            globals->device,
+            &image_info,
+            NULL,
+            &targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image));
+
+        // Figure out memory requirements for the depth image.
+        VkMemoryRequirements mem_reqs;
+        vkGetImageMemoryRequirements(
+            globals->device,
+            targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image,
+            &mem_reqs);
+
+        // Same memory property search logic as above.
+        VkPhysicalDeviceMemoryProperties mem_props;
+        vkGetPhysicalDeviceMemoryProperties(globals->device_physical, &mem_props);
+
+        uint32_t memoryTypeIndex = UINT32_MAX;
+        for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+            VkMemoryPropertyFlags flags = mem_props.memoryTypes[i].propertyFlags;
+            if ((mem_reqs.memoryTypeBits & (1 << i)) &&
+                (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                memoryTypeIndex = i;
+                break;
+            }
+        }
+        if (memoryTypeIndex == UINT32_MAX) {
+            fprintf(stderr, "Failed to find a device-local memory type for depth image.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Allocate and bind.
+        VkMemoryAllocateInfo alloc_info = {0};
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.allocationSize = mem_reqs.size;
+        alloc_info.memoryTypeIndex = memoryTypeIndex;
+        VK_CHECK(vkAllocateMemory(
+            globals->device,
+            &alloc_info,
+            NULL,
+            &targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].memory));
+
+        VK_CHECK(vkBindImageMemory(
+            globals->device,
+            targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image,
+            targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].memory,
+            0));
+
+        // Create an ImageView for the depth image.
+        VkImageViewCreateInfo view_info = {0};
+        view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_info.image = targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image;
+        view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_info.format = VK_FORMAT_D32_SFLOAT;
+        view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;  // depth aspect
+        view_info.subresourceRange.baseMipLevel = 0;
+        view_info.subresourceRange.levelCount = 1;
+        view_info.subresourceRange.baseArrayLayer = 0;
+        view_info.subresourceRange.layerCount = 1;
+
+        VK_CHECK(vkCreateImageView(
+            globals->device,
+            &view_info,
+            NULL,
+            &targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].view));
+
+        targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].type =
+            RAXEL_PIPELINE_TARGET_DEPTH;
+    }
+
+    // Whichever target you want to “debug-blit” to the swapchain
+    // or otherwise sample from can be set here:
     targets->debug_target = RAXEL_PIPELINE_TARGET_COLOR;
+
     return 0;
 }
 
@@ -323,14 +468,22 @@ static void __present_target(raxel_pipeline_globals_t *globals, raxel_pipeline_t
 
 static void __destroy_targets(raxel_pipeline_t *pipeline) {
     for (raxel_size_t i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
-        if (pipeline->resources.targets.internal[i].view)
-            vkDestroyImageView(pipeline->resources.device, pipeline->resources.targets.internal[i].view, NULL);
-        if (pipeline->resources.targets.internal[i].image)
-            vkDestroyImage(pipeline->resources.device, pipeline->resources.targets.internal[i].image, NULL);
-        if (pipeline->resources.targets.internal[i].memory)
-            vkFreeMemory(pipeline->resources.device, pipeline->resources.targets.internal[i].memory, NULL);
+        raxel_pipeline_target_t *target = &pipeline->resources.targets.internal[i];
+        if (target->view != VK_NULL_HANDLE) {
+            vkDestroyImageView(pipeline->resources.device, target->view, NULL);
+            target->view = VK_NULL_HANDLE; // Prevent double-destroy.
+        }
+        if (target->image != VK_NULL_HANDLE) {
+            vkDestroyImage(pipeline->resources.device, target->image, NULL);
+            target->image = VK_NULL_HANDLE;
+        }
+        if (target->memory != VK_NULL_HANDLE) {
+            vkFreeMemory(pipeline->resources.device, target->memory, NULL);
+            target->memory = VK_NULL_HANDLE;
+        }
     }
 }
+
 
 // -----------------------------------------------------------------------------
 // Public API implementations.
@@ -445,21 +598,35 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
 }
 
 void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
-    if (pipeline->resources.cmd_pool_compute)
-        vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_compute, NULL);
-    if (pipeline->resources.cmd_pool_graphics)
+    // Destroy compute command pool if it is not the same as graphics command pool.
+    if (pipeline->resources.cmd_pool_compute != VK_NULL_HANDLE) {
+        if (pipeline->resources.cmd_pool_compute != pipeline->resources.cmd_pool_graphics) {
+            vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_compute, NULL);
+        }
+        pipeline->resources.cmd_pool_compute = VK_NULL_HANDLE;
+    }
+
+    // Always destroy the graphics command pool.
+    if (pipeline->resources.cmd_pool_graphics != VK_NULL_HANDLE) {
         vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_graphics, NULL);
+        pipeline->resources.cmd_pool_graphics = VK_NULL_HANDLE;
+    }
+
+    if (pipeline->resources.swapchain.swapchain != VK_NULL_HANDLE) {
+        __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
+    }
+
+    __destroy_targets(pipeline);
 
     vkDestroySurfaceKHR(pipeline->resources.instance, pipeline->resources.surface->context.vk_surface, NULL);
 
-    if (pipeline->resources.device)
-        vkDestroyDevice(pipeline->resources.device, NULL);
-    if (pipeline->resources.instance)
-        vkDestroyInstance(pipeline->resources.instance, NULL);
-
-    __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
-    __destroy_targets(pipeline);
-
     raxel_surface_destroy(pipeline->resources.surface);
-    raxel_pipeline_destroy(pipeline);
+
+    if (pipeline->resources.device != VK_NULL_HANDLE) {
+        vkDestroyDevice(pipeline->resources.device, NULL);
+    }
+    if (pipeline->resources.instance != VK_NULL_HANDLE) {
+        vkDestroyInstance(pipeline->resources.instance, NULL);
+    }
 }
+

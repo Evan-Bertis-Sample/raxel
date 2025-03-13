@@ -121,11 +121,6 @@ int raxel_surface_update(raxel_surface_t *surface) {
 void raxel_surface_destroy(raxel_surface_t *surface) {
     if (!surface) return;
 
-    // If a user-defined destroy callback exists, call it.
-    if (surface->callbacks.on_destroy) {
-        surface->callbacks.on_destroy(surface);
-    }
-
     if (surface->context.window) {
         glfwDestroyWindow(surface->context.window);
     }
