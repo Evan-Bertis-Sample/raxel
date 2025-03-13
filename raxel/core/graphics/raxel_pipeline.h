@@ -59,7 +59,7 @@ typedef struct raxel_pipeline_globals {
     VkQueue queue_compute;
     uint32_t index_graphics_queue_family;
     uint32_t index_compute_queue_family;
-    raxel_surface_t surface;
+    raxel_surface_t *surface;
     VkCommandPool cmd_pool_graphics;
     VkCommandPool cmd_pool_compute;
     raxel_pipeline_swapchain_t swapchain;
@@ -93,14 +93,13 @@ typedef struct raxel_pipeline_pass {
 typedef struct raxel_pipeline {
     raxel_pipeline_globals_t resources;
     raxel_list(raxel_pipeline_pass_t) passes;
-    raxel_surface_t surface;
 } raxel_pipeline_t;
 
 // -----------------------------------------------------------------------------
 // Global API for the pipeline.
 // -----------------------------------------------------------------------------
 
-raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surface_t surface);
+raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surface_t *surface);
 void raxel_pipeline_destroy(raxel_pipeline_t *pipeline);
 void raxel_pipeline_add_pass(raxel_pipeline_t *pipeline, raxel_pipeline_pass_t pass);
 raxel_size_t raxel_pipeline_num_passes(raxel_pipeline_t *pipeline);

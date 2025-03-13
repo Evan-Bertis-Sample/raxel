@@ -13,17 +13,17 @@ static void on_key(raxel_key_event_t event) {
 }
 
 int main(void) {
+    // Get a default allocator.
+    raxel_allocator_t allocator = raxel_default_allocator();
     // Create a surface (this call creates a window and the associated Vulkan surface).
-    raxel_surface_t surface = raxel_surface_create("UV Compute", WIDTH, HEIGHT);
-    raxel_input_manager_t *input_manager = raxel_input_manager_create(&surface.allocator, &surface);
+    raxel_surface_t *surface = raxel_surface_create(&allocator, "UV Compute", WIDTH, HEIGHT);
+    raxel_input_manager_t *input_manager = raxel_input_manager_create(&allocator, surface);
     raxel_key_callback_t key_callback = {
         .key = RAXEL_KEY_A,
         .on_button = on_key,
     };
     raxel_input_manager_add_button_callback(input_manager, key_callback);
 
-    // Get a default allocator.
-    raxel_allocator_t allocator = raxel_default_allocator();
     // Create the pipeline with the surface.
     raxel_pipeline_t *pipeline = raxel_pipeline_create(&allocator, surface);
     

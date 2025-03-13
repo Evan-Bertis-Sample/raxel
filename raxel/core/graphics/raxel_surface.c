@@ -19,7 +19,6 @@ static void __key_callback(GLFWwindow *window, int key, int scancode, int action
     }
 }
 
-
 // Internal helper to create a GLFW window.
 // Static functions use the __ prefix.
 static GLFWwindow *__create_glfw_window(raxel_surface_t *surface, int width, int height, const char *title) {
@@ -44,34 +43,33 @@ static VkSurfaceKHR __create_vk_surface(GLFWwindow *window, VkInstance instance)
     return vk_surface;
 }
 
-raxel_surface_t raxel_surface_create(const char *title, int width, int height) {
-    raxel_surface_t surface = {0};
-
-    // Allocate and initialize the context.
-    surface.context = malloc(sizeof(raxel_surface_context_t));
-    if (!surface.context) {
-        RAXEL_CORE_FATAL_ERROR("Failed to allocate surface context\n");
+raxel_surface_t *raxel_surface_create(raxel_allocator_t *allocator, const char *title, int width, int height) {
+    raxel_surface_t *surface = raxel_malloc(allocator, sizeof(raxel_surface_t));
+    if (!surface) {
+        RAXEL_CORE_FATAL_ERROR("Failed to allocate memory for raxel_surface_t\n");
         exit(EXIT_FAILURE);
     }
-    surface.context->window = __create_glfw_window(&surface, width, height, title);
-    surface.context->vk_surface = VK_NULL_HANDLE;
-    surface.width = width;
-    surface.height = height;
-    surface.allocator = raxel_default_allocator();
+
+    surface->context.window = __create_glfw_window(&surface, width, height, title);
+    surface->context.vk_surface = VK_NULL_HANDLE;
+    surface->width = width;
+    surface->height = height;
 
     // Create the surface title using our raxel_string API.
-    surface.title = raxel_string_create(&surface.allocator, strlen(title) + 1);
-    raxel_string_append(&surface.title, title);
+    surface->title = raxel_string_create(allocator, strlen(title) + 1);
+    raxel_string_append(&surface->title, title);
 
-    // Initialize callbacks to NULL.
-    memset(&surface.callbacks, 0, sizeof(surface.callbacks));
+    surface->callbacks.on_update = NULL;
+    surface->callbacks.on_destroy = NULL;
+    surface->callbacks.on_key = NULL;
+    surface->callbacks.on_resize = NULL;
 
     return surface;
 }
 
 void raxel_surface_initialize(raxel_surface_t *surface, VkInstance instance) {
     // Initialize the Vulkan surface.
-    surface->context->vk_surface = __create_vk_surface(surface->context->window, instance);
+    surface->context.vk_surface = __create_vk_surface(surface->context.window, instance);
 }
 
 int raxel_surface_update(raxel_surface_t *surface) {
@@ -93,16 +91,11 @@ void raxel_surface_destroy(raxel_surface_t *surface) {
     if (surface->callbacks.on_destroy) {
         surface->callbacks.on_destroy(surface);
     }
-    if (surface->context) {
-        if (surface->context->window) {
-            glfwDestroyWindow(surface->context->window);
-        }
-        // Typically, you would destroy the Vulkan surface here.
-        // Since vkDestroySurfaceKHR requires the VkInstance, ensure that is handled appropriately.
-        // For example:
-        // vkDestroySurfaceKHR(instance, surface->context->vk_surface, NULL);
-        free(surface->context);
-        surface->context = NULL;
+
+    if (surface->context.window) {
+        glfwDestroyWindow(surface->context.window);
     }
     raxel_string_destroy(&surface->title);
+
+    raxel_free(surface->allocator, surface);
 }

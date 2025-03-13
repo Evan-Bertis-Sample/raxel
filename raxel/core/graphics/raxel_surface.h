@@ -25,16 +25,16 @@ typedef struct raxel_surface_context {
 } raxel_surface_context_t;
 
 struct raxel_surface {
-    raxel_surface_context_t *context;
+    raxel_surface_context_t context;
     raxel_string_t title;
     raxel_surface_size_t width;
     raxel_surface_size_t height;
     raxel_surface_callbacks_t callbacks;
-    raxel_allocator_t allocator;
+    raxel_allocator_t *allocator;
 };
 
 // Create a surface.
-raxel_surface_t raxel_surface_create(const char *title, int width, int height);
+raxel_surface_t *raxel_surface_create(raxel_allocator_t *allocator, const char *title, int width, int height);
 
 void raxel_surface_initialize(raxel_surface_t *surface, VkInstance instance);
 

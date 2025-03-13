@@ -115,7 +115,7 @@ static void __create_sync_objects(raxel_pipeline_globals_t *globals) {
 
 static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
     VkSurfaceCapabilitiesKHR surface_caps;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical, globals->surface.context->vk_surface, &surface_caps));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical, globals->surface->context.vk_surface, &surface_caps));
     
     // Determine desired image count.
     uint32_t desired_image_count = surface_caps.minImageCount + 1;
@@ -134,7 +134,7 @@ static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int 
     
     VkSwapchainCreateInfoKHR create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    create_info.surface = globals->surface.context->vk_surface;
+    create_info.surface = globals->surface->context.vk_surface;
     create_info.minImageCount = desired_image_count;
     create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
     create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
@@ -336,7 +336,7 @@ static void __destroy_targets(raxel_pipeline_t *pipeline) {
 // Public API implementations.
 // -----------------------------------------------------------------------------
 
-raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surface_t surface) {
+raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surface_t *surface) {
     raxel_pipeline_t *pipeline = raxel_malloc(allocator, sizeof(raxel_pipeline_t));
     pipeline->resources.allocator = *allocator;
     pipeline->resources.instance = VK_NULL_HANDLE;
@@ -350,7 +350,6 @@ raxel_pipeline_t *raxel_pipeline_create(raxel_allocator_t *allocator, raxel_surf
     pipeline->resources.cmd_pool_compute = VK_NULL_HANDLE;
     pipeline->resources.surface = surface;
     pipeline->passes = raxel_list_create_reserve(raxel_pipeline_pass_t, &pipeline->resources.allocator, 4);
-    pipeline->surface = surface;
     return pipeline;
 }
 
@@ -389,9 +388,9 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __create_command_pools(&pipeline->resources);
     __create_sync_objects(&pipeline->resources);
     // Create swapchain using surface dimensions.
-    raxel_surface_initialize(&pipeline->surface, pipeline->resources.instance);
-    __create_swapchain(&pipeline->resources, pipeline->surface.width, pipeline->surface.height, &pipeline->resources.swapchain);
-    __create_targets(&pipeline->resources, &pipeline->resources.targets, pipeline->surface.width, pipeline->surface.height);
+    raxel_surface_initialize(pipeline->resources.surface, pipeline->resources.instance);
+    __create_swapchain(&pipeline->resources, pipeline->resources.surface->width, pipeline->resources.surface->height, &pipeline->resources.swapchain);
+    __create_targets(&pipeline->resources, &pipeline->resources.targets, pipeline->resources.surface->width, pipeline->resources.surface->height);
     __create_descriptor_pool(pipeline);
     return 0;
 }
@@ -414,9 +413,9 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
         }
     }
 
-    while (!glfwWindowShouldClose(pipeline->surface.context->window)) {
+    while (!glfwWindowShouldClose(pipeline->resources.surface->context.window)) {
         glfwPollEvents();
-        if (raxel_surface_update(&pipeline->surface) != 0) {
+        if (raxel_surface_update(pipeline->resources.surface) != 0) {
             break;
         }
         raxel_size_t num_passes = raxel_list_size(pipeline->passes);
@@ -445,8 +444,7 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
     if (pipeline->resources.swapchain.swapchain)
         __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
 
-    if (pipeline->surface.context && pipeline->surface.context->vk_surface)
-        vkDestroySurfaceKHR(pipeline->resources.instance, pipeline->surface.context->vk_surface, NULL);
+    vkDestroySurfaceKHR(pipeline->resources.instance, pipeline->resources.surface->context.vk_surface, NULL);
 
     if (pipeline->resources.device)
         vkDestroyDevice(pipeline->resources.device, NULL);
@@ -456,7 +454,6 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
     __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
     __destroy_targets(pipeline);
 
-    raxel_surface_destroy(&pipeline->surface);
+    raxel_surface_destroy(pipeline->resources.surface);
     raxel_pipeline_destroy(pipeline);
-    free(pipeline->surface.context);
 }
