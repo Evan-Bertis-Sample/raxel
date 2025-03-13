@@ -380,15 +380,17 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
 }
 
 static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
-    VkDescriptorPoolSize pool_sizes[2] = {0};
+    VkDescriptorPoolSize pool_sizes[3] = {0};
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     pool_sizes[0].descriptorCount = 1;
     pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     pool_sizes[1].descriptorCount = 1;
+    pool_sizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Added for large data buffers.
+    pool_sizes[2].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo pool_info = {0};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.poolSizeCount = 2;
+    pool_info.poolSizeCount = 3;
     pool_info.pPoolSizes = pool_sizes;
     pool_info.maxSets = 1;
     VK_CHECK(vkCreateDescriptorPool(pipeline->resources.device, &pool_info, NULL, &pipeline->resources.descriptor_pool));

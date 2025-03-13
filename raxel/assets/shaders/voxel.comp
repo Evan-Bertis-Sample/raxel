@@ -14,7 +14,7 @@ layout(push_constant) uniform PushConstants {
 
 // Storage buffer for large data (e.g. voxel data).
 // Binding is set 1, binding 0. The buffer is defined in std430 layout.
-layout(std430, set = 1, binding = 0) buffer VoxelBuffer {
+layout(std430, set = 0, binding = 1) buffer VoxelBuffer {
     // Here we assume voxel data is a flat array of unsigned ints.
     // In a real application, you may want a more complex struct.
     uint voxels[];
@@ -31,20 +31,17 @@ void main() {
     // Transform the uv coordinates with the push constant view matrix.
     vec4 transformed = pc.view * vec4(uv, 0.0, 1.0);
     
-    // Use voxel data to modulate the output.
-    // Compute a 1D index based on the current pixel.
-    uint index = uint(coords.x + coords.y * size.x);
-    
-    // For safety, you might check bounds (omitted here for brevity).
-    // Here we compute a modulation factor from the voxel value.
-    float voxelFactor = float(voxels[index]) / 255.0;
+    // Use a safe index: for example, take the sum of the coordinates and mod by 1024.
+    uint index = (uint(coords.x + coords.y)) % 1024;
+    float voxelFactor = voxels[index] / 255.0;
+
     
     // Mix the original color (based on UV) with the transformed coordinates,
     // modulated by the voxel factor and further scaled by the fov push constant.
     vec4 baseColor = vec4(uv, 0.0, 1.0);
     vec4 modColor = mix(baseColor, vec4(transformed.xy, 0.0, 1.0), voxelFactor * pc.fov);
     
-    vec4 debugColor = vec4(voxelFactor, voxelFactor, voxelFactor, 1.0);
+    vec4 debugColor = vec4(voxelFactor, voxelFactor, pc.fov, 1.0);
     imageStore(outImage, coords, debugColor);
 
 }

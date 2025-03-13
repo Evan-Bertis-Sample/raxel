@@ -74,7 +74,7 @@ int main(void) {
 
     // Now, set up a storage buffer for voxel data.
     // Let's assume we want 1024 voxels.
-    uint32_t voxel_count = WIDTH * HEIGHT;
+    uint32_t voxel_count = 1024;
     raxel_sb_buffer_desc_t sb_desc = RAXEL_SB_DESC(
         (raxel_sb_entry_t){.name = "voxels", .offset = 0, .size = voxel_count * sizeof(uint32_t)});
     // Attach the storage buffer (assumes binding 1 is reserved for the storage buffer).
@@ -118,6 +118,7 @@ int main(void) {
         // Optionally update voxel data per frame.
         // For example, cycle voxel values based on time.
         for (uint32_t i = 0; i < voxel_count; i++) {
+            // RAXEL_CORE_LOG("Updating voxel %d - %d\n", i, (i + (uint32_t)(time * 10)) % 256);
             voxels[i] = (i + (uint32_t)(time * 10)) % 256;
         }
 

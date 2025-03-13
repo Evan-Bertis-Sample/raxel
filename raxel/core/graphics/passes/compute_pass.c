@@ -43,16 +43,25 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     }
     VkShaderModule comp_module = __load_shader_module(device, shader_path);
 
-    // Create a descriptor set layout for an array of storage images.
-    VkDescriptorSetLayoutBinding binding = {0};
-    binding.binding = 0;
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    binding.descriptorCount = RAXEL_PIPELINE_TARGET_COUNT;
-    binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    // Create descriptor set layout bindings using the enum to avoid magic numbers.
+    VkDescriptorSetLayoutBinding bindings[RAXEL_COMPUTE_BINDING_COUNT] = {0};
+
+    // Binding for storage images.
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].binding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorCount = RAXEL_PIPELINE_TARGET_COUNT;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    // Binding for storage buffer.
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_BUFFER].binding = RAXEL_COMPUTE_BINDING_STORAGE_BUFFER;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_BUFFER].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_BUFFER].descriptorCount = 1;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_BUFFER].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
     VkDescriptorSetLayoutCreateInfo layout_info = {0};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_info.bindingCount = 1;
-    layout_info.pBindings = &binding;
+    layout_info.bindingCount = RAXEL_COMPUTE_BINDING_COUNT;
+    layout_info.pBindings = bindings;
     VkDescriptorSetLayout desc_set_layout;
     VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &desc_set_layout));
 
@@ -92,6 +101,7 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     return shader;
 }
 
+
 void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline) {
     VkDevice device = pipeline->resources.device;
     vkDestroyPipeline(device, shader->pipeline, NULL);
@@ -130,8 +140,7 @@ void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = shader->descriptor_set;
-    // Assume binding 1 in the descriptor set is reserved for the storage buffer.
-    write.dstBinding = 1;
+    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_BUFFER;  // use enum here
     write.dstArrayElement = 0;
     write.descriptorCount = 1;
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -169,7 +178,6 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
     ctx->num_image_infos = valid_count;
 }
 
-// In on_begin, update the compute shader's descriptor set based on the compute context targets.
 static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = globals->device;
@@ -177,7 +185,7 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = ctx->compute_shader->descriptor_set;
-    write.dstBinding = 0;
+    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE; // use enum here
     write.dstArrayElement = 0;
     write.descriptorCount = ctx->num_image_infos;
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -211,6 +219,7 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
 
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 }
+
 
 static void compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     VkDevice device = globals->device;

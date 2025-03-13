@@ -5,6 +5,11 @@
 #include <raxel/core/util.h>
 #include <cglm/cglm.h>
 
+typedef enum raxel_compute_descriptor_binding {
+    RAXEL_COMPUTE_BINDING_STORAGE_IMAGE = 0,
+    RAXEL_COMPUTE_BINDING_STORAGE_BUFFER = 1,
+    RAXEL_COMPUTE_BINDING_COUNT
+} raxel_compute_descriptor_binding;
 
 typedef struct raxel_compute_shader {
     VkPipeline pipeline;
