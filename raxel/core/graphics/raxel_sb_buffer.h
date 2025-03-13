@@ -2,6 +2,7 @@
 #define __RAXEL_SB_BUFFER_H__
 
 #include <raxel/core/graphics/vk.h>
+#include <raxel/core/graphics/raxel_pipeline.h>
 #include <raxel/core/util.h>
 
 typedef struct raxel_sb_entry {
@@ -58,6 +59,15 @@ void *raxel_sb_buffer_get(raxel_sb_buffer_t *buffer, char *name);
  * @param data Pointer to the data to copy (must match the field’s size).
  */
 void raxel_sb_buffer_set(raxel_sb_buffer_t *buffer, char *name, void *data);
+
+
+/**
+ * @brief Update the storage buffer on the GPU.
+ * 
+ * @param buffer The storage buffer.
+ * @param device Vulkan device.
+ */
+void raxel_sb_buffer_update(raxel_sb_buffer_t *buffer, raxel_pipeline_t *pipeline);
 
 /**
  * Destroy the storage buffer.

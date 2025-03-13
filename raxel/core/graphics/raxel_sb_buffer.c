@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <raxel/core/graphics.h>
 
 raxel_sb_buffer_t *raxel_sb_buffer_create(raxel_allocator_t *allocator,
                                           raxel_sb_buffer_desc_t *desc,
@@ -89,6 +90,15 @@ void raxel_sb_buffer_set(raxel_sb_buffer_t *buffer, char *name, void *data)
     }
     RAXEL_CORE_LOG_ERROR("Field '%s' not found in storage buffer\n", name);
 }
+
+void raxel_sb_buffer_update(raxel_sb_buffer_t *buffer, raxel_pipeline_t *pipeline) {
+    void *mapped = NULL;
+    VkDevice device = pipeline->resources.device;
+    VK_CHECK(vkMapMemory(device, buffer->memory, 0, buffer->data_size, 0, &mapped));
+    memcpy(mapped, buffer->data, buffer->data_size);
+    vkUnmapMemory(device, buffer->memory);
+}
+
 
 void raxel_sb_buffer_destroy(raxel_sb_buffer_t *buffer, VkDevice device)
 {
