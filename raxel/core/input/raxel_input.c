@@ -18,7 +18,6 @@ static void __raxel_surface_callback_handler(raxel_surface_t *surface, raxel_key
     }
 }
 
-
 raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, raxel_surface_t *surface) {
     if (!surface) {
         RAXEL_CORE_FATAL_ERROR("raxel_input_manager_create: surface is NULL\n");
@@ -38,6 +37,16 @@ raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, 
     surface->context.input_manager = manager;
 
     return manager;
+}
+
+void raxel_input_manager_update(raxel_input_manager_t *manager) {
+    raxel_surface_t *surface = manager->__surface;
+    raxel_size_t num_keys_up = manager->__num_keys_up_this_frame;
+    for (size_t i = 0; i < num_keys_up; i++) {
+        raxel_keys_t key = manager->__keys_up_this_frame[i];
+        manager->__key_state[key] = RAXEL_KEY_STATE_UP;
+    }
+    manager->__num_keys_up_this_frame = 0;
 }
 
 void raxel_input_manager_destroy(raxel_input_manager_t *manager) {

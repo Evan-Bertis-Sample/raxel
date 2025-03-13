@@ -17,6 +17,23 @@ static void __key_callback(GLFWwindow *window, int key, int scancode, int action
         RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
         surface->callbacks.on_key(surface, event);
     }
+
+    // update the key state
+    if (action == GLFW_PRESS) {
+        // if the key is marked as down this frame, it means it was pressed last frame
+        // so we mark it as down
+        if (surface->context.input_manager->__key_state[key] == RAXEL_KEY_STATE_DOWN_THIS_FRAME) {
+            surface->context.input_manager->__key_state[key] = RAXEL_KEY_STATE_DOWN;
+        } else {
+            surface->context.input_manager->__key_state[key] = RAXEL_KEY_STATE_DOWN_THIS_FRAME;
+        }
+    } else if (action == GLFW_RELEASE) {
+        surface->context.input_manager->__key_state[key] = RAXEL_KEY_STATE_UP_THIS_FRAME;
+
+        surface->context.input_manager->__keys_up_this_frame[surface->context.input_manager->__num_keys_up_this_frame++] = key;
+
+
+    }
 }
 
 static void __resize_callback(GLFWwindow *window, int width, int height) {
@@ -111,6 +128,8 @@ int raxel_surface_update(raxel_surface_t *surface) {
     if (surface->callbacks.on_update) {
         surface->callbacks.on_update(surface);
     }
+
+    raxel_input_manager_update(surface->context.input_manager);
 
     // Poll events.
     // RAXEL_CORE_LOG("Polling events\n");
