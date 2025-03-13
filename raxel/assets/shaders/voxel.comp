@@ -163,6 +163,8 @@ void main() {
         if (rr.hit) {
             // For testing, use a fixed color (or you can use rr.normal for lighting).
             col = rr.normal * 0.5 + 0.5;
+            // multiply it by the distance to get a depth effect
+            col *= 1.0 - clamp(rr.tHit / MAX_DISTANCE, 0.0, 1.0);
         }
         finalColor += col;
         validRays++;

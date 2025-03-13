@@ -8,6 +8,7 @@
 #include <raxel/core/voxel.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #define WIDTH 800
@@ -38,7 +39,7 @@ int main(void) {
     // Create a window and Vulkan surface.
     raxel_surface_t *surface = raxel_surface_create(&allocator, "Voxel Raymarch", WIDTH, HEIGHT);
 
-    // Setup input
+    // Setup input.
     raxel_input_manager_t *input_manager = raxel_input_manager_create(&allocator, surface);
 
     // Create the pipeline.
@@ -55,30 +56,66 @@ int main(void) {
     raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.0f, 0.8f, 1.0f});
     raxel_pipeline_add_pass(pipeline, clear_pass);
 
-    // --- Create and populate a dummy voxel world ---
+    // --- Create and populate a voxel world ---
     raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
-    // For this test, we load a few chunks (up to RAXEL_MAX_LOADED_CHUNKS).
-    // Here we simply create, say, 4 chunks with random voxel data.
-    world->__num_loaded_chunks = 4;
-    for (uint32_t i = 0; i < world->__num_loaded_chunks; i++) {
-        // For simplicity, set chunk metadata (positioned in a grid).
-        raxel_voxel_chunk_meta_t meta = { .x = i, .y = 0, .z = 0, .state = RAXEL_VOXEL_CHUNK_STATE_COUNT };
-        raxel_list_push_back(world->chunk_meta, meta);
-        // Create a new chunk with random voxel values.
-        raxel_voxel_chunk_t chunk;
-        for (int x = 0; x < RAXEL_VOXEL_CHUNK_SIZE; x++) {
-            for (int y = 0; y < RAXEL_VOXEL_CHUNK_SIZE; y++) {
-                for (int z = 0; z < RAXEL_VOXEL_CHUNK_SIZE; z++) {
-                    // assign half of them to be solid (1) and the rest empty (0)
-                    chunk.voxels[x][y][z].material = rand() % 2;
+    // For this test, we load one chunk.
+    // Set the number of loaded chunks to 1.
+    world->__num_loaded_chunks = 1;
+
+    // Create a chunk covering world coordinates [0, 31] in x, y, z.
+    raxel_voxel_chunk_t chunk;
+    memset(&chunk, 0, sizeof(chunk)); // initially all voxels are air (0)
+
+    // Set chunk metadata to indicate this chunk is at the origin.
+    raxel_voxel_chunk_meta_t meta;
+    meta.x = 0;
+    meta.y = 0;
+    meta.z = 0;
+    meta.state = RAXEL_VOXEL_CHUNK_STATE_COUNT; // not used atm
+
+    // Add the meta and chunk to the world.
+    raxel_list_push_back(world->chunk_meta, meta);
+    raxel_list_push_back(world->chunks, chunk);
+
+    // --- Build a sphere in the middle of the loaded chunk ---
+    // Define sphere parameters in world space.
+    // Since our chunk covers 0..31, choose center at (16,16,16) and radius = 10.
+    vec3 sphereCenter = {0.0f, 0.0f, 0.0f};
+    float sphereRadius = 10.0f;
+    float sphereRadiusSq = sphereRadius * sphereRadius;
+    
+    // For every voxel coordinate within this chunk, compute world position and set material.
+    // We'll fill voxels inside the sphere with material value 1.
+    for (int x = 0; x < RAXEL_VOXEL_CHUNK_SIZE; x++) {
+        for (int y = 0; y < RAXEL_VOXEL_CHUNK_SIZE; y++) {
+            for (int z = 0; z < RAXEL_VOXEL_CHUNK_SIZE; z++) {
+                // Compute world-space position of the voxel.
+                // Since the chunk's origin is at (0,0,0), the world coordinate is just the index.
+                float wx = (float)x;
+                float wy = (float)y;
+                float wz = (float)z;
+                // Compute squared distance from sphere center.
+                float dx = wx - sphereCenter[0];
+                float dy = wy - sphereCenter[1];
+                float dz = wz - sphereCenter[2];
+                float distSq = dx*dx + dy*dy + dz*dz;
+                raxel_voxel_t voxel = {0};
+                if (distSq < sphereRadiusSq) {
+                    // Set material to 1 (nonzero, meaning solid)
+                    voxel.material = 1;
                 }
+                // Place voxel into the chunk's array.
+                // Note: The voxel world likely expects the chunk's voxel array to be filled
+                // via its own update functions, but for now we directly assign:
+                world->chunks[0].voxels[x][y][z] = voxel;
             }
         }
-        raxel_list_push_back(world->chunks, chunk);
     }
 
-    // (For a real application, you might also fill the materials list.)
+    // Optionally, update the voxel world based on camera position if needed:
+    // raxel_voxel_world_update(world, &options);
+    // For now, we assume our sphere is static.
 
     // --- Flatten the voxel world data into a contiguous block for the GPU ---
     GPUVoxelWorld gpuWorld = {0};
@@ -144,7 +181,7 @@ int main(void) {
         raxel_pipeline_update(pipeline);
         time += delta_time;
 
-        // Simple WASD controls to move the camera.
+        // Simple WASD and QE controls to move the camera.
         if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_W)) {
             camera_position[2] += 0.1f;
         }
@@ -164,22 +201,34 @@ int main(void) {
             camera_position[1] -= 0.1f;
         }
 
-
         RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
-        // Update the view matrix. For simplicity, start with an identity matrix and translate.
+        // Update the view matrix.
         mat4 view;
         glm_mat4_identity(view);
+        // Translate the view matrix by the negative camera position.
+        // (Depending on your convention, you might need to invert this translation.)
         glm_translate(view, camera_position);
         raxel_pc_buffer_set(compute_shader->pc_buffer, "view", view);
 
-        // Update fov (e.g., 90 degrees).
-        float fov = 90.0f;
+        // Update fov (e.g., 90 degrees converted to radians).
+        float fov = glm_rad(90.0f);
         raxel_pc_buffer_set(compute_shader->pc_buffer, "fov", &fov);
 
         // Update rays per pixel (e.g., 4 rays per pixel).
-        int rpp = 4;
+        int rpp = 1;
         raxel_pc_buffer_set(compute_shader->pc_buffer, "rays_per_pixel", &rpp);
+
+        // Update the storage buffer with the new voxel world data.
+        raxel_voxel_world_update_options_t options = {0};
+        options.camera_position[0] = camera_position[0];
+        options.camera_position[1] = camera_position[1];
+        options.camera_position[2] = camera_position[2];
+        options.view_distance = 10.0f;
+
+        raxel_voxel_world_update(world, &options);
+        memcpy(compute_shader->sb_buffer->data, &gpuWorld, sizeof(GPUVoxelWorld));
+        raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
     }
 
     return 0;
