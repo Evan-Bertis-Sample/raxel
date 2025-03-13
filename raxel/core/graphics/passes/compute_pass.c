@@ -103,8 +103,7 @@ void raxel_compute_shader_set_pc(raxel_compute_shader_t *shader, raxel_pc_buffer
     shader->pc_buffer = raxel_pc_buffer_create(shader->allocator, desc);
 }
 
-void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffer cmd_buf)
-{
+void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffer cmd_buf) {
     if (shader->pc_buffer) {
         vkCmdPushConstants(cmd_buf,
                            shader->pipeline_layout,
@@ -115,6 +114,30 @@ void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffe
     }
 }
 
+void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline, raxel_sb_buffer_desc_t *desc) {
+    // Create the storage buffer using the pipeline's allocator.
+    shader->sb_buffer = raxel_sb_buffer_create(&pipeline->resources.allocator,
+                                               desc,
+                                               pipeline->resources.device,
+                                               pipeline->resources.device_physical);
+
+    // Update the compute shader's descriptor set.
+    VkDescriptorBufferInfo bufferInfo = {0};
+    bufferInfo.buffer = shader->sb_buffer->buffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = shader->sb_buffer->data_size;
+
+    VkWriteDescriptorSet write = {0};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = shader->descriptor_set;
+    // Assume binding 1 in the descriptor set is reserved for the storage buffer.
+    write.dstBinding = 1;
+    write.dstArrayElement = 0;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    write.pBufferInfo = &bufferInfo;
+    vkUpdateDescriptorSets(pipeline->resources.device, 1, &write, 0, NULL);
+}
 
 // -----------------------------------------------------------------------------
 // Compute Pass Implementation
@@ -144,7 +167,6 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
         ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
     ctx->num_image_infos = valid_count;
-
 }
 
 // In on_begin, update the compute shader's descriptor set based on the compute context targets.
