@@ -10,7 +10,8 @@ typedef struct raxel_compute_shader {
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
     VkDescriptorSet descriptor_set; // Bound to a storage image (set=0, binding=0)
-    raxel_pc_buffer_t push_constants;
+    raxel_pc_buffer_t *pc_buffer;
+    raxel_allocator_t *allocator;
 } raxel_compute_shader_t;
 
 /**
@@ -30,6 +31,23 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
  * @param pipeline Pointer to the pipeline.
  */
 void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline);
+
+/**
+ * Create a push–constant buffer descriptor for a compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param desc Descriptor for the push–constant buffer.
+ */
+void raxel_compute_shader_set_pc(raxel_compute_shader_t *shader, raxel_pc_buffer_desc_t *desc);
+
+
+/**
+ * @brief Passes the push-constant buffer to the compute shader.
+ * 
+ * @param shader Pointer to the compute shader.
+ * @param cmd_buffer The command buffer to record the push-constant update.
+ */
+void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffer cmd_buffer);
 
 // -----------------------------------------------------------------------------
 // Compute Pass Context

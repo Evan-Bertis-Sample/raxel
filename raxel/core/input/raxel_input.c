@@ -28,6 +28,7 @@ raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, 
     manager->__allocator = allocator;
     manager->key_callbacks = raxel_list_create_reserve(raxel_key_callback_t, allocator, 0);
     manager->mouse_callbacks = raxel_list_create_reserve(raxel_mouse_callback_t, allocator, 0);
+    manager->__num_keys_up_this_frame = 0;
 
     if (surface->callbacks.on_key) {
         RAXEL_CORE_LOG_ERROR("raxel_input_manager_create: surface already has a key callback, overwritting...\n");
@@ -42,9 +43,9 @@ raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, 
 void raxel_input_manager_update(raxel_input_manager_t *manager) {
     raxel_surface_t *surface = manager->__surface;
     raxel_size_t num_keys_up = manager->__num_keys_up_this_frame;
-    for (size_t i = 0; i < num_keys_up; i++) {
-        raxel_keys_t key = manager->__keys_up_this_frame[i];
-        manager->__key_state[key] = RAXEL_KEY_STATE_UP;
+    for (raxel_size_t i = 0; i < num_keys_up; i++) {
+        raxel_size_t key_idx = manager->__keys_up_this_frame[i];
+        manager->__key_state[key_idx] = RAXEL_KEY_STATE_UP;
     }
     manager->__num_keys_up_this_frame = 0;
 }

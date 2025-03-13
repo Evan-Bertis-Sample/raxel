@@ -17,6 +17,8 @@
         "raxel_pc_buffer.h": "c",
         "input.h": "c",
         "clear_color_pass.h": "c",
-        "raxel_input.h": "c"
+        "raxel_input.h": "c",
+        "raxel_debug.h": "c",
+        "xmemory": "c"
     }
 }

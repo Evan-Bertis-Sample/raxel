@@ -87,6 +87,8 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     // Clean up the temporary descriptor set layout.
     vkDestroyDescriptorSetLayout(device, desc_set_layout, NULL);
 
+    shader->allocator = &pipeline->resources.allocator;
+
     return shader;
 }
 
@@ -97,12 +99,22 @@ void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline
     free(shader);
 }
 
-void raxel_compute_shader_push_constant(raxel_compute_shader_t *shader, const char *name, const void *data) {
-    // Not used in this version.
-    (void)shader;
-    (void)name;
-    (void)data;
+void raxel_compute_shader_set_pc(raxel_compute_shader_t *shader, raxel_pc_buffer_desc_t *desc) {
+    shader->pc_buffer = raxel_pc_buffer_create(shader->allocator, desc);
 }
+
+void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffer cmd_buf)
+{
+    if (shader->pc_buffer) {
+        vkCmdPushConstants(cmd_buf,
+                           shader->pipeline_layout,
+                           VK_SHADER_STAGE_COMPUTE_BIT,
+                           0,
+                           shader->pc_buffer->data_size,
+                           shader->pc_buffer->data);
+    }
+}
+
 
 // -----------------------------------------------------------------------------
 // Compute Pass Implementation
@@ -132,6 +144,7 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
         ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
     ctx->num_image_infos = valid_count;
+
 }
 
 // In on_begin, update the compute shader's descriptor set based on the compute context targets.
@@ -163,6 +176,8 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
+
+    raxel_compute_shader_push_pc(ctx->compute_shader, cmd_buf);
 
     // Bind the compute pipeline.
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, ctx->compute_shader->pipeline);
@@ -203,5 +218,8 @@ raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *co
     pass.on_begin = compute_pass_on_begin;
     pass.on_end = compute_pass_on_end;
     pass.allocator = allocator;
+
+    raxel_compute_shader_set_pc(context->compute_shader, &context->pc_desc);
+
     return pass;
 }
