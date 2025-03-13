@@ -92,8 +92,18 @@ int main(void) {
     // Add the compute pass to the pipeline.
     raxel_pipeline_add_pass(pipeline, compute_pass);
 
-    // Run the pipeline main loop.
-    raxel_pipeline_run(pipeline);
+    raxel_pipeline_start(pipeline);
+
+    double time = 0.0;
+    double delta_time = 0.01;
+    while (!raxel_pipeline_should_close(pipeline)) {
+        raxel_pipeline_update(pipeline);
+        time += delta_time;
+
+        // update the fov in the push constant buffer
+        float fov = 1.0f + sin(time) * 0.5f;
+        raxel_pc_buffer_set(compute_ctx->compute_shader->pc_buffer, "fov", &fov);
+    }
     
     return 0;
 }

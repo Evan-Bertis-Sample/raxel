@@ -109,6 +109,11 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline);
 void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_target_type_t target);
 void raxel_pipeline_present(raxel_pipeline_t *pipeline);
 void raxel_pipeline_run(raxel_pipeline_t *pipeline);
+
+void raxel_pipeline_start(raxel_pipeline_t *pipeline);
+int raxel_pipeline_should_close(raxel_pipeline_t *pipeline);
+void raxel_pipeline_update(raxel_pipeline_t *pipeline);
+
 void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline);
 
 #ifdef __cplusplus

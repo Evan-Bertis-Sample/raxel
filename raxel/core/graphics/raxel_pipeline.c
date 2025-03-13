@@ -183,7 +183,7 @@ static void __destroy_swapchain(raxel_pipeline_globals_t *globals, raxel_pipelin
         for (uint32_t i = 0; i < swapchain->image_count; i++) {
             if (swapchain->targets[i].view != VK_NULL_HANDLE) {
                 vkDestroyImageView(globals->device, swapchain->targets[i].view, NULL);
-                swapchain->targets[i].view = VK_NULL_HANDLE; // Mark as destroyed.
+                swapchain->targets[i].view = VK_NULL_HANDLE;  // Mark as destroyed.
             }
         }
         free(swapchain->targets);
@@ -194,7 +194,6 @@ static void __destroy_swapchain(raxel_pipeline_globals_t *globals, raxel_pipelin
         swapchain->swapchain = VK_NULL_HANDLE;
     }
 }
-
 
 static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_targets_t *targets, int width, int height) {
     // ----------------------------------------------------------
@@ -471,7 +470,7 @@ static void __destroy_targets(raxel_pipeline_t *pipeline) {
         raxel_pipeline_target_t *target = &pipeline->resources.targets.internal[i];
         if (target->view != VK_NULL_HANDLE) {
             vkDestroyImageView(pipeline->resources.device, target->view, NULL);
-            target->view = VK_NULL_HANDLE; // Prevent double-destroy.
+            target->view = VK_NULL_HANDLE;  // Prevent double-destroy.
         }
         if (target->image != VK_NULL_HANDLE) {
             vkDestroyImage(pipeline->resources.device, target->image, NULL);
@@ -483,7 +482,6 @@ static void __destroy_targets(raxel_pipeline_t *pipeline) {
         }
     }
 }
-
 
 // -----------------------------------------------------------------------------
 // Public API implementations.
@@ -567,7 +565,14 @@ void raxel_pipeline_present(raxel_pipeline_t *pipeline) {
 }
 
 void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
-    // initialize all passes
+    raxel_pipeline_start(pipeline);
+    while (!raxel_pipeline_should_close(pipeline)) {
+        raxel_pipeline_update(pipeline);
+    }
+    vkDeviceWaitIdle(pipeline->resources.device);
+}
+
+void raxel_pipeline_start(raxel_pipeline_t *pipeline) {
     raxel_size_t num_passes = raxel_list_size(pipeline->passes);
     for (size_t i = 0; i < num_passes; i++) {
         raxel_pipeline_pass_t *pass = &pipeline->passes[i];
@@ -575,26 +580,30 @@ void raxel_pipeline_run(raxel_pipeline_t *pipeline) {
             pass->initialize(pass, &pipeline->resources);
         }
     }
+}
 
-    while (!glfwWindowShouldClose(pipeline->resources.surface->context.window)) {
-        if (raxel_surface_update(pipeline->resources.surface) != 0) {
-            break;
-        }
-        raxel_size_t num_passes = raxel_list_size(pipeline->passes);
-        for (size_t i = 0; i < num_passes; i++) {
-            raxel_pipeline_pass_t *pass = &pipeline->passes[i];
-            if (pass->on_begin) {
-                // RAXEL_CORE_LOG("Running pass %s\n", raxel_string_to_cstr(&pass->name));
-                pass->on_begin(pass, &pipeline->resources);
-            }
-            if (pass->on_end) {
-                // RAXEL_CORE_LOG("Ending pass %s\n", raxel_string_to_cstr(&pass->name));
-                pass->on_end(pass, &pipeline->resources);
-            }
-        }
-        raxel_pipeline_present(pipeline);
+int raxel_pipeline_should_close(raxel_pipeline_t *pipeline) {
+    return glfwWindowShouldClose(pipeline->resources.surface->context.window);
+}
+
+void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
+    if (raxel_surface_update(pipeline->resources.surface) != 0) {
+        return;
     }
-    vkDeviceWaitIdle(pipeline->resources.device);
+
+    raxel_size_t num_passes = raxel_list_size(pipeline->passes);
+    for (size_t i = 0; i < num_passes; i++) {
+        raxel_pipeline_pass_t *pass = &pipeline->passes[i];
+        if (pass->on_begin) {
+            // RAXEL_CORE_LOG("Running pass %s\n", raxel_string_to_cstr(&pass->name));
+            pass->on_begin(pass, &pipeline->resources);
+        }
+        if (pass->on_end) {
+            // RAXEL_CORE_LOG("Ending pass %s\n", raxel_string_to_cstr(&pass->name));
+            pass->on_end(pass, &pipeline->resources);
+        }
+    }
+    raxel_pipeline_present(pipeline);
 }
 
 void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
@@ -629,4 +638,3 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
         vkDestroyInstance(pipeline->resources.instance, NULL);
     }
 }
-
