@@ -15,16 +15,16 @@ typedef struct raxel_voxel {
 #define RAXEL_VOXEL_CHUNK_SIZE 32
 #define RAXEL_MAX_LOADED_CHUNKS 16
 
-tyepdef enum raxel_voxel_chunk_state {
+typedef enum raxel_voxel_chunk_state {
     RAXEL_VOXEL_CHUNK_STATE_COUNT = 0, // not used atm
-}
+} raxel_voxel_chunk_state_t;
 
 typedef struct raxel_voxel_chunk_meta {
     // defines the bottom-left corner of the chunk
-    raxel_chunk_coord_t x;
-    raxel_chunk_coord_t y;
-    raxel_chunk_coord_t z;
-    raxel_voxel_chunk_state state;
+    raxel_coord_t x;
+    raxel_coord_t y;
+    raxel_coord_t z;
+    raxel_voxel_chunk_state_t state;
 } raxel_voxel_chunk_meta_t;
 
 typedef struct raxel_voxel_chunk {
@@ -59,7 +59,7 @@ void raxel_voxel_world_destroy(raxel_voxel_world_t *world);
 void raxel_voxel_world_add_material(raxel_voxel_world_t *world, raxel_string_t name, vec4 color);
 raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_t *world, raxel_string_t name);
 
-raxel_voxel_chunk_t *raxel_world_get_chunk(raxel_voxel_world_t *world, raxel_chunk_coord_t x, raxel_chunk_coord_t y, raxel_chunk_coord_t z);
+raxel_voxel_chunk_t *raxel_world_get_chunk(raxel_voxel_world_t *world, raxel_coord_t x, raxel_coord_t y, raxel_coord_t z);
 raxel_voxel_t raxel_world_get_voxel(raxel_voxel_world_t *world, raxel_coord_t x, raxel_coord_t y, raxel_coord_t z);
 void raxel_world_place_voxel(raxel_voxel_world_t *world, raxel_coord_t x, raxel_coord_t y, raxel_coord_t z, raxel_voxel_t voxel);
 

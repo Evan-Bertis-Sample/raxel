@@ -5,7 +5,7 @@
 #include <string.h>
 
 static void __key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
+    // RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
     raxel_surface_t *surface = (raxel_surface_t *)glfwGetWindowUserPointer(window);
     raxel_key_event_t event = {
         .key = key,
@@ -14,7 +14,7 @@ static void __key_callback(GLFWwindow *window, int key, int scancode, int action
         .mods = mods,
     };
     if (surface->callbacks.on_key) {
-        RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
+        // RAXEL_CORE_LOG("Key event: key=%d, scancode=%d, action=%d, mods=%d\n", key, scancode, action, mods);
         surface->callbacks.on_key(surface, event);
     }
 

@@ -63,3 +63,24 @@ void raxel_input_manager_add_button_callback(raxel_input_manager_t *manager, rax
 void raxel_input_manager_add_mouse_callback(raxel_input_manager_t *manager, raxel_mouse_callback_t callback) {
     raxel_list_push_back(manager->mouse_callbacks, callback);
 }
+
+int raxel_input_manager_is_key_down(raxel_input_manager_t *manager, raxel_keys_t key) {
+    if (manager->__key_state[key] == RAXEL_KEY_STATE_DOWN_THIS_FRAME || manager->__key_state[key] == RAXEL_KEY_STATE_DOWN) {
+        return 1;
+    }
+    return 0;
+}
+
+int raxel_input_manager_is_key_up(raxel_input_manager_t *manager, raxel_keys_t key) {
+    if (manager->__key_state[key] == RAXEL_KEY_STATE_UP_THIS_FRAME || manager->__key_state[key] == RAXEL_KEY_STATE_UP) {
+        return 1;
+    }
+    return 0;
+}
+
+int raxel_input_manager_is_key_pressed(raxel_input_manager_t *manager, raxel_keys_t key) {
+    if (manager->__key_state[key] == RAXEL_KEY_STATE_DOWN_THIS_FRAME) {
+        return 1;
+    }
+    return 0;
+}

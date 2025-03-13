@@ -182,5 +182,9 @@ void raxel_input_manager_update(raxel_input_manager_t *manager);
 void raxel_input_manager_add_button_callback(raxel_input_manager_t *manager, raxel_key_callback_t callback);
 void raxel_input_manager_add_mouse_callback(raxel_input_manager_t *manager, raxel_mouse_callback_t callback);
 
+int raxel_input_manager_is_key_down(raxel_input_manager_t *manager, raxel_keys_t key);
+int raxel_input_manager_is_key_up(raxel_input_manager_t *manager, raxel_keys_t key);
+int raxel_input_manager_is_key_pressed(raxel_input_manager_t *manager, raxel_keys_t key);
+
 
 #endif  // __RAXEL_INPUT_H__
