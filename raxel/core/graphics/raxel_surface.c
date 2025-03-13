@@ -19,6 +19,20 @@ static void __key_callback(GLFWwindow *window, int key, int scancode, int action
     }
 }
 
+static void __resize_callback(GLFWwindow *window, int width, int height) {
+    raxel_surface_t *surface = (raxel_surface_t *)glfwGetWindowUserPointer(window);
+    if (surface->callbacks.on_resize) {
+        surface->callbacks.on_resize(surface, width, height);
+    }
+}
+
+static void __destroy_callback(GLFWwindow *window) {
+    raxel_surface_t *surface = (raxel_surface_t *)glfwGetWindowUserPointer(window);
+    if (surface->callbacks.on_destroy) {
+        surface->callbacks.on_destroy(surface);
+    }
+}
+
 // Internal helper to create a GLFW window.
 // Static functions use the __ prefix.
 static GLFWwindow *__create_glfw_window(raxel_surface_t *surface, int width, int height, const char *title) {
@@ -34,6 +48,14 @@ static GLFWwindow *__create_glfw_window(raxel_surface_t *surface, int width, int
     // Set the key callback.
     RAXEL_CORE_LOG("Setting key callback\n");
     glfwSetKeyCallback(window, __key_callback);
+
+    // Set the resize callback.
+    RAXEL_CORE_LOG("Setting resize callback\n");
+    glfwSetWindowSizeCallback(window, __resize_callback);
+
+    // Set the destroy callback.
+    RAXEL_CORE_LOG("Setting destroy callback\n");
+    glfwSetWindowCloseCallback(window, __destroy_callback);
     // Set the user pointer to the surface.
     RAXEL_CORE_LOG("Setting window user pointer\n");
     glfwSetWindowUserPointer(window, surface);
@@ -71,6 +93,7 @@ raxel_surface_t *raxel_surface_create(raxel_allocator_t *allocator, const char *
     surface->callbacks.on_key = NULL;
     surface->callbacks.on_resize = NULL;
     surface->allocator = allocator;
+    surface->user_data = NULL;
 
     RAXEL_CORE_LOG("Surface created\n");
 

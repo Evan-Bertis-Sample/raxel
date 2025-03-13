@@ -31,6 +31,7 @@ struct raxel_surface {
     raxel_surface_size_t height;
     raxel_surface_callbacks_t callbacks;
     raxel_allocator_t *allocator;
+    void *user_data;
 };
 
 // Create a surface.

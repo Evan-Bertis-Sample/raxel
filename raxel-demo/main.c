@@ -8,8 +8,15 @@
 #define WIDTH  800
 #define HEIGHT 600
 
-void on_key(raxel_key_event_t event) {
+static void on_key(raxel_key_event_t event) {
     RAXEL_CORE_LOG("Pushed key %d\n", event.key);
+}
+
+static void on_destroy(raxel_surface_t *surface) {
+    RAXEL_CORE_LOG("Destroying surface\n");
+    raxel_pipeline_t *pipeline = (raxel_pipeline_t *)surface->user_data;
+    raxel_pipeline_cleanup(pipeline);
+    raxel_pipeline_destroy(pipeline);
 }
 
 int main(void) {
@@ -17,6 +24,8 @@ int main(void) {
     raxel_allocator_t allocator = raxel_default_allocator();
     // Create a surface (this call creates a window and the associated Vulkan surface).
     raxel_surface_t *surface = raxel_surface_create(&allocator, "UV Compute", WIDTH, HEIGHT);
+
+    surface->callbacks.on_destroy = on_destroy;
 
     RAXEL_APP_LOG("Creating input manager\n");
     raxel_input_manager_t *input_manager = raxel_input_manager_create(&allocator, surface);
@@ -31,6 +40,8 @@ int main(void) {
 
     // Create the pipeline with the surface.
     raxel_pipeline_t *pipeline = raxel_pipeline_create(&allocator, surface);
+
+    surface->user_data = pipeline;
 
     RAXEL_APP_LOG("Initializing pipeline\n");
     
@@ -85,8 +96,6 @@ int main(void) {
 
     // Run the pipeline main loop.
     raxel_pipeline_run(pipeline);
-    // Cleanup after the main loop exits.
-    raxel_pipeline_cleanup(pipeline);
     
     return 0;
 }

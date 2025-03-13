@@ -11,8 +11,9 @@ static void __raxel_surface_callback_handler(raxel_surface_t *surface, raxel_key
         raxel_key_callback_t callback = manager->key_callbacks[i];
         if (callback.key == event.key) {
             RAXEL_CORE_LOG("Calling key callback for key %d\n", event.key);
-            if (callback.on_button)
+            if (callback.on_button) {
                 callback.on_button(event);
+            }
         }
     }
 }

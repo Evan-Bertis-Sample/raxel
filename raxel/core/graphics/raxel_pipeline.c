@@ -450,9 +450,6 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
     if (pipeline->resources.cmd_pool_graphics)
         vkDestroyCommandPool(pipeline->resources.device, pipeline->resources.cmd_pool_graphics, NULL);
 
-    if (pipeline->resources.swapchain.swapchain)
-        __destroy_swapchain(&pipeline->resources, &pipeline->resources.swapchain);
-
     vkDestroySurfaceKHR(pipeline->resources.instance, pipeline->resources.surface->context.vk_surface, NULL);
 
     if (pipeline->resources.device)
