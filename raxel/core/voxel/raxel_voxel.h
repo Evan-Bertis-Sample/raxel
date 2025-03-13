@@ -5,7 +5,7 @@
 #include <raxel/core/util.h>  // for raxel_allocator_t, raxel_string_t, etc.
 #include <stdint.h>
 
-typedef uint8_t raxel_material_handle_t;
+typedef uint32_t raxel_material_handle_t;
 typedef int32_t raxel_coord_t;
 
 typedef struct raxel_voxel {
@@ -13,7 +13,7 @@ typedef struct raxel_voxel {
 } raxel_voxel_t;
 
 #define RAXEL_VOXEL_CHUNK_SIZE 32
-#define RAXEL_MAX_LOADED_CHUNKS 16
+#define RAXEL_MAX_LOADED_CHUNKS 6
 
 typedef enum raxel_voxel_chunk_state {
     RAXEL_VOXEL_CHUNK_STATE_COUNT = 0, // not used atm
