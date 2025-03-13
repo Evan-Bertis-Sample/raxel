@@ -382,16 +382,26 @@ raxel_pipeline_pass_t *raxel_pipeline_get_pass_by_name(raxel_pipeline_t *pipelin
 }
 
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
+    RAXEL_CORE_LOG("Creating Vulkan instance\n");
     __create_instance(&pipeline->resources);
+    RAXEL_CORE_LOG("Picking physical device\n");
     __pick_physical_device(&pipeline->resources);
+    RAXEL_CORE_LOG("Creating logical device\n");
     __create_logical_device(&pipeline->resources);
+    RAXEL_CORE_LOG("Creating command pools\n");
     __create_command_pools(&pipeline->resources);
+    RAXEL_CORE_LOG("Creating synchronization objects\n");
     __create_sync_objects(&pipeline->resources);
     // Create swapchain using surface dimensions.
+    RAXEL_CORE_LOG("Initializing surface\n");
     raxel_surface_initialize(pipeline->resources.surface, pipeline->resources.instance);
+    RAXEL_CORE_LOG("Creating swapchain\n");
     __create_swapchain(&pipeline->resources, pipeline->resources.surface->width, pipeline->resources.surface->height, &pipeline->resources.swapchain);
+    RAXEL_CORE_LOG("Creating targets\n");
     __create_targets(&pipeline->resources, &pipeline->resources.targets, pipeline->resources.surface->width, pipeline->resources.surface->height);
+    RAXEL_CORE_LOG("Creating descriptor pool\n");
     __create_descriptor_pool(pipeline);
+    RAXEL_CORE_LOG("Pipeline initialized\n");
     return 0;
 }
 

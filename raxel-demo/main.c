@@ -8,8 +8,8 @@
 #define WIDTH  800
 #define HEIGHT 600
 
-static void on_key(raxel_key_event_t event) {
-    RAXEL_CORE_LOG("PUshed key %d\n", event.key);
+void on_key(raxel_key_event_t event) {
+    RAXEL_CORE_LOG("Pushed key %d\n", event.key);
 }
 
 int main(void) {
@@ -17,18 +17,27 @@ int main(void) {
     raxel_allocator_t allocator = raxel_default_allocator();
     // Create a surface (this call creates a window and the associated Vulkan surface).
     raxel_surface_t *surface = raxel_surface_create(&allocator, "UV Compute", WIDTH, HEIGHT);
+
+    RAXEL_APP_LOG("Creating input manager\n");
     raxel_input_manager_t *input_manager = raxel_input_manager_create(&allocator, surface);
     raxel_key_callback_t key_callback = {
         .key = RAXEL_KEY_A,
         .on_button = on_key,
     };
+    RAXEL_APP_LOG("Adding key callback\n");
     raxel_input_manager_add_button_callback(input_manager, key_callback);
+
+    RAXEL_APP_LOG("Initializing surface\n");
 
     // Create the pipeline with the surface.
     raxel_pipeline_t *pipeline = raxel_pipeline_create(&allocator, surface);
+
+    RAXEL_APP_LOG("Initializing pipeline\n");
     
     // Initialize the pipeline (this creates the Vulkan instance, device, swapchain, internal targets, sync objects, etc.).
     raxel_pipeline_initialize(pipeline);
+
+    RAXEL_APP_LOG("Setting debug target\n");
     // Set the debug target to the internal color target.
     raxel_pipeline_set_debug_target(pipeline, RAXEL_PIPELINE_TARGET_COLOR);
 

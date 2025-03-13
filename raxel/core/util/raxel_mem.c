@@ -58,11 +58,13 @@ raxel_allocator_t *raxel_arena_allocator(raxel_size_t size) {
     arena_ctx->arena = malloc(size);
     arena_ctx->size = size;
     arena_ctx->used = 0;
-    return &(raxel_allocator_t){
+    raxel_allocator_t *allocator = malloc(sizeof(raxel_allocator_t));
+    *allocator = (raxel_allocator_t){
         .ctx = arena_ctx,
         .alloc = raxel_arena_alloc,
         .free = raxel_arena_free,
         .copy = raxel_arena_copy};
+    return allocator;
 }
 
 void raxel_arena_allocator_destroy(raxel_allocator_t *allocator) {
