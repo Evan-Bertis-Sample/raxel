@@ -4,16 +4,19 @@
 #include <raxel/core/util.h>
 
 static void __raxel_surface_callback_handler(raxel_surface_t *surface, raxel_key_event_t event) {
+    RAXEL_CORE_LOG("Raxel surface callback handler!\n");
     raxel_input_manager_t *manager = (raxel_input_manager_t *)surface->context.input_manager;
     raxel_size_t num_callbacks = raxel_list_size(manager->key_callbacks);
     for (size_t i = 0; i < num_callbacks; i++) {
         raxel_key_callback_t callback = manager->key_callbacks[i];
         if (callback.key == event.key) {
-            callback.on_button(event);
+            RAXEL_CORE_LOG("Calling key callback for key %d\n", event.key);
+            if (callback.on_button)
+                callback.on_button(event);
         }
     }
-
 }
+
 
 raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, raxel_surface_t *surface) {
     if (!surface) {
@@ -29,10 +32,10 @@ raxel_input_manager_t *raxel_input_manager_create(raxel_allocator_t *allocator, 
     if (surface->callbacks.on_key) {
         RAXEL_CORE_LOG_ERROR("raxel_input_manager_create: surface already has a key callback, overwritting...\n");
     }
-    
+
     surface->callbacks.on_key = __raxel_surface_callback_handler;
     surface->context.input_manager = manager;
-    
+
     return manager;
 }
 

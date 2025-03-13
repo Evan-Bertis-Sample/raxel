@@ -74,6 +74,7 @@ void raxel_surface_initialize(raxel_surface_t *surface, VkInstance instance) {
 
 int raxel_surface_update(raxel_surface_t *surface) {
     // Here you might call a user-defined on_update callback.
+    // RAXEL_CORE_LOG("Updating surface\n");
     if (surface->callbacks.on_update) {
         surface->callbacks.on_update(surface);
     }
