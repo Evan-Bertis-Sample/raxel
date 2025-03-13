@@ -17,8 +17,16 @@ raxel_pc_buffer_t *raxel_pc_buffer_create(raxel_allocator_t *allocator, raxel_pc
     for (raxel_size_t i = 0; i < desc->entry_count; i++) {
         raxel_size_t new_size = desc->entries[i].offset + desc->entries[i].size;
         buffer->data_size = new_size > buffer->data_size ? new_size : buffer->data_size;
+
+        raxel_pc_entry_t entry = desc->entries[i];
+        buffer->entries[i] = entry;
     }
+
+    RAXEL_CORE_LOG("Allocating push-constant buffer of size %u\n", buffer->data_size);
+
     buffer->data = raxel_malloc(allocator, buffer->data_size);
+
+    return buffer;
 }
 
 void *raxel_pc_buffer_get(raxel_pc_buffer_t *buffer, char *name) {

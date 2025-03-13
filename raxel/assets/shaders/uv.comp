@@ -1,28 +1,45 @@
 #version 450
 layout(local_size_x = 16, local_size_y = 16) in;
 
-// Our storage image for output (set=0, binding=0).
+// Output image (set = 0, binding = 0)
 layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 
+// Push constant block containing a view matrix and a modulation value.
+layout(push_constant) uniform PushConstants {
+    mat4 view;
+    float fov;
+} pc;
+
 void main() {
-    // Get the size of the image
+    // Get the size of the output image and the current pixel coordinates.
     ivec2 imageSize = imageSize(outImage);
-    // Get the current pixel position
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
-    // Get the normalized pixel position
+    
+    // Compute the normalized pixel coordinates.
     vec2 uv = vec2(pixelCoords) / vec2(imageSize);
-
-    if (uv.x > 0.5 || uv.y > 0.5) {
-        if (uv.x < 0.75 || uv.y < 0.75) {
-            // blend the current color in the output image with the uv color
-            vec4 currentColor = imageLoad(outImage, pixelCoords);
-            vec4 newColor = vec4(uv, 0.0, 1.0);
-            vec4 finalColor = mix(currentColor, newColor, 0.5);
-            imageStore(outImage, pixelCoords, finalColor);
-        }
-        return;
+    
+    // Transform the uv coordinates with the push constant view matrix.
+    // Here we treat uv as an XY position; the Z is zero and W is 1.
+    vec4 transformed = pc.view * vec4(uv, 0.0, 1.0);
+    
+    // Use the fov push constant as a modulation factor.
+    // Here we take its sine (absolute value) to get a value between 0 and 1.
+    float modFactor = abs(sin(pc.fov));
+    
+    // Create a base color from the original uv coordinates.
+    vec4 baseColor = vec4(uv, 0.0, 1.0);
+    
+    // Mix the base color with the color from the transformed coordinates.
+    // The transformation may rotate or skew the uv, giving an interesting effect.
+    vec4 newColor = mix(baseColor, vec4(transformed.xy, 0.0, 1.0), modFactor);
+    
+    // Add a conditional tweak: for pixels on the right half, darken; on the left, brighten.
+    if (uv.x > 0.5) {
+        newColor.rgb *= 0.7;
+    } else {
+        newColor.rgb *= 1.3;
     }
-
-    // Write the pixel color
-    imageStore(outImage, pixelCoords, vec4(uv, 0.0, 1.0));
+    
+    // Write the final color to the output image.
+    imageStore(outImage, pixelCoords, newColor);
 }

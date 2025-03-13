@@ -177,6 +177,10 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
 
+    // for testing purposes, we will modify the "fov" push constant
+    float fov = 1.0f;
+    raxel_pc_buffer_set(ctx->compute_shader->pc_buffer, "fov", &fov);
+
     raxel_compute_shader_push_pc(ctx->compute_shader, cmd_buf);
 
     // Bind the compute pipeline.
