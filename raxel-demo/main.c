@@ -105,10 +105,8 @@ int main(void) {
                     // Set material to 1 (nonzero, meaning solid)
                     voxel.material = 1;
                 }
-                // Place voxel into the chunk's array.
-                // Note: The voxel world likely expects the chunk's voxel array to be filled
-                // via its own update functions, but for now we directly assign:
-                world->chunks[0].voxels[x][y][z] = voxel;
+
+                raxel_world_place_voxel(world, x, y, z, voxel);
             }
         }
     }
