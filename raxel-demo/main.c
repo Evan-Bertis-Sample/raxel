@@ -22,12 +22,6 @@ static void on_destroy(raxel_surface_t *surface) {
     raxel_pipeline_destroy(pipeline);
 }
 
-// Define a GPU-side structure matching what we will send to the shader.
-typedef struct GPUVoxelWorld {
-    uint32_t num_loaded_chunks;
-    raxel_voxel_chunk_meta_t chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
-    raxel_voxel_chunk_t chunks[RAXEL_MAX_LOADED_CHUNKS];
-} GPUVoxelWorld;
 
 int main(void) {
     // Initialize random seed.
@@ -106,7 +100,7 @@ int main(void) {
                     voxel.material = 1;
                 }
 
-                raxel_world_place_voxel(world, x, y, z, voxel);
+                raxel_voxel_world_place_voxel(world, x, y, z, voxel);
             }
         }
     }
@@ -114,16 +108,6 @@ int main(void) {
     // Optionally, update the voxel world based on camera position if needed:
     // raxel_voxel_world_update(world, &options);
     // For now, we assume our sphere is static.
-
-    // --- Flatten the voxel world data into a contiguous block for the GPU ---
-    GPUVoxelWorld gpuWorld = {0};
-    gpuWorld.num_loaded_chunks = (uint32_t)world->__num_loaded_chunks;
-    for (uint32_t i = 0; i < gpuWorld.num_loaded_chunks; i++) {
-        // Copy chunk metadata.
-        gpuWorld.chunk_meta[i] = world->chunk_meta[i];
-        // Copy chunk data.
-        gpuWorld.chunks[i] = world->chunks[i];
-    }
 
     // --- Create the compute shader pass for voxel raymarching ---
     // Assume the compiled SPIR-V file is at "internal/shaders/voxel.comp.spv".
@@ -138,17 +122,6 @@ int main(void) {
     );
     raxel_compute_shader_set_pc(compute_shader, &pc_desc);
 
-    // Set up the storage buffer for the voxel world data.
-    // The size of our data is the size of GPUVoxelWorld.
-    raxel_sb_buffer_desc_t sb_desc = RAXEL_SB_DESC(
-        (raxel_sb_entry_t){ .name = "voxel_world", .offset = 0, .size = sizeof(GPUVoxelWorld) }
-    );
-    // This call will create the buffer and update binding 1 of the compute shader’s descriptor set.
-    raxel_compute_shader_set_sb(compute_shader, pipeline, &sb_desc);
-
-    // Copy our flattened voxel world into the storage buffer.
-    memcpy(compute_shader->sb_buffer->data, &gpuWorld, sizeof(GPUVoxelWorld));
-    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
 
     // Create a compute pass context.
     raxel_compute_pass_context_t *compute_ctx = raxel_malloc(&allocator, sizeof(raxel_compute_pass_context_t));
@@ -166,6 +139,9 @@ int main(void) {
     // Create the compute pass and add it to the pipeline.
     raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(compute_ctx);
     raxel_pipeline_add_pass(pipeline, compute_pass);
+
+    raxel_voxel_world_set_sb(world, compute_shader, pipeline);
+    raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 
     raxel_pipeline_start(pipeline);
 
@@ -223,10 +199,6 @@ int main(void) {
         options.camera_position[1] = camera_position[1];
         options.camera_position[2] = camera_position[2];
         options.view_distance = 10.0f;
-
-        raxel_voxel_world_update(world, &options);
-        memcpy(compute_shader->sb_buffer->data, &gpuWorld, sizeof(GPUVoxelWorld));
-        raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
     }
 
     return 0;
