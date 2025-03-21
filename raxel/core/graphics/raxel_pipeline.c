@@ -55,8 +55,8 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, NULL);
     VkQueueFamilyProperties *queue_families = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, queue_families);
-    globals->index_graphics_queue_family = 0;
-    globals->index_compute_queue_family = 0;
+    globals->index_graphics_queue_family = -1;
+    globals->index_compute_queue_family = -1;
     for (uint32_t i = 0; i < queue_family_count; i++) {
         if ((queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
             (queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
@@ -66,6 +66,11 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
         }
     }
     free(queue_families);
+
+    if (globals->index_graphics_queue_family == -1 || globals->index_compute_queue_family == -1) {
+        RAXEL_CORE_FATAL_ERROR("Failed to find suitable queue families\n");
+        exit(EXIT_FAILURE);
+    }
 
     float queue_priority = 1.0f;
     VkDeviceQueueCreateInfo queue_info = {0};

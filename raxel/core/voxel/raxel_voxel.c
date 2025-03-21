@@ -61,10 +61,10 @@ raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_
 
 // Returns a pointer to a chunk given its chunk coordinates (relative to chunk grid).
 // Only loaded chunks (the first __num_loaded_chunks in the lists) are searched.
-raxel_voxel_chunk_t *raxel_world_get_chunk(raxel_voxel_world_t *world,
-                                           raxel_coord_t x,
-                                           raxel_coord_t y,
-                                           raxel_coord_t z) {
+raxel_voxel_chunk_t *raxel_voxel_world_get_chunk(raxel_voxel_world_t *world,
+                                                 raxel_coord_t x,
+                                                 raxel_coord_t y,
+                                                 raxel_coord_t z) {
     for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
         raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
         if (meta->x == x && meta->y == y && meta->z == z) {
@@ -77,14 +77,14 @@ raxel_voxel_chunk_t *raxel_world_get_chunk(raxel_voxel_world_t *world,
 // Given world coordinates, returns the voxel stored at that location.
 // This function computes which chunk the voxel lies in and then the voxel’s
 // local coordinates within that chunk.
-raxel_voxel_t raxel_world_get_voxel(raxel_voxel_world_t *world,
-                                    raxel_coord_t x,
-                                    raxel_coord_t y,
-                                    raxel_coord_t z) {
+raxel_voxel_t raxel_voxel_world_get_voxel(raxel_voxel_world_t *world,
+                                          raxel_coord_t x,
+                                          raxel_coord_t y,
+                                          raxel_coord_t z) {
     raxel_coord_t chunk_x = x / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t chunk_y = y / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_voxel_chunk_t *chunk = raxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
+    raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
         raxel_voxel_t empty = {0};
         return empty;
@@ -97,15 +97,15 @@ raxel_voxel_t raxel_world_get_voxel(raxel_voxel_world_t *world,
 
 // Places a voxel at the given world coordinates by updating the appropriate chunk.
 // If the chunk is not loaded, nothing is done (alternatively, you could choose to load it).
-void raxel_world_place_voxel(raxel_voxel_world_t *world,
-                             raxel_coord_t x,
-                             raxel_coord_t y,
-                             raxel_coord_t z,
-                             raxel_voxel_t voxel) {
+void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
+                                   raxel_coord_t x,
+                                   raxel_coord_t y,
+                                   raxel_coord_t z,
+                                   raxel_voxel_t voxel) {
     raxel_coord_t chunk_x = x / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t chunk_y = y / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_voxel_chunk_t *chunk = raxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
+    raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
         // Optionally, create and load the chunk here.
         return;
@@ -185,4 +185,27 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
             }
         }
     }
+}
+
+void raxel_voxel_world_set_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline) {
+    // Set up the storage buffer for the voxel world data.
+    // The size of our data is the size of GPUVoxelWorld.
+    raxel_sb_buffer_desc_t sb_desc = RAXEL_SB_DESC(
+        (raxel_sb_entry_t){.name = "voxel_world", .offset = 0, .size = sizeof(__raxel_voxel_world_gpu_t)});
+    // This call will create the buffer and update binding 1 of the compute shader’s descriptor set.
+    raxel_compute_shader_set_sb(compute_shader, pipeline, &sb_desc);
+}
+
+void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline) {
+    // Copy the voxel world data into the storage buffer.
+    __raxel_voxel_world_gpu_t gpu_world = {0};
+    gpu_world.num_loaded_chunks = (uint32_t)world->__num_loaded_chunks;
+    for (uint32_t i = 0; i < gpu_world.num_loaded_chunks; i++) {
+        gpu_world.chunk_meta[i] = world->chunk_meta[i];
+        gpu_world.chunks[i] = world->chunks[i];
+    }
+
+    // Update the storage buffer with the new voxel world data.
+    memcpy(compute_shader->sb_buffer->data, &gpu_world, sizeof(__raxel_voxel_world_gpu_t));
+    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
 }
