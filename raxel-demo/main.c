@@ -147,22 +147,15 @@ int main(void) {
             break;
         }
 
-        // use the number keys to switch debug modes 1 is normal, 2 is raymarch debug, 3 is data debug
-        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_1)) {
-            int debug_mode = 0;
-            RAXEL_APP_LOG("Setting debug mode to 0\n");
-            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+        // use the number keys to switch debug moddes
+        for (int i = 0; i < 5; i++) {
+            if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_1 + i)) {
+                int debug_mode = i;
+                raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+                RAXEL_APP_LOG("Setting debug mode to %d\n", debug_mode);
+            }
         }
-        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_2)) {
-            int debug_mode = 1;
-            RAXEL_APP_LOG("Setting debug mode to 1\n");
-            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
-        }
-        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_3)) {
-            int debug_mode = 2;
-            RAXEL_APP_LOG("Setting debug mode to 2\n");
-            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
-        }
+
 
         // RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
