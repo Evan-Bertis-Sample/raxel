@@ -15,7 +15,7 @@
 // -----------------------------------------------------------------------------
 
 // Global debug messenger (will be destroyed during cleanup)
-static VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+static VkDebugUtilsMessengerEXT __debug_messenger = VK_NULL_HANDLE;
 
 static VkResult __create_debug_utils_messenger_ext(
     VkInstance instance,
@@ -64,7 +64,7 @@ static void __setup_debug_messanger(VkInstance instance) {
     createInfo.pfnUserCallback = __debug_clbk;
     createInfo.pUserData = NULL;  // Optional
 
-    if (__create_debug_utils_messenger_ext(instance, &createInfo, NULL, &debugMessenger) != VK_SUCCESS) {
+    if (__create_debug_utils_messenger_ext(instance, &createInfo, NULL, &__debug_messenger) != VK_SUCCESS) {
         fprintf(stderr, "Failed to set up debug messenger!\n");
     }
 }
@@ -719,6 +719,12 @@ void raxel_pipeline_cleanup(raxel_pipeline_t *pipeline) {
 
     if (pipeline->resources.device != VK_NULL_HANDLE) {
         vkDestroyDevice(pipeline->resources.device, NULL);
+    }
+
+    // Destroy the debug messenger before destroying the instance.
+    if (__debug_messenger != VK_NULL_HANDLE) {
+        __destroy_debug_utils_messenger_ext(pipeline->resources.instance, __debug_messenger, NULL);
+        __debug_messenger = VK_NULL_HANDLE;
     }
     if (pipeline->resources.instance != VK_NULL_HANDLE) {
         vkDestroyInstance(pipeline->resources.instance, NULL);
