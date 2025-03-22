@@ -6,7 +6,7 @@
 #include <raxel/core/graphics.h>  // for raxel_compute_shader_t, raxel_pipeline_t
 #include <stdint.h>
 
-typedef uint8_t raxel_material_handle_t;
+typedef uint32_t raxel_material_handle_t;
 typedef int32_t raxel_coord_t;
 
 typedef struct raxel_voxel {
