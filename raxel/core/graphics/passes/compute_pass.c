@@ -261,13 +261,16 @@ static void __compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &pass->resources.command_buffer;
 
+    RAXEL_CORE_LOG("Submitting compute pass\n");
     VK_CHECK(vkQueueSubmit(globals->queue_compute, 1, &submit_info, VK_NULL_HANDLE));
     vkQueueWaitIdle(globals->queue_compute);
+    RAXEL_CORE_LOG("Compute pass finished\n");
 
     vkFreeCommandBuffers(device, globals->cmd_pool_compute, 1, &pass->resources.command_buffer);
 
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     if (ctx->on_dispatch_finished) {
+        RAXEL_CORE_LOG("Invoking dispatch finished callback\n");
         ctx->on_dispatch_finished(ctx, globals);
     }
 }

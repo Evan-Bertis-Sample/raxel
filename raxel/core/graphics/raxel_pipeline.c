@@ -10,8 +10,16 @@
 
 #include "raxel_surface.h"
 
+#define ENABLE_VALIDATION_LAYERS 1
+
+#ifdef ENABLE_VALIDATION_LAYERS
+#define validation_layers_enabled 1
+#else
+#define validation_layers_enabled 0
+#endif
+
 // -----------------------------------------------------------------------------
-// Debug Messenger Setup for Validation Layers
+// Debug messenger setup for validation layers
 // -----------------------------------------------------------------------------
 
 // Global debug messenger (will be destroyed during cleanup)
@@ -19,52 +27,52 @@ static VkDebugUtilsMessengerEXT __debug_messenger = VK_NULL_HANDLE;
 
 static VkResult __create_debug_utils_messenger_ext(
     VkInstance instance,
-    const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator,
-    VkDebugUtilsMessengerEXT *pDebugMessenger) {
+    const VkDebugUtilsMessengerCreateInfoEXT *p_create_info,
+    const VkAllocationCallbacks *p_allocator,
+    VkDebugUtilsMessengerEXT *p_debug_messenger) {
     PFN_vkCreateDebugUtilsMessengerEXT func =
         (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != NULL) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+        return func(instance, p_create_info, p_allocator, p_debug_messenger);
     }
     return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
 static void __destroy_debug_utils_messenger_ext(
     VkInstance instance,
-    VkDebugUtilsMessengerEXT debugMessenger,
-    const VkAllocationCallbacks *pAllocator) {
+    VkDebugUtilsMessengerEXT debug_messenger,
+    const VkAllocationCallbacks *p_allocator) {
     PFN_vkDestroyDebugUtilsMessengerEXT func =
         (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != NULL) {
-        func(instance, debugMessenger, pAllocator);
+        func(instance, debug_messenger, p_allocator);
     }
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL __debug_clbk(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-    void *pUserData) {
-    fprintf(stderr, "Validation layer: %s\n", pCallbackData->pMessage);
+VKAPI_ATTR VkBool32 VKAPI_CALL __debug_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_types,
+    const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data,
+    void *p_user_data) {
+    fprintf(stderr, "Validation layer: %s\n", p_callback_data->pMessage);
     return VK_FALSE;
 }
 
-static void __setup_debug_messanger(VkInstance instance) {
-    VkDebugUtilsMessengerCreateInfoEXT createInfo = {0};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity =
+static void __setup_debug_messenger(VkInstance instance) {
+    VkDebugUtilsMessengerCreateInfoEXT create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    create_info.messageSeverity =
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType =
+    create_info.messageType =
         VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = __debug_clbk;
-    createInfo.pUserData = NULL;  // Optional
+    create_info.pfnUserCallback = __debug_callback;
+    create_info.pUserData = NULL;  // Optional
 
-    if (__create_debug_utils_messenger_ext(instance, &createInfo, NULL, &__debug_messenger) != VK_SUCCESS) {
+    if (__create_debug_utils_messenger_ext(instance, &create_info, NULL, &__debug_messenger) != VK_SUCCESS) {
         fprintf(stderr, "Failed to set up debug messenger!\n");
     }
 }
@@ -88,15 +96,16 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
         exit(EXIT_FAILURE);
     }
 
-    // Define any additional instance extensions you require.
-    const char *additionalExtensions[] = {
-        "VK_EXT_debug_utils"  // For debugging support.
-    };
-    uint32_t additionalExtCount = sizeof(additionalExtensions) / sizeof(additionalExtensions[0]);
-    
-    // Combine GLFW extensions and our additional ones.
-    uint32_t extensionCount = glfw_extension_count + additionalExtCount;
-    const char **extensions = malloc(extensionCount * sizeof(const char *));
+#ifdef ENABLE_VALIDATION_LAYERS
+    const char *additional_extensions[] = {"VK_EXT_debug_utils"};
+    uint32_t additional_ext_count = sizeof(additional_extensions) / sizeof(additional_extensions[0]);
+#else
+    uint32_t additional_ext_count = 0;
+#endif
+
+    // Combine GLFW extensions and additional ones.
+    uint32_t extension_count = glfw_extension_count + additional_ext_count;
+    const char **extensions = malloc(extension_count * sizeof(const char *));
     if (!extensions) {
         fprintf(stderr, "Failed to allocate memory for instance extensions\n");
         exit(EXIT_FAILURE);
@@ -104,31 +113,37 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
     for (uint32_t i = 0; i < glfw_extension_count; i++) {
         extensions[i] = glfw_extensions[i];
     }
-    for (uint32_t i = 0; i < additionalExtCount; i++) {
-        extensions[glfw_extension_count + i] = additionalExtensions[i];
+#ifdef ENABLE_VALIDATION_LAYERS
+    for (uint32_t i = 0; i < additional_ext_count; i++) {
+        extensions[glfw_extension_count + i] = additional_extensions[i];
     }
+#endif
 
-    // Specify validation layers.
-    const char *validationLayers[] = {
-        "VK_LAYER_KHRONOS_validation"
-    };
+#ifdef ENABLE_VALIDATION_LAYERS
+    const char *validation_layers[] = {"VK_LAYER_KHRONOS_validation"};
+    uint32_t validation_layer_count = 1;
+#else
+    uint32_t validation_layer_count = 0;
+#endif
 
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &app_info;
-    create_info.enabledExtensionCount = extensionCount;
+    create_info.enabledExtensionCount = extension_count;
     create_info.ppEnabledExtensionNames = extensions;
-    create_info.enabledLayerCount = 1;
-    create_info.ppEnabledLayerNames = validationLayers;
+    create_info.enabledLayerCount = validation_layer_count;
+#ifdef ENABLE_VALIDATION_LAYERS
+    create_info.ppEnabledLayerNames = validation_layers;
+#endif
 
     VK_CHECK(vkCreateInstance(&create_info, NULL, &globals->instance));
 
     free(extensions);
 
-    // Set up the debug messenger.
-    __setup_debug_messanger(globals->instance);
+#ifdef ENABLE_VALIDATION_LAYERS
+    __setup_debug_messenger(globals->instance);
+#endif
 }
-
 
 static void __pick_physical_device(raxel_pipeline_globals_t *globals) {
     uint32_t device_count = 0;
@@ -137,7 +152,7 @@ static void __pick_physical_device(raxel_pipeline_globals_t *globals) {
         fprintf(stderr, "No Vulkan-compatible GPU found!\n");
         exit(EXIT_FAILURE);
     }
-    VkPhysicalDevice *devices = malloc(sizeof(VkPhysicalDevice) * device_count);
+    VkPhysicalDevice *devices = malloc(device_count * sizeof(VkPhysicalDevice));
     vkEnumeratePhysicalDevices(globals->instance, &device_count, devices);
     globals->device_physical = devices[0];
     free(devices);
@@ -177,7 +192,7 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     queue_info.pQueuePriorities = &queue_priority;
 
     // Enable the swapchain extension.
-    const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    const char *device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     VkDeviceCreateInfo device_info = {0};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -192,7 +207,6 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     vkGetDeviceQueue(globals->device, globals->index_compute_queue_family, 0, &globals->queue_compute);
 }
 
-
 static void __create_command_pools(raxel_pipeline_globals_t *globals) {
     VkCommandPoolCreateInfo pool_info = {0};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -203,7 +217,6 @@ static void __create_command_pools(raxel_pipeline_globals_t *globals) {
     VK_CHECK(vkCreateCommandPool(globals->device, &pool_info, NULL, &globals->cmd_pool_compute));
 }
 
-// Create synchronization objects (semaphores) for presentation.
 static void __create_sync_objects(raxel_pipeline_globals_t *globals) {
     VkSemaphoreCreateInfo sem_info = {0};
     sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -367,7 +380,7 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             targets->internal[RAXEL_PIPELINE_TARGET_COLOR].memory,
             0));
 
-        // Create an ImageView for the color image.
+        // Create an image view for the color image.
         VkImageViewCreateInfo view_info = {0};
         view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         view_info.image = targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image;
@@ -417,8 +430,8 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             barrier.subresourceRange.layerCount = 1;
 
             vkCmdPipelineBarrier(cmd_buf,
-                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,  // srcStageMask
-                                 VK_PIPELINE_STAGE_TRANSFER_BIT,     // dstStageMask
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,  // src_stage_mask
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,     // dst_stage_mask
                                  0,
                                  0, NULL,
                                  0, NULL,
@@ -631,60 +644,6 @@ static void __destroy_targets(raxel_pipeline_t *pipeline) {
         }
     }
 }
-
-// void __record_layout_transition_barrier(raxel_pipeline_globals_t *globals,
-//                                       VkImage image,
-//                                       VkImageLayout oldLayout,
-//                                       VkImageLayout newLayout,
-//                                       VkPipelineStageFlags srcStage,
-//                                       VkPipelineStageFlags dstStage) {
-//     VkCommandBufferAllocateInfo alloc_info = {0};
-//     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-//     alloc_info.commandPool = globals->cmd_pool_graphics;
-//     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-//     alloc_info.commandBufferCount = 1;
-
-//     VkCommandBuffer cmd_buf;
-//     VK_CHECK(vkAllocateCommandBuffers(globals->device, &alloc_info, &cmd_buf));
-
-//     VkCommandBufferBeginInfo begin_info = {0};
-//     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-//     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-//     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
-
-//     VkImageMemoryBarrier barrier = {0};
-//     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-//     barrier.oldLayout = oldLayout;
-//     barrier.newLayout = newLayout;
-//     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-//     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-//     barrier.image = image;
-//     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//     barrier.subresourceRange.baseMipLevel = 0;
-//     barrier.subresourceRange.levelCount = 1;
-//     barrier.subresourceRange.baseArrayLayer = 0;
-//     barrier.subresourceRange.layerCount = 1;
-
-//     vkCmdPipelineBarrier(
-//         cmd_buf,
-//         srcStage,
-//         dstStage,
-//         0,
-//         0, NULL,
-//         0, NULL,
-//         1, &barrier);
-
-//     VK_CHECK(vkEndCommandBuffer(cmd_buf));
-
-//     VkSubmitInfo submit_info = {0};
-//     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-//     submit_info.commandBufferCount = 1;
-//     submit_info.pCommandBuffers = &cmd_buf;
-//     VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
-//     vkQueueWaitIdle(globals->queue_graphics);
-
-//     vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
-// }
 
 // -----------------------------------------------------------------------------
 // Public API implementations.
