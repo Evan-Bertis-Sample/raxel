@@ -44,9 +44,9 @@ struct BVHNode {
 };
 
 struct BVHAccel {
+    BVHNode nodes[RAXEL_BVH_MAX_NODES];
     int n_nodes;
     int max_leaf_size;
-    BVHNode nodes[RAXEL_BVH_MAX_NODES];
 };
 
 // -----------------------------------------------------------------------------

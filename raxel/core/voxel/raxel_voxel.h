@@ -90,18 +90,17 @@ typedef struct __raxel_bvh_build_node {
 typedef struct raxel_linear_bvh_node_t {
     raxel_bvh_bounds_t bounds;
     union {
-        int primitives_offset;    // for leaf nodes
-        int second_child_offset;  // for interior nodes
+        int32_t primitives_offset;    // for leaf nodes
+        int32_t second_child_offset;  // for interior nodes
     };
-    uint16_t n_primitives;  // 0 means interior node
-    uint8_t axis;           // interior node: splitting axis
-    uint8_t pad[1];         // padding to 32 bytes
+    uint32_t n_primitives;  // 0 means interior node
+    uint32_t axis;           // interior node: splitting axis
 } raxel_linear_bvh_node_t;
 
 typedef struct raxel_bvh_accel_t {
     raxel_linear_bvh_node_t nodes[RAXEL_BVH_MAX_NODES];  // linear array of nodes
-    int n_nodes;                                         // total number of nodes
-    int max_leaf_size;                                   // maximum primitives per leaf
+    int32_t n_nodes;                                         // total number of nodes
+    int32_t max_leaf_size;                                   // maximum primitives per leaf
 } raxel_bvh_accel_t;
 
 raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
