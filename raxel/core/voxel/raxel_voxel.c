@@ -217,6 +217,11 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
             }
             num_loaded_chunks++;
         }
+
+        if (num_loaded_chunks >= RAXEL_MAX_LOADED_CHUNKS) {
+            break;
+        }
+
     }
     world->__num_loaded_chunks = num_loaded_chunks;
 
@@ -251,16 +256,17 @@ void raxel_voxel_world_set_sb(raxel_voxel_world_t *world, raxel_compute_shader_t
 
 void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline) {
     // Copy the voxel world data into the storage buffer.
-    __raxel_voxel_world_gpu_t gpu_world = {0};
-    gpu_world.num_loaded_chunks = (uint32_t)world->__num_loaded_chunks;
-    for (uint32_t i = 0; i < gpu_world.num_loaded_chunks; i++) {
-        gpu_world.chunk_meta[i] = world->chunk_meta[i];
-        gpu_world.chunks[i] = world->chunks[i];
+    // TECHNICALLY, this is undefined behavior
+    // but we know that sb_buffer->data is can be cast to __raxel_voxel_world_gpu_t safely
+    // this is because we described the buffer as having a size of sizeof(__raxel_voxel_world_gpu_t)
+    // and we know that the data pointer is pointing to a buffer of that size
+    __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
+    gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
+    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+        gpu_world->chunk_meta[i] = world->chunk_meta[i];
+        RAXEL_CORE_LOG("Copying chunk %d, size %lu\n", i, sizeof(raxel_voxel_chunk_t));
+        memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
     }
 
-    RAXEL_CORE_LOG("Dispatching voxel world with %d chunks\n", gpu_world.num_loaded_chunks);
-
-    // Update the storage buffer with the new voxel world data.
-    memcpy(compute_shader->sb_buffer->data, &gpu_world, sizeof(__raxel_voxel_world_gpu_t));
     raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
 }
