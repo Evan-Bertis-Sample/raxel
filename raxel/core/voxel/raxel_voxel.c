@@ -61,9 +61,9 @@ raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_
 // -----------------------------------------------------------------------------
 
 static raxel_voxel_chunk_t *__raxel_voxel_world_create_chunk(raxel_voxel_world_t *world,
-                                             raxel_coord_t x,
-                                             raxel_coord_t y,
-                                             raxel_coord_t z) {
+                                                             raxel_coord_t x,
+                                                             raxel_coord_t y,
+                                                             raxel_coord_t z) {
     raxel_voxel_chunk_meta_t meta = {x, y, z, RAXEL_VOXEL_CHUNK_STATE_COUNT};
     RAXEL_CORE_LOG("Pushing back chunk meta\n");
     raxel_list_push_back(world->chunk_meta, meta);
@@ -90,6 +90,34 @@ static void __raxel_voxel_world_swap_chunks(raxel_voxel_world_t *world,
     world->chunks[j] = tmp_chunk;
 }
 
+static void __raxel_voxel_world_from_world_to_chunk_coords(raxel_voxel_world_t *world,
+                                                           raxel_coord_t x,
+                                                           raxel_coord_t y,
+                                                           raxel_coord_t z,
+                                                           raxel_coord_t *chunk_x,
+                                                           raxel_coord_t *chunk_y,
+                                                           raxel_coord_t *chunk_z) {
+    *chunk_x = x / RAXEL_VOXEL_CHUNK_SIZE;
+    *chunk_y = y / RAXEL_VOXEL_CHUNK_SIZE;
+    *chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
+}
+
+static raxel_size_t __raxel_voxel_world_from_world_to_index(raxel_voxel_world_t *world,
+                                                            raxel_coord_t x,
+                                                            raxel_coord_t y,
+                                                            raxel_coord_t z) {
+    raxel_coord_t chunk_x, chunk_y, chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world, x, y, z, &chunk_x, &chunk_y, &chunk_z);
+    raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
+    if (!chunk) {
+        return 0;
+    }
+    raxel_coord_t local_x = ((x % RAXEL_VOXEL_CHUNK_SIZE) + RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
+    raxel_coord_t local_y = (chunk_y * RAXEL_VOXEL_CHUNK_SIZE) - y;
+    raxel_coord_t local_z = (chunk_z * RAXEL_VOXEL_CHUNK_SIZE) - z;
+    return local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE + local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+}
+
 // Returns a pointer to a chunk given its chunk coordinates (relative to chunk grid).
 raxel_voxel_chunk_t *raxel_voxel_world_get_chunk(raxel_voxel_world_t *world,
                                                  raxel_coord_t x,
@@ -112,19 +140,14 @@ raxel_voxel_t raxel_voxel_world_get_voxel(raxel_voxel_world_t *world,
                                           raxel_coord_t x,
                                           raxel_coord_t y,
                                           raxel_coord_t z) {
-    raxel_coord_t chunk_x = x / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t chunk_y = y / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
+    raxel_coord_t chunk_x, chunk_y, chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world, x, y, z, &chunk_x, &chunk_y, &chunk_z);
     raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
         raxel_voxel_t empty = {0};
         return empty;
     }
-    raxel_coord_t local_x = x % RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t local_y = y % RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t local_z = z % RAXEL_VOXEL_CHUNK_SIZE;
-
-    raxel_size_t index = local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE + local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+    raxel_size_t index = __raxel_voxel_world_from_world_to_index(world, x, y, z);
     return chunk->voxels[index];
 }
 
@@ -135,9 +158,8 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
                                    raxel_coord_t y,
                                    raxel_coord_t z,
                                    raxel_voxel_t voxel) {
-    raxel_coord_t chunk_x = x / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t chunk_y = y / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
+    raxel_coord_t chunk_x, chunk_y, chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world, x, y, z, &chunk_x, &chunk_y, &chunk_z);
     raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
         // we'll need to create a new chunk
@@ -147,14 +169,9 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
             RAXEL_CORE_FATAL_ERROR("Failed to create chunk at (%d, %d, %d)\n", chunk_x, chunk_y, chunk_z);
         }
     }
-
-    raxel_coord_t local_x = x % RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t local_y = y % RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t local_z = z % RAXEL_VOXEL_CHUNK_SIZE;
-
-    raxel_size_t index = local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE + local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+    raxel_size_t index = __raxel_voxel_world_from_world_to_index(world, x, y, z);
+    RAXEL_CORE_LOG("Placing voxel at (%d, %d, %d) in chunk (%d, %d, %d) at index %d\n", x, y, z, chunk_x, chunk_y, chunk_z, index);
     chunk->voxels[index] = voxel;
-
 }
 
 // -----------------------------------------------------------------------------
