@@ -48,9 +48,10 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     VkDescriptorSetLayoutBinding bindings[RAXEL_COMPUTE_BINDING_COUNT] = {0};
 
     // Binding for storage images.
+    // If the shader expects a single image (not an array), set descriptorCount to 1.
     bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].binding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;
     bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorCount = RAXEL_PIPELINE_TARGET_COUNT;
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorCount = 1;  // Use 1 instead of RAXEL_PIPELINE_TARGET_COUNT.
     bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
     // Binding for storage buffer.

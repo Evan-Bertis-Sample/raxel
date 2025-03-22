@@ -77,6 +77,7 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
     VkApplicationInfo app_info = {0};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName = "raxel_pipeline_renderer";
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.apiVersion = VK_API_VERSION_1_2;
 
     // Query required extensions from GLFW.
@@ -87,18 +88,30 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
         exit(EXIT_FAILURE);
     }
 
-    // Add the debug utils extension
-    const char *debugExtension = "VK_EXT_debug_utils";
-    uint32_t extensionCount = glfw_extension_count + 1;
+    // Define any additional instance extensions you require.
+    const char *additionalExtensions[] = {
+        "VK_EXT_debug_utils"  // For debugging support.
+    };
+    uint32_t additionalExtCount = sizeof(additionalExtensions) / sizeof(additionalExtensions[0]);
+    
+    // Combine GLFW extensions and our additional ones.
+    uint32_t extensionCount = glfw_extension_count + additionalExtCount;
     const char **extensions = malloc(extensionCount * sizeof(const char *));
+    if (!extensions) {
+        fprintf(stderr, "Failed to allocate memory for instance extensions\n");
+        exit(EXIT_FAILURE);
+    }
     for (uint32_t i = 0; i < glfw_extension_count; i++) {
         extensions[i] = glfw_extensions[i];
     }
-    extensions[glfw_extension_count] = debugExtension;
+    for (uint32_t i = 0; i < additionalExtCount; i++) {
+        extensions[glfw_extension_count + i] = additionalExtensions[i];
+    }
 
     // Specify validation layers.
     const char *validationLayers[] = {
-        "VK_LAYER_KHRONOS_validation"};
+        "VK_LAYER_KHRONOS_validation"
+    };
 
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -112,9 +125,10 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
 
     free(extensions);
 
-    // Set up the debug messenger
+    // Set up the debug messenger.
     __setup_debug_messanger(globals->instance);
 }
+
 
 static void __pick_physical_device(raxel_pipeline_globals_t *globals) {
     uint32_t device_count = 0;
@@ -132,7 +146,11 @@ static void __pick_physical_device(raxel_pipeline_globals_t *globals) {
 static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, NULL);
-    VkQueueFamilyProperties *queue_families = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
+    VkQueueFamilyProperties *queue_families = malloc(queue_family_count * sizeof(VkQueueFamilyProperties));
+    if (!queue_families) {
+        fprintf(stderr, "Failed to allocate memory for queue family properties\n");
+        exit(EXIT_FAILURE);
+    }
     vkGetPhysicalDeviceQueueFamilyProperties(globals->device_physical, &queue_family_count, queue_families);
     globals->index_graphics_queue_family = -1;
     globals->index_compute_queue_family = -1;
@@ -159,7 +177,7 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     queue_info.pQueuePriorities = &queue_priority;
 
     // Enable the swapchain extension.
-    const char *device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
     VkDeviceCreateInfo device_info = {0};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -173,6 +191,7 @@ static void __create_logical_device(raxel_pipeline_globals_t *globals) {
     vkGetDeviceQueue(globals->device, globals->index_graphics_queue_family, 0, &globals->queue_graphics);
     vkGetDeviceQueue(globals->device, globals->index_compute_queue_family, 0, &globals->queue_compute);
 }
+
 
 static void __create_command_pools(raxel_pipeline_globals_t *globals) {
     VkCommandPoolCreateInfo pool_info = {0};
