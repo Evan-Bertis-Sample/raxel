@@ -174,18 +174,6 @@ void raxel_voxel_world_set_sb(raxel_voxel_world_t *world,
     raxel_compute_shader_set_sb(compute_shader, pipeline, &sb_desc);
 }
 
-void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world,
-                                   raxel_compute_shader_t *compute_shader,
-                                   raxel_pipeline_t *pipeline) {
-    __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
-    gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
-    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
-        gpu_world->chunk_meta[i] = world->chunk_meta[i];
-        memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
-    }
-    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
-}
-
 // =============================================================================
 // 4. BVH Utility Functions
 // =============================================================================
@@ -345,9 +333,8 @@ raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
     bvh->max_leaf_size = max_leaf_size;
     int node_counter = 1;
     __raxel_bvh_build_node_t *root = __build_raxel_bvh_limited(primitive_bounds, primitive_indices, 0, n, max_leaf_size, &node_counter, allocator);
-    __print_bvh_build_structure(root, 0);
+    // __print_bvh_build_structure(root, 0); // DO NOT DO THIS
     bvh->n_nodes = __count_raxel_bvh_nodes(root);
-    bvh->nodes = (raxel_linear_bvh_node_t *)raxel_malloc(allocator, bvh->n_nodes * sizeof(raxel_linear_bvh_node_t));
     int offset = 0;
     __flatten_bvh_tree(root, &offset, bvh->nodes);
     __raxel_bvh_build_tree_free(root, allocator);
@@ -500,5 +487,5 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     // raxel_bvh_accel_print(bvh);
     raxel_bvh_accel_destroy(bvh, world->allocator);
     RAXEL_CORE_LOG("Dispatching updated chunks and BVH!\n");
-    raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
+    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
 }

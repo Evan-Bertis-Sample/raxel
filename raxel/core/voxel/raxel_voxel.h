@@ -84,7 +84,7 @@ typedef struct __raxel_bvh_build_node {
     int first_prim_offset;  // valid for leaf nodes
     int n_primitives;       // >0 for leaf, 0 for interior
     int split_axis;         // splitting axis: 0=x, 1=y, 2=z
-    struct __raxel_bvh_build_node_t *children[2];
+    struct __raxel_bvh_build_node *children[2];
 } __raxel_bvh_build_node_t;
 
 typedef struct raxel_linear_bvh_node_t {
