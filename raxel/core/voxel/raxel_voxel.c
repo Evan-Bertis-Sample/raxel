@@ -97,9 +97,13 @@ static void __raxel_voxel_world_from_world_to_chunk_coords(raxel_voxel_world_t *
                                                            raxel_coord_t *chunk_x,
                                                            raxel_coord_t *chunk_y,
                                                            raxel_coord_t *chunk_z) {
-    *chunk_x = x / RAXEL_VOXEL_CHUNK_SIZE;
-    *chunk_y = y / RAXEL_VOXEL_CHUNK_SIZE;
-    *chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
+    // For negative numbers, floor division is different from integer division.
+    *chunk_x = (x >= 0) ? (x / RAXEL_VOXEL_CHUNK_SIZE)
+                        : ((x - RAXEL_VOXEL_CHUNK_SIZE + 1) / RAXEL_VOXEL_CHUNK_SIZE);
+    *chunk_y = (y >= 0) ? (y / RAXEL_VOXEL_CHUNK_SIZE)
+                        : ((y - RAXEL_VOXEL_CHUNK_SIZE + 1) / RAXEL_VOXEL_CHUNK_SIZE);
+    *chunk_z = (z >= 0) ? (z / RAXEL_VOXEL_CHUNK_SIZE)
+                        : ((z - RAXEL_VOXEL_CHUNK_SIZE + 1) / RAXEL_VOXEL_CHUNK_SIZE);
 }
 
 static raxel_size_t __raxel_voxel_world_from_world_to_index(raxel_voxel_world_t *world,
@@ -112,10 +116,18 @@ static raxel_size_t __raxel_voxel_world_from_world_to_index(raxel_voxel_world_t 
     if (!chunk) {
         return 0;
     }
-    raxel_coord_t local_x = ((x % RAXEL_VOXEL_CHUNK_SIZE) + RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t local_y = (chunk_y * RAXEL_VOXEL_CHUNK_SIZE) - y;
-    raxel_coord_t local_z = (chunk_z * RAXEL_VOXEL_CHUNK_SIZE) - z;
-    return local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE + local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+    // Compute local coordinates as: local = world coordinate - (chunk coordinate * chunk_size)
+    raxel_coord_t local_x = x - (chunk_x * RAXEL_VOXEL_CHUNK_SIZE);
+    raxel_coord_t local_y = y - (chunk_y * RAXEL_VOXEL_CHUNK_SIZE);
+    raxel_coord_t local_z = z - (chunk_z * RAXEL_VOXEL_CHUNK_SIZE);
+
+    // Adjust to positive range using a positive modulo.
+    local_x = ((local_x % RAXEL_VOXEL_CHUNK_SIZE) + RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
+    local_y = ((local_y % RAXEL_VOXEL_CHUNK_SIZE) + RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
+    local_z = ((local_z % RAXEL_VOXEL_CHUNK_SIZE) + RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
+
+    return local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE +
+           local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
 }
 
 // Returns a pointer to a chunk given its chunk coordinates (relative to chunk grid).
@@ -170,7 +182,7 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
         }
     }
     raxel_size_t index = __raxel_voxel_world_from_world_to_index(world, x, y, z);
-    RAXEL_CORE_LOG("Placing voxel at (%d, %d, %d) in chunk (%d, %d, %d) at index %d\n", x, y, z, chunk_x, chunk_y, chunk_z, index);
+    // RAXEL_CORE_LOG("Placing voxel at (%d, %d, %d) in chunk (%d, %d, %d) at index %d\n", x, y, z, chunk_x, chunk_y, chunk_z, index);
     chunk->voxels[index] = voxel;
 }
 
