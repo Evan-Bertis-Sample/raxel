@@ -22,7 +22,6 @@ static void on_destroy(raxel_surface_t *surface) {
     raxel_pipeline_destroy(pipeline);
 }
 
-
 int main(void) {
     // Initialize random seed.
     srand((unsigned)time(NULL));
@@ -59,14 +58,14 @@ int main(void) {
 
     // Create a chunk covering world coordinates [0, 31] in x, y, z.
     raxel_voxel_chunk_t chunk;
-    memset(&chunk, 0, sizeof(chunk)); // initially all voxels are air (0)
+    memset(&chunk, 0, sizeof(chunk));  // initially all voxels are air (0)
 
     // Set chunk metadata to indicate this chunk is at the origin.
     raxel_voxel_chunk_meta_t meta;
     meta.x = 0;
     meta.y = 0;
     meta.z = 0;
-    meta.state = RAXEL_VOXEL_CHUNK_STATE_COUNT; // not used atm
+    meta.state = RAXEL_VOXEL_CHUNK_STATE_COUNT;  // not used atm
 
     // Add the meta and chunk to the world.
     raxel_list_push_back(world->chunk_meta, meta);
@@ -78,7 +77,7 @@ int main(void) {
     vec3 sphereCenter = {0.0f, 0.0f, 0.0f};
     float sphereRadius = 10.0f;
     float sphereRadiusSq = sphereRadius * sphereRadius;
-    
+
     // For every voxel coordinate within this chunk, compute world position and set material.
     // We'll fill voxels inside the sphere with material value 1.
     for (int x = 0; x < RAXEL_VOXEL_CHUNK_SIZE; x++) {
@@ -93,7 +92,7 @@ int main(void) {
                 float dx = wx - sphereCenter[0];
                 float dy = wy - sphereCenter[1];
                 float dz = wz - sphereCenter[2];
-                float distSq = dx*dx + dy*dy + dz*dz;
+                float distSq = dx * dx + dy * dy + dz * dz;
                 raxel_voxel_t voxel = {0};
                 if (distSq < sphereRadiusSq) {
                     // Set material to 1 (nonzero, meaning solid)
@@ -111,17 +110,13 @@ int main(void) {
 
     // --- Create the compute shader pass for voxel raymarching ---
     // Assume the compiled SPIR-V file is at "internal/shaders/voxel.comp.spv".
-    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/voxel.comp.spv");
-
     // Set up the push constant buffer.
     // Push constants: view matrix (16 floats), fov (1 float), and rays_per_pixel (1 int).
     raxel_pc_buffer_desc_t pc_desc = RAXEL_PC_DESC(
-        (raxel_pc_entry_t){ .name = "view", .offset = 0, .size = 16 * sizeof(float) },
-        (raxel_pc_entry_t){ .name = "fov", .offset = 16 * sizeof(float), .size = sizeof(float) },
-        (raxel_pc_entry_t){ .name = "rays_per_pixel", .offset = 16 * sizeof(float) + sizeof(float), .size = sizeof(int) }
-    );
-    raxel_compute_shader_set_pc(compute_shader, &pc_desc);
-
+        (raxel_pc_entry_t){.name = "view", .offset = 0, .size = 16 * sizeof(float)},
+        (raxel_pc_entry_t){.name = "fov", .offset = 16 * sizeof(float), .size = sizeof(float)},
+        (raxel_pc_entry_t){.name = "rays_per_pixel", .offset = 16 * sizeof(float) + sizeof(float), .size = sizeof(int)});
+    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/voxel.comp.spv", &pc_desc);
 
     // Create a compute pass context.
     raxel_compute_pass_context_t *compute_ctx = raxel_malloc(&allocator, sizeof(raxel_compute_pass_context_t));
@@ -133,7 +128,6 @@ int main(void) {
     // Set the blit target to the internal color target.
     compute_ctx->targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
     compute_ctx->targets[1] = -1;  // Sentinel.
-    compute_ctx->pc_desc = pc_desc;
     compute_ctx->on_dispatch_finished = NULL;
 
     // Create the compute pass and add it to the pipeline.
