@@ -31,7 +31,7 @@ typedef struct raxel_voxel_chunk_meta {
 typedef struct raxel_voxel_chunk {
     // all of these voxel's coordinates are relative to the chunk's bottom-left corner, and implicitly
     // stored in the index of the array
-    raxel_voxel_t voxels[RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE];
+    raxel_voxel_t voxels[RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE];
 } raxel_voxel_chunk_t;
 
 typedef struct raxel_voxel_material_attributes {
@@ -47,7 +47,7 @@ typedef struct raxel_voxel_world {
     raxel_list(raxel_voxel_chunk_t) chunks; // the first __num_loaded_chunks are loaded
     raxel_list(raxel_voxel_chunk_meta_t) chunk_meta; // index of chunk in chunks
     raxel_size_t __num_loaded_chunks; // between 0 and RAXEL_MAX_LOADED_CHUNKS
-    raxel_allocator_t allocator;
+    raxel_allocator_t *allocator;
     raxel_list(raxel_voxel_material_t) materials;
 } raxel_voxel_world_t;
 

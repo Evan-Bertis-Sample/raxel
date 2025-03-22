@@ -49,33 +49,8 @@ int main(void) {
     raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.3f, 0.8f, 1.0f});
     raxel_pipeline_add_pass(pipeline, clear_pass);
 
-    // --- Create and populate a voxel world ---
-    raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
-    // Create a giant sphere at the origin
-    int radius = 10;
-    raxel_voxel_t sphere_voxel = {
-        .material = 1,  // material index
-    };
-
-    for (int x = -radius; x <= radius; x++) {
-        for (int y = -radius; y <= radius; y++) {
-            for (int z = -radius; z <= radius; z++) {
-                if (x * x + y * y + z * z <= radius * radius) {
-                    raxel_voxel_world_place_voxel(world, x, y, z, sphere_voxel);
-                }
-            }
-        }
-    }
-
-    // Optionally, update the voxel world based on camera position if needed:
-    // raxel_voxel_world_update(world, &options);
-    // For now, we assume our sphere is static.
-
-    // --- Create the compute shader pass for voxel raymarching ---
-    // Assume the compiled SPIR-V file is at "internal/shaders/voxel.comp.spv".
-    // Set up the push constant buffer.
-    // Push constants: view matrix (16 floats), fov (1 float), and rays_per_pixel (1 int).
+    // Create the compute shader and pass.
     raxel_pc_buffer_desc_t pc_desc = RAXEL_PC_DESC(
         (raxel_pc_entry_t){.name = "view", .offset = 0, .size = 16 * sizeof(float)},
         (raxel_pc_entry_t){.name = "fov", .offset = 16 * sizeof(float), .size = sizeof(float)},
@@ -98,6 +73,25 @@ int main(void) {
     // Create the compute pass and add it to the pipeline.
     raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(compute_ctx);
     raxel_pipeline_add_pass(pipeline, compute_pass);
+
+    // --- Create and populate a voxel world ---
+    raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
+
+    // Create a giant sphere at the origin
+    int radius = 100;
+    raxel_voxel_t sphere_voxel = {
+        .material = 1,  // material index
+    };
+
+    for (int x = -radius; x <= radius; x++) {
+        for (int y = -radius; y <= radius; y++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + y * y + z * z <= radius * radius) {
+                    raxel_voxel_world_place_voxel(world, x, y, z, sphere_voxel);
+                }
+            }
+        }
+    }
 
     raxel_voxel_world_set_sb(world, compute_shader, pipeline);
     raxel_voxel_world_update_options_t initial_options = {0};

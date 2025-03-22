@@ -21,7 +21,6 @@ void *__raxel_array_create(raxel_allocator_t *allocator, raxel_size_t size, raxe
     return (void *)((char *)block + header_size);
 }
 
-
 void __raxel_array_destroy(void *array) {
     if (!array) return;
     __raxel_array_header_t *header = raxel_array_header(array);
@@ -73,13 +72,14 @@ void __raxel_list_destroy(void *list) {
 
 void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
     if (!list_ptr || !(*list_ptr)) return;
+
     __raxel_list_header_t *old_header = raxel_list_header(*list_ptr);
     void *old_list = *list_ptr;
-    raxel_size_t copy_size = (old_header->__size < new_capacity) ? old_header->__size : new_capacity;
+    raxel_size_t copy_size = (old_header->__size > new_capacity) ? old_header->__size : new_capacity;
+    RAXEL_CORE_LOG("Resizing list from %u to %u\n", old_header->__capacity, copy_size);
     void *new_list = __raxel_list_create(old_header->__allocator, new_capacity, copy_size, old_header->__stride);
     __raxel_list_header_t *new_header = raxel_list_header(new_list);
     // Copy old data to new list
-
     new_header->__size = copy_size;
     memcpy(new_list, old_list, copy_size * old_header->__stride);
     __raxel_list_destroy(old_list);
@@ -87,14 +87,21 @@ void __raxel_list_resize(void **list_ptr, raxel_size_t new_capacity) {
 }
 
 void __raxel_list_push_back(void **list_ptr, void *data) {
-    if (!list_ptr || !(*list_ptr)) return;
+    if (!list_ptr || !(*list_ptr)) {
+        RAXEL_CORE_LOG("List is NULL\n");
+        return;
+    }
+
+    RAXEL_CORE_LOG("Pushing back data onto array of size %u and capacity %u\n", raxel_list_size(*list_ptr), raxel_list_capacity(*list_ptr));
     __raxel_list_header_t *header = raxel_list_header(*list_ptr);
     if (header->__size == header->__capacity) {
+        RAXEL_CORE_LOG("Resizing list to new capacity %u\n", header->__capacity * 2);
         __raxel_list_resize(list_ptr, header->__capacity * 2);
         header = raxel_list_header(*list_ptr);
     }
     // Copy data to the end of the list
     raxel_size_t offset = header->__size * header->__stride;
+    RAXEL_CORE_LOG("Copying data of size %u at offset %u\n", header->__stride, offset);
     memcpy((char *)*list_ptr + offset, data, header->__stride);
 
     header->__size++;

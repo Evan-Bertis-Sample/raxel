@@ -13,9 +13,10 @@
 
 raxel_voxel_world_t *raxel_voxel_world_create(raxel_allocator_t *allocator) {
     raxel_voxel_world_t *world = raxel_malloc(allocator, sizeof(raxel_voxel_world_t));
-    world->allocator = *allocator;
+    world->allocator = allocator;
     // Create dynamic lists for chunks, chunk meta, and materials.
     world->chunks = raxel_list_create_reserve(raxel_voxel_chunk_t, allocator, RAXEL_MAX_LOADED_CHUNKS);
+
     world->chunk_meta = raxel_list_create_reserve(raxel_voxel_chunk_meta_t, allocator, RAXEL_MAX_LOADED_CHUNKS);
     world->__num_loaded_chunks = 0;
     world->materials = raxel_list_create_reserve(raxel_voxel_material_t, allocator, 16);
@@ -31,7 +32,7 @@ void raxel_voxel_world_destroy(raxel_voxel_world_t *world) {
     raxel_list_destroy(world->materials);
     raxel_list_destroy(world->chunk_meta);
     raxel_list_destroy(world->chunks);
-    raxel_free(&world->allocator, world);
+    raxel_free(world->allocator, world);
 }
 
 // -----------------------------------------------------------------------------
@@ -60,15 +61,19 @@ raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_
 // Chunk Access
 // -----------------------------------------------------------------------------
 
-static void __raxel_voxel_world_create_chunk(raxel_voxel_world_t *world,
+static raxel_voxel_chunk_t *__raxel_voxel_world_create_chunk(raxel_voxel_world_t *world,
                                              raxel_coord_t x,
                                              raxel_coord_t y,
                                              raxel_coord_t z) {
     raxel_voxel_chunk_meta_t meta = {x, y, z, RAXEL_VOXEL_CHUNK_STATE_COUNT};
-    raxel_voxel_chunk_t chunk;
-    memset(&chunk, 0, sizeof(chunk));
+    RAXEL_CORE_LOG("Pushing back chunk meta\n");
     raxel_list_push_back(world->chunk_meta, meta);
+    raxel_voxel_chunk_t chunk;
+    memset(&chunk, 0, sizeof(raxel_voxel_chunk_t));
+    RAXEL_CORE_LOG("Pushing back chunk\n");
     raxel_list_push_back(world->chunks, chunk);
+    RAXEL_CORE_LOG("New chunk created at (%d, %d, %d), index %d\n", x, y, z, raxel_list_size(world->chunks) - 1);
+    return &world->chunks[raxel_list_size(world->chunks) - 1];
 }
 
 static void __raxel_voxel_world_swap_chunks(raxel_voxel_world_t *world,
@@ -115,7 +120,9 @@ raxel_voxel_t raxel_voxel_world_get_voxel(raxel_voxel_world_t *world,
     raxel_coord_t local_x = x % RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t local_y = y % RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t local_z = z % RAXEL_VOXEL_CHUNK_SIZE;
-    return chunk->voxels[local_x][local_y][local_z];
+
+    raxel_size_t index = local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE + local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+    return chunk->voxels[index];
 }
 
 // Places a voxel at the given world coordinates by updating the appropriate chunk.
@@ -131,13 +138,20 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
     raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
         // we'll need to create a new chunk
-        __raxel_voxel_world_create_chunk(world, chunk_x, chunk_y, chunk_z);
-        chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
+        RAXEL_CORE_LOG("Creating new chunk at (%d, %d, %d)\n", chunk_x, chunk_y, chunk_z);
+        chunk = __raxel_voxel_world_create_chunk(world, chunk_x, chunk_y, chunk_z);
+        if (!chunk) {
+            RAXEL_CORE_FATAL_ERROR("Failed to create chunk at (%d, %d, %d)\n", chunk_x, chunk_y, chunk_z);
+        }
     }
+
     raxel_coord_t local_x = x % RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t local_y = y % RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t local_z = z % RAXEL_VOXEL_CHUNK_SIZE;
-    chunk->voxels[local_x][local_y][local_z] = voxel;
+
+    raxel_size_t index = local_x + local_y * RAXEL_VOXEL_CHUNK_SIZE + local_z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+    chunk->voxels[index] = voxel;
+
 }
 
 // -----------------------------------------------------------------------------
@@ -150,6 +164,7 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
 void raxel_voxel_world_update(raxel_voxel_world_t *world,
                               raxel_voxel_world_update_options_t *options) {
     // Determine the camera's chunk coordinates.
+    RAXEL_CORE_LOG("Updating voxel world\n");
     raxel_coord_t cam_chunk_x = options->camera_position[0] / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t cam_chunk_y = options->camera_position[1] / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t cam_chunk_z = options->camera_position[2] / RAXEL_VOXEL_CHUNK_SIZE;
@@ -173,7 +188,6 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     }
     world->__num_loaded_chunks = num_loaded_chunks;
 
-
     // print out some information about the voxel world
     printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
     for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
@@ -183,15 +197,13 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
         // count the number of non-air voxels in this chunk
         int count = 0;
         raxel_voxel_chunk_t *chunk = &world->chunks[i];
-        for (int x = 0; x < RAXEL_VOXEL_CHUNK_SIZE; x++) {
-            for (int y = 0; y < RAXEL_VOXEL_CHUNK_SIZE; y++) {
-                for (int z = 0; z < RAXEL_VOXEL_CHUNK_SIZE; z++) {
-                    if (chunk->voxels[x][y][z].material != 0) {
-                        count++;
-                    }
-                }
+
+        for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+            if (chunk->voxels[j].material != 0) {
+                count++;
             }
         }
+
         printf("  Non-air voxels: %d\n", count);
     }
 }
@@ -213,6 +225,8 @@ void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world, raxel_compute_sha
         gpu_world.chunk_meta[i] = world->chunk_meta[i];
         gpu_world.chunks[i] = world->chunks[i];
     }
+
+    RAXEL_CORE_LOG("Dispatching voxel world with %d chunks\n", gpu_world.num_loaded_chunks);
 
     // Update the storage buffer with the new voxel world data.
     memcpy(compute_shader->sb_buffer->data, &gpu_world, sizeof(__raxel_voxel_world_gpu_t));
