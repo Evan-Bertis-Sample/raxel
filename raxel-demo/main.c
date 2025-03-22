@@ -52,10 +52,6 @@ int main(void) {
     // --- Create and populate a voxel world ---
     raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
-    // For this test, we load one chunk.
-    // Set the number of loaded chunks to 1.
-    world->__num_loaded_chunks = 1;
-
     // Create a chunk covering world coordinates [0, 31] in x, y, z.
     raxel_voxel_chunk_t chunk;
     memset(&chunk, 0, sizeof(chunk));  // initially all voxels are air (0)
@@ -137,6 +133,12 @@ int main(void) {
     raxel_pipeline_add_pass(pipeline, compute_pass);
 
     raxel_voxel_world_set_sb(world, compute_shader, pipeline);
+    raxel_voxel_world_update_options_t initial_options = {0};
+    initial_options.camera_position[0] = 0.0f;
+    initial_options.camera_position[1] = 0.0f;
+    initial_options.camera_position[2] = 0.0f;
+    initial_options.view_distance = 100.0f;
+    raxel_voxel_world_update(world, &initial_options);
     raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 
     raxel_pipeline_start(pipeline);
@@ -148,8 +150,16 @@ int main(void) {
     vec3 camera_position = {0.0f, 0.0f, 0.0f};
 
     while (!raxel_pipeline_should_close(pipeline)) {
-        raxel_pipeline_update(pipeline);
         time += delta_time;
+        // Update the storage buffer with the new voxel world data.
+        raxel_voxel_world_update_options_t options = {0};
+        options.camera_position[0] = camera_position[0];
+        options.camera_position[1] = camera_position[1];
+        options.camera_position[2] = camera_position[2];
+        options.view_distance = 100.0f;
+
+        // raxel_voxel_world_update(world, &options);
+        // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 
         // Simple WASD and QE controls to move the camera.
         if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_W)) {
@@ -211,12 +221,7 @@ int main(void) {
         int rpp = 1;
         raxel_pc_buffer_set(compute_shader->pc_buffer, "rays_per_pixel", &rpp);
 
-        // Update the storage buffer with the new voxel world data.
-        raxel_voxel_world_update_options_t options = {0};
-        options.camera_position[0] = camera_position[0];
-        options.camera_position[1] = camera_position[1];
-        options.camera_position[2] = camera_position[2];
-        options.view_distance = 10.0f;
+        raxel_pipeline_update(pipeline);
     }
 
     return 0;
