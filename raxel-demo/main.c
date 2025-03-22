@@ -79,25 +79,30 @@ int main(void) {
 
     // Create a giant sphere at the origin
     int radius = 50;
-    raxel_voxel_t sphere_voxel = {
-        .material = 1,  // material index
-    };
 
     for (int x = -radius; x <= radius; x++) {
         for (int y = -radius; y <= radius; y++) {
             for (int z = -radius; z <= radius; z++) {
                 if (x * x + y * y + z * z <= radius * radius) {
+
+                    raxel_voxel_t sphere_voxel = {
+                        .material = 255,
+                    };
+
                     raxel_voxel_world_place_voxel(world, x, y, z, sphere_voxel);
                 }
             }
         }
     }
 
+    vec3 camera_position = {0.0f, 0.0f, -50.0f};
+    float camera_rotation = 0.0f;
+
     raxel_voxel_world_set_sb(world, compute_shader, pipeline);
     raxel_voxel_world_update_options_t initial_options = {0};
-    initial_options.camera_position[0] = 0.0f;
-    initial_options.camera_position[1] = 0.0f;
-    initial_options.camera_position[2] = 0.0f;
+    initial_options.camera_position[0] = camera_position[0];
+    initial_options.camera_position[1] = camera_position[1];
+    initial_options.camera_position[2] = camera_position[2];
     initial_options.view_distance = 100.0f;
     raxel_voxel_world_update(world, &initial_options);
     raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
@@ -108,19 +113,10 @@ int main(void) {
     // For demonstration, we update the push constants per frame.
     double time = 0.0;
     double delta_time = 0.01;
-    vec3 camera_position = {0.0f, 0.0f, 0.0f};
+
 
     while (!raxel_pipeline_should_close(pipeline)) {
-        time += delta_time;
-        // Update the storage buffer with the new voxel world data.
-        raxel_voxel_world_update_options_t options = {0};
-        options.camera_position[0] = camera_position[0];
-        options.camera_position[1] = camera_position[1];
-        options.camera_position[2] = camera_position[2];
-        options.view_distance = 100.0f;
-
-        // raxel_voxel_world_update(world, &options);
-        // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
+        time += delta_time;;
 
         // Simple WASD and QE controls to move the camera.
         if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_W)) {
@@ -140,6 +136,12 @@ int main(void) {
         }
         if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_LEFT_SHIFT)) {
             camera_position[1] -= 0.1f;
+        }
+        if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_Q)) {
+            camera_rotation -= 0.1f;
+        }
+        if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_E)) {
+            camera_rotation += 0.1f;
         }
 
         if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_ESCAPE)) {
@@ -168,9 +170,13 @@ int main(void) {
         // Update the view matrix.
         mat4 view;
         glm_mat4_identity(view);
+
+        // Rotate the view matrix by the camera rotation.
+        glm_rotate(view, camera_rotation, (vec3){0.0f, 1.0f, 0.0f});
+
         // Translate the view matrix by the negative camera position.
-        // (Depending on your convention, you might need to invert this translation.)
-        glm_translate(view, camera_position);
+        glm_translate(view, (vec3){-camera_position[0], -camera_position[1], -camera_position[2]});
+
         raxel_pc_buffer_set(compute_shader->pc_buffer, "view", view);
 
         // Update fov (e.g., 90 degrees converted to radians).
@@ -180,6 +186,19 @@ int main(void) {
         // Update rays per pixel (e.g., 4 rays per pixel).
         int rpp = 1;
         raxel_pc_buffer_set(compute_shader->pc_buffer, "rays_per_pixel", &rpp);
+
+
+        // Update the storage buffer with the new voxel world data.
+        raxel_voxel_world_update_options_t options = {0};
+        options.camera_position[0] = camera_position[0];
+        options.camera_position[1] = camera_position[1];
+        options.camera_position[2] = camera_position[2];
+        options.view_distance = 100.0f;
+
+        RAXEL_CORE_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
+
+        // raxel_voxel_world_update(world, &options);
+        // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline)
 
         raxel_pipeline_update(pipeline);
     }
