@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 #define RAXEL_VOXEL_CHUNK_SIZE 32
 #define RAXEL_MAX_LOADED_CHUNKS 32
-#define RAXEL_BVH_MAX_NODES 4096
+#define RAXEL_BVH_MAX_NODES 1024
 #define EPSILON 0.01
 #define MAX_DISTANCE 1000.0
 #define MAX_STEPS 1000
@@ -52,9 +52,9 @@ struct BVHAccel {
 // -----------------------------------------------------------------------------
 struct GPUVoxelWorld {
     BVHAccel bvh;
-    uint num_loaded_chunks;
     VoxelChunkMeta chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
     VoxelChunk chunks[RAXEL_MAX_LOADED_CHUNKS];
+    uint num_loaded_chunks;
 };
 
 layout(std430, set = 0, binding = 1) buffer VoxelWorldBuffer {
@@ -98,9 +98,7 @@ bool intersectAABB(vec3 ro, vec3 rd, vec3 inv_rd, vec3 bmin, vec3 bmax, out floa
     return tmax >= max(tmin, 0.0);
 }
 
-// -----------------------------------------------------------------------------
-// BVH Traversal Function
-// Outputs hit distance and leaf node id.
+
 bool traverseBVH(vec3 ro, vec3 rd, out float t_hit, out int leaf_id) {
     vec3 inv_rd = 1.0 / rd;
     int stack[64];

@@ -16,7 +16,7 @@ typedef struct raxel_voxel {
 
 #define RAXEL_VOXEL_CHUNK_SIZE 32
 #define RAXEL_MAX_LOADED_CHUNKS 32
-#define RAXEL_BVH_MAX_NODES 4096
+#define RAXEL_BVH_MAX_NODES 1024
 #define MAX_LEAF_SIZE_BVH 32
 
 typedef enum raxel_voxel_chunk_state {
@@ -120,9 +120,9 @@ void raxel_bvh_accel_print(raxel_bvh_accel_t *bvh);
 
 typedef struct __raxel_voxel_world_gpu {
     raxel_bvh_accel_t bvh;
-    uint32_t num_loaded_chunks;
     raxel_voxel_chunk_meta_t chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
     raxel_voxel_chunk_t chunks[RAXEL_MAX_LOADED_CHUNKS];
+    uint32_t num_loaded_chunks;
 } __raxel_voxel_world_gpu_t;
 
 #endif  // __RAXEL_VOXEL_H__

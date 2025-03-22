@@ -486,11 +486,15 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
         raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
         return;
     }
-    
+
+    RAXEL_CORE_LOG("Copying BVH to GPU world buffer, size: %d\n", sizeof(raxel_bvh_accel_t));
     memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
     // Optional: print BVH structure for debugging.
-    raxel_bvh_accel_print(bvh);
     raxel_bvh_accel_destroy(bvh, world->allocator);
     RAXEL_CORE_LOG("Dispatching updated chunks and BVH!\n");
+    RAXEL_CORE_LOG("Num Loaded Chunks: %d\n", world->__num_loaded_chunks);
+    RAXEL_CORE_LOG("Num BVH Nodes: %d\n", bvh->n_nodes);
+    RAXEL_CORE_LOG("Data Size: %d\n", sizeof(__raxel_voxel_world_gpu_t));
+    // raxel_bvh_accel_print(bvh);
     raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
 }
