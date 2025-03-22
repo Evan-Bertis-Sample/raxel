@@ -119,7 +119,7 @@ void raxel_bvh_accel_print(raxel_bvh_accel_t *bvh);
 
 typedef struct __raxel_voxel_world_gpu {
     raxel_bvh_accel_t bvh;
-    raxel_size_t num_loaded_chunks;
+    uint32_t num_loaded_chunks;
     raxel_voxel_chunk_meta_t chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
     raxel_voxel_chunk_t chunks[RAXEL_MAX_LOADED_CHUNKS];
 } __raxel_voxel_world_gpu_t;
