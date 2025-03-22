@@ -1,6 +1,7 @@
 // raxel_voxel.c
 
 #include "raxel_voxel.h"
+#include <raxel/core/graphics/passes/compute_pass.h>
 
 #include <math.h>
 #include <stdlib.h>

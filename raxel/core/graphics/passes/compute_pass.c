@@ -41,6 +41,7 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
         fprintf(stderr, "Failed to allocate compute shader\n");
         exit(EXIT_FAILURE);
     }
+    
     VkShaderModule comp_module = __load_shader_module(device, shader_path);
 
     // Create descriptor set layout bindings using the enum to avoid magic numbers.

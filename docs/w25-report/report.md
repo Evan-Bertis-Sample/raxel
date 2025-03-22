@@ -1,7 +1,7 @@
 raxel
 ======
 
-**A Raymarched Voxel Engine Developed with Vulkan**
+**A Raymarched Voxel Engine Developed with Vulkan, in C99**
 ```
 Author: Evan Bertis-Sample
 Date: 3/21/2025
@@ -23,9 +23,6 @@ This report covers the development of `raxel` within the past quarter. These dev
 
 # Table of Contents
 
-- [raxel](#raxel)
-- [Overview](#overview)
-- [Table of Contents](#table-of-contents)
 - [Engine](#engine)
   - [Objectives](#objectives)
   - [High Level Description](#high-level-description)
@@ -50,11 +47,26 @@ This report covers the development of `raxel` within the past quarter. These dev
 
 # Engine
 
-...
+`raxel` is split into two core parts, the *engine* and the *rendering systems.*
+
+The engine encapsulates the `raxel` that aren't interacting directly with the Vulkan code. Rather, the engine is concerned with building an abstraction around the rendering systems, providing tooling, and making the developer experience better. It also provides many utilities that would be fundamental to building games and technical demos.
+
+Whereas the rendering systems is the portion of `raxel` that directly interact with graphics drivers and utilities, and the abstractions around them.
+
+As of writing this report, the responsibilities of the engine and the rendering systems are split as follows:
+
+* **Engine**
+  * Building and compiling games, and linking it with the engine
+  * Providing a standard library for the user, namely data structures and wrappers around the rendering system
+  * Providing a suite of tools to make development easier - handling unit tests, enabling intellisense (in VSCode), updating the engine, running raxel games, etc.
+* **Rendering Systems**
+  * Setting up graphics resources, making lower level calls to graphics libraries
+  * Creating an abstraction above these resources, allowing the developer to focus on their application of these graphics tools
+  * Defining voxels, voxel worlds, and handling the rendering of them
 
 ## Objectives
 
-...
+Building the engine was a selfish effort, and it's design is to cater to my (Evan's) workflow. This workflow involves minimum usage of GUI's, a reliance on the CLI, and creating the minim possible 
 
 ## High Level Description
 
