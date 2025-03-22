@@ -173,7 +173,12 @@ void main() {
             // Debug mode 2: display raw voxel data.
             // use pix as an index into the large array
             int idx = pix.x + pix.y * int(iResolution.x);
-            uint voxel = sampleVoxelWorld(vec3(float(idx), 0.0, 0.0));
+            int chunk_idx = idx % RAXEL_MAX_LOADED_CHUNKS;
+            int voxel_x = idx % RAXEL_VOXEL_CHUNK_SIZE;
+            int voxel_y = (idx / RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
+            int voxel_z = (idx / (RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE)) % RAXEL_VOXEL_CHUNK_SIZE;
+            uint voxel = voxel_world.chunks[chunk_idx].voxels[voxel_x][voxel_y][voxel_z];
+
             col = vec3(float(voxel) / 255.0);
         } else {
             // Normal mode.

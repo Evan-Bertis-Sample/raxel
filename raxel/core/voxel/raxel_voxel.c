@@ -38,11 +38,11 @@ void raxel_voxel_world_destroy(raxel_voxel_world_t *world) {
 // Materials
 // -----------------------------------------------------------------------------
 
-void raxel_voxel_world_add_material(raxel_voxel_world_t *world, raxel_string_t name, vec4 color) {
-    raxel_voxel_material_t material;
-    // Here we simply assign the name (a shallow copy). You may wish to duplicate it.
-    material.name = name;
-    glm_vec4_copy(color, material.color);
+void raxel_voxel_world_add_material(raxel_voxel_world_t *world, raxel_string_t name, raxel_voxel_material_attributes_t attributes) {
+    raxel_voxel_material_t material = {
+        .name = name,
+        .attributes = attributes,
+    };
     raxel_list_push_back(world->materials, material);
 }
 

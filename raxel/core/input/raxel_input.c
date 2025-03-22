@@ -4,7 +4,7 @@
 #include <raxel/core/util.h>
 
 static void __raxel_surface_callback_handler(raxel_surface_t *surface, raxel_key_event_t event) {
-    RAXEL_CORE_LOG("Raxel surface callback handler!\n");
+    // RAXEL_CORE_LOG("Raxel surface callback handler!\n");
     raxel_input_manager_t *manager = (raxel_input_manager_t *)surface->context.input_manager;
     raxel_size_t num_callbacks = raxel_list_size(manager->key_callbacks);
     for (size_t i = 0; i < num_callbacks; i++) {
@@ -47,6 +47,7 @@ void raxel_input_manager_update(raxel_input_manager_t *manager) {
         raxel_size_t key_idx = manager->__keys_up_this_frame[i];
         manager->__key_state[key_idx] = RAXEL_KEY_STATE_UP;
     }
+
     manager->__num_keys_up_this_frame = 0;
 }
 

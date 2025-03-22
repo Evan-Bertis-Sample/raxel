@@ -29,10 +29,7 @@ static void __key_callback(GLFWwindow *window, int key, int scancode, int action
         }
     } else if (action == GLFW_RELEASE) {
         surface->context.input_manager->__key_state[key] = RAXEL_KEY_STATE_UP_THIS_FRAME;
-
-        surface->context.input_manager->__keys_up_this_frame[surface->context.input_manager->__num_keys_up_this_frame++] = key;
-
-
+        // surface->context.input_manager->__keys_up_this_frame[surface->context.input_manager->__num_keys_up_this_frame++] = key;
     }
 }
 

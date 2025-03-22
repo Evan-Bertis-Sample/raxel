@@ -34,9 +34,13 @@ typedef struct raxel_voxel_chunk {
     raxel_voxel_t voxels[RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE];
 } raxel_voxel_chunk_t;
 
+typedef struct raxel_voxel_material_attributes {
+    vec4 color;
+} raxel_voxel_material_attributes_t;
+
 typedef struct raxel_voxel_material {
     raxel_string_t name;
-    vec4 color;
+    raxel_voxel_material_attributes_t attributes;
 } raxel_voxel_material_t;
 
 typedef struct raxel_voxel_world {
@@ -63,7 +67,7 @@ typedef struct __raxel_voxel_world_gpu {
 
 raxel_voxel_world_t *raxel_voxel_world_create(raxel_allocator_t *allocator);
 void raxel_voxel_world_destroy(raxel_voxel_world_t *world);
-void raxel_voxel_world_add_material(raxel_voxel_world_t *world, raxel_string_t name, vec4 color);
+void raxel_voxel_world_add_material(raxel_voxel_world_t *world, raxel_string_t name, raxel_voxel_material_attributes_t attributes);
 raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_t *world, raxel_string_t name);
 
 raxel_voxel_chunk_t *raxel_voxel_world_get_chunk(raxel_voxel_world_t *world, raxel_coord_t x, raxel_coord_t y, raxel_coord_t z);
