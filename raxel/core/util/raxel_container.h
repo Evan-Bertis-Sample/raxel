@@ -91,6 +91,9 @@ typedef struct __raxel_list_header {
 #define raxel_list_capacity(list) \
     raxel_list_header(list)->__capacity
 
+#define raxel_list_stride(list) \
+    raxel_list_header(list)->__stride
+
 #define raxel_list_allocator(list) \
     raxel_list_header(list)->__allocator
 

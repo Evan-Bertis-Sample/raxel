@@ -18,50 +18,52 @@ raxel_sb_buffer_t *raxel_sb_buffer_create(raxel_allocator_t *allocator,
     for (raxel_size_t i = 0; i < desc->entry_count; i++) {
         // You might wish to duplicate the string if needed.
         buffer->entries[i] = desc->entries[i];
-        uint32_t fieldEnd = desc->entries[i].offset + desc->entries[i].size;
-        if (fieldEnd > buffer->data_size) {
-            buffer->data_size = fieldEnd;
+        uint32_t field_end = desc->entries[i].offset + desc->entries[i].size;
+        if (field_end > buffer->data_size) {
+            buffer->data_size = field_end;
         }
     }
+
+    RAXEL_CORE_LOG("Allocating storage buffer of size %u\n", buffer->data_size);
+    
     // Allocate CPU–side memory.
     buffer->data = raxel_malloc(allocator, buffer->data_size);
 
-    // --- Create the Vulkan buffer ---
-    VkBufferCreateInfo bufInfo = {0};
-    bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufInfo.size = buffer->data_size;
-    bufInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VK_CHECK(vkCreateBuffer(device, &bufInfo, NULL, &buffer->buffer));
+    // Create the Vulkan buffer
+    VkBufferCreateInfo buf_info = {0};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.size = buffer->data_size;
+    buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VK_CHECK(vkCreateBuffer(device, &buf_info, NULL, &buffer->buffer));
 
     // Query memory requirements.
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(device, buffer->buffer, &memReq);
+    VkMemoryRequirements mem_req;
+    vkGetBufferMemoryRequirements(device, buffer->buffer, &mem_req);
 
     // Find a memory type that is host-visible and coherent.
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
-    uint32_t memoryTypeIndex = UINT32_MAX;
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
-        if ((memReq.memoryTypeBits & (1 << i)) &&
-            (memProps.memoryTypes[i].propertyFlags &
+    VkPhysicalDeviceMemoryProperties mem_props;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &mem_props);
+    uint32_t memory_type_index = UINT32_MAX;
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+        if ((mem_req.memoryTypeBits & (1 << i)) &&
+            (mem_props.memoryTypes[i].propertyFlags &
              (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
                 (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
         {
-            memoryTypeIndex = i;
+            memory_type_index = i;
             break;
         }
     }
-    if (memoryTypeIndex == UINT32_MAX) {
-        fprintf(stderr, "Failed to find suitable memory type for storage buffer.\n");
-        exit(EXIT_FAILURE);
+    if (memory_type_index == UINT32_MAX) {
+        RAXEL_CORE_FATAL_ERROR("Failed to find a host-visible memory type for storage buffer\n");
     }
 
-    VkMemoryAllocateInfo allocInfo = {0};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memoryTypeIndex;
-    VK_CHECK(vkAllocateMemory(device, &allocInfo, NULL, &buffer->memory));
+    VkMemoryAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.allocationSize = mem_req.size;
+    alloc_info.memoryTypeIndex = memory_type_index;
+    VK_CHECK(vkAllocateMemory(device, &alloc_info, NULL, &buffer->memory));
     VK_CHECK(vkBindBufferMemory(device, buffer->buffer, buffer->memory, 0));
 
     return buffer;

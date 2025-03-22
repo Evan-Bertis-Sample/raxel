@@ -20,6 +20,10 @@
         "raxel_input.h": "c",
         "raxel_debug.h": "c",
         "xmemory": "c",
-        "raxel_hashtable.h": "c"
+        "raxel_hashtable.h": "c",
+        "span": "c",
+        "vector": "c",
+        "xstring": "c",
+        "xutility": "c"
     }
 }
