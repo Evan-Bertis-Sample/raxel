@@ -295,7 +295,8 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
         image_info.arrayLayers = 1;
         image_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_info.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        // Include transfer usage flags for clear/blit operations.
+        image_info.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VK_CHECK(vkCreateImage(
@@ -364,8 +365,57 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             NULL,
             &targets->internal[RAXEL_PIPELINE_TARGET_COLOR].view));
 
-        targets->internal[RAXEL_PIPELINE_TARGET_COLOR].type =
-            RAXEL_PIPELINE_TARGET_COLOR;
+        targets->internal[RAXEL_PIPELINE_TARGET_COLOR].type = RAXEL_PIPELINE_TARGET_COLOR;
+
+        // ----------------------------------------------------------
+        // Transition the color image from UNDEFINED to GENERAL.
+        // ----------------------------------------------------------
+        {
+            VkCommandBufferAllocateInfo allocInfo = {0};
+            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.commandPool = globals->cmd_pool_graphics;
+            allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandBufferCount = 1;
+            VkCommandBuffer cmdBuf;
+            VK_CHECK(vkAllocateCommandBuffers(globals->device, &allocInfo, &cmdBuf));
+
+            VkCommandBufferBeginInfo beginInfo = {0};
+            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            VK_CHECK(vkBeginCommandBuffer(cmdBuf, &beginInfo));
+
+            VkImageMemoryBarrier barrier = {0};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = targets->internal[RAXEL_PIPELINE_TARGET_COLOR].image;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount = 1;
+
+            vkCmdPipelineBarrier(cmdBuf,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,   // srcStageMask
+                VK_PIPELINE_STAGE_TRANSFER_BIT,        // dstStageMask
+                0,
+                0, NULL,
+                0, NULL,
+                1, &barrier);
+
+            VK_CHECK(vkEndCommandBuffer(cmdBuf));
+
+            VkSubmitInfo submitInfo = {0};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &cmdBuf;
+            VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submitInfo, VK_NULL_HANDLE));
+            vkQueueWaitIdle(globals->queue_graphics);
+
+            vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmdBuf);
+        }
     }
 
     // ----------------------------------------------------------
@@ -399,7 +449,6 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image,
             &mem_reqs);
 
-        // Same memory property search logic as above.
         VkPhysicalDeviceMemoryProperties mem_props;
         vkGetPhysicalDeviceMemoryProperties(globals->device_physical, &mem_props);
 
@@ -417,7 +466,6 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             exit(EXIT_FAILURE);
         }
 
-        // Allocate and bind.
         VkMemoryAllocateInfo alloc_info = {0};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize = mem_reqs.size;
@@ -434,13 +482,12 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].memory,
             0));
 
-        // Create an ImageView for the depth image.
         VkImageViewCreateInfo view_info = {0};
         view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         view_info.image = targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].image;
         view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         view_info.format = VK_FORMAT_D32_SFLOAT;
-        view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;  // depth aspect
+        view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         view_info.subresourceRange.baseMipLevel = 0;
         view_info.subresourceRange.levelCount = 1;
         view_info.subresourceRange.baseArrayLayer = 0;
@@ -452,16 +499,14 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             NULL,
             &targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].view));
 
-        targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].type =
-            RAXEL_PIPELINE_TARGET_DEPTH;
+        targets->internal[RAXEL_PIPELINE_TARGET_DEPTH].type = RAXEL_PIPELINE_TARGET_DEPTH;
     }
 
-    // Whichever target you want to “debug-blit” to the swapchain
-    // or otherwise sample from can be set here:
+    // Set the debug target.
     targets->debug_target = RAXEL_PIPELINE_TARGET_COLOR;
-
     return 0;
 }
+
 
 static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
     VkDescriptorPoolSize pool_sizes[3] = {0};
@@ -568,6 +613,60 @@ static void __destroy_targets(raxel_pipeline_t *pipeline) {
         }
     }
 }
+
+// void __record_layout_transition_barrier(raxel_pipeline_globals_t *globals,
+//                                       VkImage image,
+//                                       VkImageLayout oldLayout,
+//                                       VkImageLayout newLayout,
+//                                       VkPipelineStageFlags srcStage,
+//                                       VkPipelineStageFlags dstStage) {
+//     VkCommandBufferAllocateInfo alloc_info = {0};
+//     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+//     alloc_info.commandPool = globals->cmd_pool_graphics;
+//     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+//     alloc_info.commandBufferCount = 1;
+
+//     VkCommandBuffer cmd_buf;
+//     VK_CHECK(vkAllocateCommandBuffers(globals->device, &alloc_info, &cmd_buf));
+
+//     VkCommandBufferBeginInfo begin_info = {0};
+//     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+//     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+//     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
+
+//     VkImageMemoryBarrier barrier = {0};
+//     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+//     barrier.oldLayout = oldLayout;
+//     barrier.newLayout = newLayout;
+//     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+//     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+//     barrier.image = image;
+//     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//     barrier.subresourceRange.baseMipLevel = 0;
+//     barrier.subresourceRange.levelCount = 1;
+//     barrier.subresourceRange.baseArrayLayer = 0;
+//     barrier.subresourceRange.layerCount = 1;
+
+//     vkCmdPipelineBarrier(
+//         cmd_buf,
+//         srcStage,
+//         dstStage,
+//         0,
+//         0, NULL,
+//         0, NULL,
+//         1, &barrier);
+
+//     VK_CHECK(vkEndCommandBuffer(cmd_buf));
+
+//     VkSubmitInfo submit_info = {0};
+//     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+//     submit_info.commandBufferCount = 1;
+//     submit_info.pCommandBuffers = &cmd_buf;
+//     VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
+//     vkQueueWaitIdle(globals->queue_graphics);
+
+//     vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
+// }
 
 // -----------------------------------------------------------------------------
 // Public API implementations.
@@ -680,12 +779,17 @@ void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
     raxel_size_t num_passes = raxel_list_size(pipeline->passes);
     for (size_t i = 0; i < num_passes; i++) {
         raxel_pipeline_pass_t *pass = &pipeline->passes[i];
+
+        RAXEL_CORE_LOG("Running pass %d\n", i);
+
+        RAXEL_CORE_LOG("On begin\n");
         if (pass->on_begin) {
-            // RAXEL_CORE_LOG("Running pass %s\n", raxel_string_to_cstr(&pass->name));
             pass->on_begin(pass, &pipeline->resources);
         }
+
+        RAXEL_CORE_LOG("On end\n");
+        
         if (pass->on_end) {
-            // RAXEL_CORE_LOG("Ending pass %s\n", raxel_string_to_cstr(&pass->name));
             pass->on_end(pass, &pipeline->resources);
         }
     }
