@@ -1,9 +1,9 @@
 // raxel_voxel.c
 
 #include "raxel_voxel.h"
-#include <raxel/core/graphics/passes/compute_pass.h>
 
 #include <math.h>
+#include <raxel/core/graphics/passes/compute_pass.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -60,13 +60,35 @@ raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_
 // Chunk Access
 // -----------------------------------------------------------------------------
 
+static void __raxel_voxel_world_create_chunk(raxel_voxel_world_t *world,
+                                             raxel_coord_t x,
+                                             raxel_coord_t y,
+                                             raxel_coord_t z) {
+    raxel_voxel_chunk_meta_t meta = {x, y, z, RAXEL_VOXEL_CHUNK_STATE_COUNT};
+    raxel_voxel_chunk_t chunk;
+    memset(&chunk, 0, sizeof(chunk));
+    raxel_list_push_back(world->chunk_meta, meta);
+    raxel_list_push_back(world->chunks, chunk);
+}
+
+static void __raxel_voxel_world_swap_chunks(raxel_voxel_world_t *world,
+                                            raxel_size_t i,
+                                            raxel_size_t j) {
+    raxel_voxel_chunk_meta_t tmp_meta = world->chunk_meta[i];
+    world->chunk_meta[i] = world->chunk_meta[j];
+    world->chunk_meta[j] = tmp_meta;
+    raxel_voxel_chunk_t tmp_chunk = world->chunks[i];
+    world->chunks[i] = world->chunks[j];
+    world->chunks[j] = tmp_chunk;
+}
+
 // Returns a pointer to a chunk given its chunk coordinates (relative to chunk grid).
-// Only loaded chunks (the first __num_loaded_chunks in the lists) are searched.
 raxel_voxel_chunk_t *raxel_voxel_world_get_chunk(raxel_voxel_world_t *world,
                                                  raxel_coord_t x,
                                                  raxel_coord_t y,
                                                  raxel_coord_t z) {
-    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+    // scan through though all chunks in the list
+    for (raxel_size_t i = 0; i < raxel_list_size(world->chunk_meta); i++) {
         raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
         if (meta->x == x && meta->y == y && meta->z == z) {
             return &world->chunks[i];
@@ -108,8 +130,9 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
     raxel_coord_t chunk_z = z / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
-        // Optionally, create and load the chunk here.
-        return;
+        // we'll need to create a new chunk
+        __raxel_voxel_world_create_chunk(world, chunk_x, chunk_y, chunk_z);
+        chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     }
     raxel_coord_t local_x = x % RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t local_y = y % RAXEL_VOXEL_CHUNK_SIZE;
@@ -131,60 +154,45 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     raxel_coord_t cam_chunk_y = options->camera_position[1] / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t cam_chunk_z = options->camera_position[2] / RAXEL_VOXEL_CHUNK_SIZE;
 
-    // Unload chunks that are farther than the view distance.
-    for (raxel_size_t i = 0; i < world->__num_loaded_chunks;) {
+    // find the number chunks that are actually within the view distance
+    raxel_size_t num_chunks = raxel_list_size(world->chunk_meta);
+    raxel_size_t num_loaded_chunks = 0;
+    // swap the chunks that are within the view distance to the front of the list
+    for (raxel_size_t i = 0; i < num_chunks; i++) {
         raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
-        int dx = meta->x - cam_chunk_x;
-        int dy = meta->y - cam_chunk_y;
-        int dz = meta->z - cam_chunk_z;
-        float distance = sqrtf(dx * dx + dy * dy + dz * dz);
-        if (distance > options->view_distance) {
-            // Remove this chunk by swapping with the last loaded chunk.
-            world->chunk_meta[i] = world->chunk_meta[world->__num_loaded_chunks - 1];
-            world->chunks[i] = world->chunks[world->__num_loaded_chunks - 1];
-            world->__num_loaded_chunks--;
-        } else {
-            i++;
+        raxel_coord_t dx = meta->x - cam_chunk_x;
+        raxel_coord_t dy = meta->y - cam_chunk_y;
+        raxel_coord_t dz = meta->z - cam_chunk_z;
+        float dist = sqrtf(dx * dx + dy * dy + dz * dz);
+        if (dist < options->view_distance) {
+            if (num_loaded_chunks != i) {
+                __raxel_voxel_world_swap_chunks(world, num_loaded_chunks, i);
+            }
+            num_loaded_chunks++;
         }
     }
+    world->__num_loaded_chunks = num_loaded_chunks;
 
-    // Load new chunks within the view distance.
-    int range = (int)ceil(options->view_distance);
-    for (int x = cam_chunk_x - range; x <= cam_chunk_x + range; x++) {
-        for (int y = cam_chunk_y - range; y <= cam_chunk_y + range; y++) {
-            for (int z = cam_chunk_z - range; z <= cam_chunk_z + range; z++) {
-                int dx = x - cam_chunk_x;
-                int dy = y - cam_chunk_y;
-                int dz = z - cam_chunk_z;
-                float distance = sqrtf(dx * dx + dy * dy + dz * dz);
-                if (distance <= options->view_distance) {
-                    // Check if the chunk is already loaded.
-                    int found = 0;
-                    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
-                        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
-                        if (meta->x == x && meta->y == y && meta->z == z) {
-                            found = 1;
-                            break;
-                        }
-                    }
-                    if (!found && world->__num_loaded_chunks < RAXEL_MAX_LOADED_CHUNKS) {
-                        // Create a new chunk.
-                        raxel_voxel_chunk_t new_chunk;
-                        memset(&new_chunk, 0, sizeof(new_chunk));
-                        raxel_list_push_back(world->chunks, new_chunk);
 
-                        // Create corresponding chunk meta.
-                        raxel_voxel_chunk_meta_t new_meta;
-                        new_meta.x = x;
-                        new_meta.y = y;
-                        new_meta.z = z;
-                        new_meta.state = RAXEL_VOXEL_CHUNK_STATE_COUNT;
-                        raxel_list_push_back(world->chunk_meta, new_meta);
-                        world->__num_loaded_chunks++;
+    // print out some information about the voxel world
+    printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
+    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
+        printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
+
+        // count the number of non-air voxels in this chunk
+        int count = 0;
+        raxel_voxel_chunk_t *chunk = &world->chunks[i];
+        for (int x = 0; x < RAXEL_VOXEL_CHUNK_SIZE; x++) {
+            for (int y = 0; y < RAXEL_VOXEL_CHUNK_SIZE; y++) {
+                for (int z = 0; z < RAXEL_VOXEL_CHUNK_SIZE; z++) {
+                    if (chunk->voxels[x][y][z].material != 0) {
+                        count++;
                     }
                 }
             }
         }
+        printf("  Non-air voxels: %d\n", count);
     }
 }
 
