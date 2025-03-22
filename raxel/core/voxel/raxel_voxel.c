@@ -343,8 +343,6 @@ raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
 
 void raxel_bvh_accel_destroy(raxel_bvh_accel_t *bvh, raxel_allocator_t *allocator) {
     if (!bvh) return;
-    if (bvh->nodes)
-        raxel_free(allocator, bvh->nodes);
     raxel_free(allocator, bvh);
 }
 
