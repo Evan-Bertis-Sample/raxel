@@ -34,17 +34,17 @@ static VkShaderModule __load_shader_module(VkDevice device, const char *path) {
     return shader_module;
 }
 
-raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path) {
+raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path, raxel_pc_buffer_desc_t *desc) {
     VkDevice device = pipeline->resources.device;
     raxel_compute_shader_t *shader = malloc(sizeof(raxel_compute_shader_t));
     if (!shader) {
         fprintf(stderr, "Failed to allocate compute shader\n");
         exit(EXIT_FAILURE);
     }
-
+    
     VkShaderModule comp_module = __load_shader_module(device, shader_path);
 
-    // Create descriptor set layout bindings using the enum to avoid magic numbers.
+    // Create descriptor set layout bindings.
     VkDescriptorSetLayoutBinding bindings[RAXEL_COMPUTE_BINDING_COUNT] = {0};
 
     // Binding for storage images.
@@ -66,11 +66,20 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     VkDescriptorSetLayout desc_set_layout;
     VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &desc_set_layout));
 
-    // Create a pipeline layout with the descriptor set layout.
+    shader->pc_buffer = raxel_pc_buffer_create(&pipeline->resources.allocator, desc);
+
+    VkPushConstantRange push_constant_range = {0};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    push_constant_range.offset = 0;
+    push_constant_range.size = shader->pc_buffer->data_size;
+
+    // Create a pipeline layout with the descriptor set layout and push constant range.
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 1;
     pipeline_layout_info.pSetLayouts = &desc_set_layout;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
     VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, NULL, &shader->pipeline_layout));
 
     VkPipelineShaderStageCreateInfo stage_info = {0};
@@ -94,12 +103,13 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     ds_alloc.pSetLayouts = &desc_set_layout;
     VK_CHECK(vkAllocateDescriptorSets(device, &ds_alloc, &shader->descriptor_set));
 
-    // Instead of destroying the descriptor set layout immediately, store it for later cleanup.
+    // Store the descriptor set layout for later cleanup.
     shader->descriptor_set_layout = desc_set_layout;
     shader->allocator = &pipeline->resources.allocator;
 
     return shader;
 }
+
 
 void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline) {
     VkDevice device = pipeline->resources.device;
@@ -107,10 +117,6 @@ void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline
     vkDestroyPipelineLayout(device, shader->pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(device, shader->descriptor_set_layout, NULL);
     free(shader);
-}
-
-void raxel_compute_shader_set_pc(raxel_compute_shader_t *shader, raxel_pc_buffer_desc_t *desc) {
-    shader->pc_buffer = raxel_pc_buffer_create(shader->allocator, desc);
 }
 
 void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffer cmd_buf) {
@@ -248,8 +254,6 @@ raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *co
     pass.on_begin = compute_pass_on_begin;
     pass.on_end = compute_pass_on_end;
     pass.allocator = allocator;
-
-    raxel_compute_shader_set_pc(context->compute_shader, &context->pc_desc);
-
+    
     return pass;
 }

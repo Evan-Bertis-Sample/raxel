@@ -29,7 +29,7 @@ typedef struct raxel_compute_shader {
  * @param shader_path File path to the SPIR-V compute shader.
  * @return Pointer to a newly created compute shader.
  */
-raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path);
+raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path, raxel_pc_buffer_desc_t *desc);
 
 /**
  * Destroy a compute shader.
@@ -77,7 +77,6 @@ typedef struct raxel_compute_pass_context {
     uint32_t dispatch_z;
     // Which internal target to use for blitting the compute result.
     raxel_pipeline_target_type_t targets[RAXEL_PIPELINE_TARGET_COUNT];
-    raxel_pc_buffer_desc_t pc_desc;
     // Optional: if non-null, use this image as the computed result.
     VkImage output_image;
     // Callback invoked after dispatch finishes.
