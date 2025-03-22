@@ -16,7 +16,6 @@ raxel_voxel_world_t *raxel_voxel_world_create(raxel_allocator_t *allocator) {
     world->allocator = allocator;
     // Create dynamic lists for chunks, chunk meta, and materials.
     world->chunks = raxel_list_create_reserve(raxel_voxel_chunk_t, allocator, RAXEL_MAX_LOADED_CHUNKS);
-
     world->chunk_meta = raxel_list_create_reserve(raxel_voxel_chunk_meta_t, allocator, RAXEL_MAX_LOADED_CHUNKS);
     world->__num_loaded_chunks = 0;
     world->materials = raxel_list_create_reserve(raxel_voxel_material_t, allocator, 16);
@@ -69,11 +68,15 @@ static raxel_voxel_chunk_t *__raxel_voxel_world_create_chunk(raxel_voxel_world_t
     RAXEL_CORE_LOG("Pushing back chunk meta\n");
     raxel_list_push_back(world->chunk_meta, meta);
     raxel_voxel_chunk_t chunk;
-    memset(&chunk, 0, sizeof(raxel_voxel_chunk_t));
     RAXEL_CORE_LOG("Pushing back chunk\n");
     raxel_list_push_back(world->chunks, chunk);
+
+    // zero out the chunk
+    raxel_voxel_chunk_t *new_chunk = &world->chunks[raxel_list_size(world->chunks) - 1];
+    memset(new_chunk, 0, sizeof(raxel_voxel_chunk_t));
+
     RAXEL_CORE_LOG("New chunk created at (%d, %d, %d), index %d\n", x, y, z, raxel_list_size(world->chunks) - 1);
-    return &world->chunks[raxel_list_size(world->chunks) - 1];
+    return new_chunk;
 }
 
 static void __raxel_voxel_world_swap_chunks(raxel_voxel_world_t *world,
