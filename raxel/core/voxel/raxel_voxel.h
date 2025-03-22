@@ -73,7 +73,6 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world, raxel_coord_t x, 
 void raxel_voxel_world_update(raxel_voxel_world_t *world, raxel_voxel_world_update_options_t *options, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline);
 
 void raxel_voxel_world_set_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline);
-void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline);
 
 typedef struct raxel_bvh_bounds {
     vec3 min;
@@ -100,27 +99,28 @@ typedef struct raxel_linear_bvh_node_t {
 } raxel_linear_bvh_node_t;
 
 typedef struct raxel_bvh_accel_t {
-    raxel_linear_bvh_node_t[RAXEL_BVH_MAX_NODES] nodes;  // linear array of nodes
-    int n_nodes;                   // total number of nodes
-    int max_leaf_size;             // maximum primitives per leaf
+    raxel_linear_bvh_node_t nodes[RAXEL_BVH_MAX_NODES];  // linear array of nodes
+    int n_nodes;                                         // total number of nodes
+    int max_leaf_size;                                   // maximum primitives per leaf
 } raxel_bvh_accel_t;
 
 raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
-                                       int *primitive_indices,
-                                       int n,
-                                       int max_leaf_size,
-                                       raxel_allocator_t *allocator);
+                                         int *primitive_indices,
+                                         int n,
+                                         int max_leaf_size,
+                                         raxel_allocator_t *allocator);
 
 void raxel_bvh_accel_destroy(raxel_bvh_accel_t *bvh, raxel_allocator_t *allocator);
 
-
-raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(struct raxel_voxel_world *world,
-                                                        int max_leaf_size,
-                                                        raxel_allocator_t *allocator);
+raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *world,
+                                                          int max_leaf_size,
+                                                          raxel_allocator_t *allocator);
 
 typedef struct __raxel_voxel_world_gpu {
     raxel_bvh_accel_t bvh;
+    raxel_size_t num_loaded_chunks;
+    raxel_voxel_chunk_meta_t chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    raxel_voxel_chunk_t chunks[RAXEL_MAX_LOADED_CHUNKS];
 } __raxel_voxel_world_gpu_t;
-
 
 #endif  // __RAXEL_VOXEL_H__
