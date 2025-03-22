@@ -34,7 +34,9 @@ static VkShaderModule __load_shader_module(VkDevice device, const char *path) {
     return shader_module;
 }
 
-raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path, raxel_pc_buffer_desc_t *desc) {
+raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline,
+                                                    const char *shader_path,
+                                                    raxel_pc_buffer_desc_t *desc) {
     VkDevice device = pipeline->resources.device;
     raxel_compute_shader_t *shader = malloc(sizeof(raxel_compute_shader_t));
     if (!shader) {
@@ -48,10 +50,11 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     VkDescriptorSetLayoutBinding bindings[RAXEL_COMPUTE_BINDING_COUNT] = {0};
 
     // Binding for storage images.
-    // If the shader expects a single image (not an array), set descriptorCount to 1.
+    // Since the shader declares a single image (not an array),
+    // we set descriptorCount to 1.
     bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].binding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;
     bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorCount = 1;  // Use 1 instead of RAXEL_PIPELINE_TARGET_COUNT.
+    bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].descriptorCount = 1;
     bindings[RAXEL_COMPUTE_BINDING_STORAGE_IMAGE].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
     // Binding for storage buffer.
@@ -130,7 +133,9 @@ void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffe
     }
 }
 
-void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline, raxel_sb_buffer_desc_t *desc) {
+void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader,
+                                 raxel_pipeline_t *pipeline,
+                                 raxel_sb_buffer_desc_t *desc) {
     // Create the storage buffer using the pipeline's allocator.
     shader->sb_buffer = raxel_sb_buffer_create(&pipeline->resources.allocator,
                                                desc,
@@ -138,10 +143,10 @@ void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_
                                                pipeline->resources.device_physical);
 
     // Update the compute shader's descriptor set.
-    VkDescriptorBufferInfo bufferInfo = {0};
-    bufferInfo.buffer = shader->sb_buffer->buffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = shader->sb_buffer->data_size;
+    VkDescriptorBufferInfo buffer_info = {0};
+    buffer_info.buffer = shader->sb_buffer->buffer;
+    buffer_info.offset = 0;
+    buffer_info.range = shader->sb_buffer->data_size;
 
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -150,66 +155,38 @@ void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_
     write.dstArrayElement = 0;
     write.descriptorCount = 1;
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    write.pBufferInfo = &bufferInfo;
+    write.pBufferInfo = &buffer_info;
     vkUpdateDescriptorSets(pipeline->resources.device, 1, &write, 0, NULL);
 }
 
 // -----------------------------------------------------------------------------
-// Compute Pass Implementation
+// Compute pass implementation
 // -----------------------------------------------------------------------------
 
 static void __compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = globals->device;
 
-    RAXEL_CORE_LOG("Initializing compute pass\n");
-
-    // Count valid targets using the -1 sentinel.
+    // Count valid targets in the context's targets array.
     int valid_count = 0;
     for (int i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
-        if (ctx->targets[i] < 0) {
+        RAXEL_CORE_LOG("ctx->targets[%d]: %d\n", i, ctx->targets[i]);
+        if (ctx->targets[i] < 0)
             break;
-        }
         valid_count++;
     }
+    valid_count -= 1;  // Exclude the sentinel value.
 
-    // Our descriptor set layout was created with a fixed count.
-    int full_count = RAXEL_PIPELINE_TARGET_COUNT;
-    ctx->num_image_infos = full_count;
-    ctx->image_infos = raxel_malloc(&globals->allocator, full_count * sizeof(VkDescriptorImageInfo));
-
-    // Fill in valid entries.
+    // Build an array of descriptor image infos from the pipeline's targets.
+    ctx->image_infos = raxel_malloc(&globals->allocator, valid_count * sizeof(VkDescriptorImageInfo));
+    RAXEL_CORE_LOG("valid_count: %d\n", valid_count);
     for (int i = 0; i < valid_count; i++) {
         int target_index = ctx->targets[i];
         ctx->image_infos[i].imageView = globals->targets.internal[target_index].view;
         ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
-
-    // For any remaining entries, use a fallback.
-    VkImageView fallback = VK_NULL_HANDLE;
-    if (valid_count > 0) {
-        fallback = globals->targets.internal[ctx->targets[0]].view;
-    } else {
-        RAXEL_CORE_FATAL_ERROR("No valid targets for compute pass\n");
-    }
-
-    for (int i = valid_count; i < full_count; i++) {
-        ctx->image_infos[i].imageView = fallback;
-        ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        ctx->image_infos[i].sampler = VK_NULL_HANDLE;
-    }
-
-    // Update the descriptor set for the full array.
-    VkWriteDescriptorSet write = {0};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet = ctx->compute_shader->descriptor_set;
-    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;
-    write.dstArrayElement = 0;
-    write.descriptorCount = ctx->num_image_infos;
-    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    write.pImageInfo = ctx->image_infos;
-    vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+    ctx->num_image_infos = valid_count;
 }
 
 static void __compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
@@ -219,7 +196,7 @@ static void __compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = ctx->compute_shader->descriptor_set;
-    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;  // use enum here
+    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE; // use enum here
     write.dstArrayElement = 0;
     write.descriptorCount = ctx->num_image_infos;
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -261,19 +238,17 @@ static void __compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &pass->resources.command_buffer;
 
-    RAXEL_CORE_LOG("Submitting compute pass\n");
     VK_CHECK(vkQueueSubmit(globals->queue_compute, 1, &submit_info, VK_NULL_HANDLE));
     vkQueueWaitIdle(globals->queue_compute);
-    RAXEL_CORE_LOG("Compute pass finished\n");
 
     vkFreeCommandBuffers(device, globals->cmd_pool_compute, 1, &pass->resources.command_buffer);
 
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     if (ctx->on_dispatch_finished) {
-        RAXEL_CORE_LOG("Invoking dispatch finished callback\n");
         ctx->on_dispatch_finished(ctx, globals);
     }
 }
+
 
 raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *context) {
     raxel_pipeline_pass_t pass = {0};

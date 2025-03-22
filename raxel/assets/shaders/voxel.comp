@@ -173,9 +173,9 @@ void main() {
     if (validRays > 0)
         finalColor /= float(validRays);
     
-    // // For debugging, blend the final color with a UV gradient.
-    // vec4 uvColor = vec4(pix.x / iResolution.x, pix.y / iResolution.y, 0.0, 1.0);
-    // finalColor = mix(finalColor, uvColor.rgb, 0.5);
+    // For debugging, blend the final color with a UV gradient.
+    vec4 uvColor = vec4(pix.x / iResolution.x, pix.y / iResolution.y, 0.0, 1.0);
+    finalColor = mix(finalColor, uvColor.rgb, 0.5);
     
     imageStore(outImage, pix, vec4(finalColor, 1.0));
 }

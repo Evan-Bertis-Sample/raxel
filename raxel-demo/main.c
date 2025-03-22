@@ -46,7 +46,7 @@ int main(void) {
     raxel_pipeline_set_debug_target(pipeline, RAXEL_PIPELINE_TARGET_COLOR);
 
     // Create a clear pass to clear the internal color target.
-    raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.0f, 0.8f, 1.0f});
+    raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.3f, 0.8f, 1.0f});
     raxel_pipeline_add_pass(pipeline, clear_pass);
 
     // --- Create and populate a voxel world ---
@@ -169,7 +169,7 @@ int main(void) {
             camera_position[1] -= 0.1f;
         }
 
-        RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
+        // RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
         // Update the view matrix.
         mat4 view;
