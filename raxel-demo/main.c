@@ -52,50 +52,18 @@ int main(void) {
     // --- Create and populate a voxel world ---
     raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
-    // Create a chunk covering world coordinates [0, 31] in x, y, z.
-    raxel_voxel_chunk_t chunk;
-    memset(&chunk, 0, sizeof(chunk));  // initially all voxels are air (0)
+    // Create a giant sphere at the origin
+    int radius = 10;
+    raxel_voxel_t sphere_voxel = {
+        .material = 1,  // material index
+    };
 
-    // Set chunk metadata to indicate this chunk is at the origin.
-    raxel_voxel_chunk_meta_t meta;
-    meta.x = 0;
-    meta.y = 0;
-    meta.z = 0;
-    meta.state = RAXEL_VOXEL_CHUNK_STATE_COUNT;  // not used atm
-
-    // Add the meta and chunk to the world.
-    raxel_list_push_back(world->chunk_meta, meta);
-    raxel_list_push_back(world->chunks, chunk);
-
-    // --- Build a sphere in the middle of the loaded chunk ---
-    // Define sphere parameters in world space.
-    // Since our chunk covers 0..31, choose center at (16,16,16) and radius = 10.
-    vec3 sphereCenter = {0.0f, 0.0f, 0.0f};
-    float sphereRadius = 10.0f;
-    float sphereRadiusSq = sphereRadius * sphereRadius;
-
-    // For every voxel coordinate within this chunk, compute world position and set material.
-    // We'll fill voxels inside the sphere with material value 1.
-    for (int x = 0; x < RAXEL_VOXEL_CHUNK_SIZE; x++) {
-        for (int y = 0; y < RAXEL_VOXEL_CHUNK_SIZE; y++) {
-            for (int z = 0; z < RAXEL_VOXEL_CHUNK_SIZE; z++) {
-                // Compute world-space position of the voxel.
-                // Since the chunk's origin is at (0,0,0), the world coordinate is just the index.
-                float wx = (float)x;
-                float wy = (float)y;
-                float wz = (float)z;
-                // Compute squared distance from sphere center.
-                float dx = wx - sphereCenter[0];
-                float dy = wy - sphereCenter[1];
-                float dz = wz - sphereCenter[2];
-                float distSq = dx * dx + dy * dy + dz * dz;
-                raxel_voxel_t voxel = {0};
-                if (distSq < sphereRadiusSq) {
-                    // Set material to 1 (nonzero, meaning solid)
-                    voxel.material = 255;
+    for (int x = -radius; x <= radius; x++) {
+        for (int y = -radius; y <= radius; y++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + y * y + z * z <= radius * radius) {
+                    raxel_voxel_world_place_voxel(world, x, y, z, sphere_voxel);
                 }
-
-                raxel_voxel_world_place_voxel(world, x, y, z, voxel);
             }
         }
     }
@@ -112,8 +80,7 @@ int main(void) {
         (raxel_pc_entry_t){.name = "view", .offset = 0, .size = 16 * sizeof(float)},
         (raxel_pc_entry_t){.name = "fov", .offset = 16 * sizeof(float), .size = sizeof(float)},
         (raxel_pc_entry_t){.name = "rays_per_pixel", .offset = 16 * sizeof(float) + sizeof(float), .size = sizeof(int)},
-        (raxel_pc_entry_t){.name = "debug_mode", .offset = 16 * sizeof(float) + sizeof(float) + sizeof(int), .size = sizeof(int)},
-    );
+        (raxel_pc_entry_t){.name = "debug_mode", .offset = 16 * sizeof(float) + sizeof(float) + sizeof(int), .size = sizeof(int)}, );
     raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/voxel.comp.spv", &pc_desc);
 
     // Create a compute pass context.
@@ -187,7 +154,7 @@ int main(void) {
 
         // use the number keys to switch debug modes 1 is normal, 2 is raymarch debug, 3 is data debug
         if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_1)) {
-            int debug_mode = 0;\
+            int debug_mode = 0;
             RAXEL_APP_LOG("Setting debug mode to 0\n");
             raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
         }
@@ -201,7 +168,6 @@ int main(void) {
             RAXEL_APP_LOG("Setting debug mode to 2\n");
             raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
         }
-
 
         // RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
