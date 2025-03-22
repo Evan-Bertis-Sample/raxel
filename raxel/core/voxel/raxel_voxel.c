@@ -65,17 +65,17 @@ static raxel_voxel_chunk_t *__raxel_voxel_world_create_chunk(raxel_voxel_world_t
                                                              raxel_coord_t y,
                                                              raxel_coord_t z) {
     raxel_voxel_chunk_meta_t meta = {x, y, z, RAXEL_VOXEL_CHUNK_STATE_COUNT};
-    RAXEL_CORE_LOG("Pushing back chunk meta\n");
+    // RAXEL_CORE_LOG("Pushing back chunk meta\n");
     raxel_list_push_back(world->chunk_meta, meta);
     raxel_voxel_chunk_t chunk;
-    RAXEL_CORE_LOG("Pushing back chunk\n");
+    // RAXEL_CORE_LOG("Pushing back chunk\n");
     raxel_list_push_back(world->chunks, chunk);
 
     // zero out the chunk
     raxel_voxel_chunk_t *new_chunk = &world->chunks[raxel_list_size(world->chunks) - 1];
     memset(new_chunk, 0, sizeof(raxel_voxel_chunk_t));
 
-    RAXEL_CORE_LOG("New chunk created at (%d, %d, %d), index %d\n", x, y, z, raxel_list_size(world->chunks) - 1);
+    // RAXEL_CORE_LOG("New chunk created at (%d, %d, %d), index %d\n", x, y, z, raxel_list_size(world->chunks) - 1);
     return new_chunk;
 }
 
@@ -175,7 +175,7 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
     raxel_voxel_chunk_t *chunk = raxel_voxel_world_get_chunk(world, chunk_x, chunk_y, chunk_z);
     if (!chunk) {
         // we'll need to create a new chunk
-        RAXEL_CORE_LOG("Creating new chunk at (%d, %d, %d)\n", chunk_x, chunk_y, chunk_z);
+        // RAXEL_CORE_LOG("Creating new chunk at (%d, %d, %d)\n", chunk_x, chunk_y, chunk_z);
         chunk = __raxel_voxel_world_create_chunk(world, chunk_x, chunk_y, chunk_z);
         if (!chunk) {
             RAXEL_CORE_FATAL_ERROR("Failed to create chunk at (%d, %d, %d)\n", chunk_x, chunk_y, chunk_z);
@@ -225,24 +225,24 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     }
     world->__num_loaded_chunks = num_loaded_chunks;
 
-    // // print out some information about the voxel world
-    // printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
-    // for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
-    //     raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
-    //     printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
+    // print out some information about the voxel world
+    printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
+    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
+        printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
 
-    //     // count the number of non-air voxels in this chunk
-    //     int count = 0;
-    //     raxel_voxel_chunk_t *chunk = &world->chunks[i];
+        // count the number of non-air voxels in this chunk
+        int count = 0;
+        raxel_voxel_chunk_t *chunk = &world->chunks[i];
 
-    //     for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
-    //         if (chunk->voxels[j].material != 0) {
-    //             count++;
-    //         }
-    //     }
+        for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+            if (chunk->voxels[j].material != 0) {
+                count++;
+            }
+        }
 
-    //     printf("  Non-air voxels: %d\n", count);
-    // }
+        printf("  Non-air voxels: %d\n", count);
+    }
 }
 
 void raxel_voxel_world_set_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline) {

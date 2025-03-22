@@ -79,11 +79,7 @@ int flatIndex(int lx, int ly, int lz) {
 // Voxels with value 0 are treated as air; any non-zero voxel is solid.
 //
 uint getVoxelAtWorldPos(ivec3 worldPos) {
-    for (int i = 0; i < RAXEL_MAX_LOADED_CHUNKS; i++) {
-        if (i >= voxel_world.num_loaded_chunks) {
-            break;
-        }
-
+    for (int i = 0; i < voxel_world.num_loaded_chunks; i++) {
         VoxelChunkMeta meta = voxel_world.chunk_meta[i];
         int chunkOriginX = meta.x * RAXEL_VOXEL_CHUNK_SIZE;
         int chunkOriginY = meta.y * RAXEL_VOXEL_CHUNK_SIZE;
