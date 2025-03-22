@@ -608,10 +608,10 @@ static void __present_target(raxel_pipeline_globals_t *globals,
                          0, NULL,
                          1, &src_barrier);
 
-    // Transition dst_image from PRESENT_SRC_KHR to TRANSFER_DST_OPTIMAL.
+    // Transition dst_image from UNDEFINED to TRANSFER_DST_OPTIMAL.
     VkImageMemoryBarrier dst_barrier = {0};
     dst_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    dst_barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    dst_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;  // Changed from PRESENT_SRC_KHR
     dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     dst_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -689,7 +689,6 @@ static void __present_target(raxel_pipeline_globals_t *globals,
 
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 
-    // Submit the command buffer.
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
@@ -704,7 +703,6 @@ static void __present_target(raxel_pipeline_globals_t *globals,
     vkQueueWaitIdle(globals->queue_graphics);
     vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
 
-    // Present the image.
     VkPresentInfoKHR present_info = {0};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;

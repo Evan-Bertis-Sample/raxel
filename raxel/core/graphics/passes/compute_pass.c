@@ -175,7 +175,6 @@ static void __compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipelin
             break;
         valid_count++;
     }
-    valid_count -= 1;  // Exclude the sentinel value.
 
     // Build an array of descriptor image infos from the pipeline's targets.
     ctx->image_infos = raxel_malloc(&globals->allocator, valid_count * sizeof(VkDescriptorImageInfo));
@@ -190,6 +189,7 @@ static void __compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipelin
 }
 
 static void __compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+    RAXEL_CORE_LOG("Compute pass on begin\n");
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = globals->device;
 
@@ -218,6 +218,7 @@ static void __compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
 
+    RAXEL_CORE_LOG("Pushing push-constant buffer\n");
     raxel_compute_shader_push_pc(ctx->compute_shader, cmd_buf);
 
     // Bind the compute pipeline.
@@ -232,6 +233,7 @@ static void __compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_
 }
 
 static void __compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+    RAXEL_CORE_LOG("Compute pass on end\n");
     VkDevice device = globals->device;
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
