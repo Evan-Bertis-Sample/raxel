@@ -96,7 +96,7 @@ int main(void) {
                 raxel_voxel_t voxel = {0};
                 if (distSq < sphereRadiusSq) {
                     // Set material to 1 (nonzero, meaning solid)
-                    voxel.material = 1;
+                    voxel.material = 255;
                 }
 
                 raxel_voxel_world_place_voxel(world, x, y, z, voxel);
@@ -115,7 +115,9 @@ int main(void) {
     raxel_pc_buffer_desc_t pc_desc = RAXEL_PC_DESC(
         (raxel_pc_entry_t){.name = "view", .offset = 0, .size = 16 * sizeof(float)},
         (raxel_pc_entry_t){.name = "fov", .offset = 16 * sizeof(float), .size = sizeof(float)},
-        (raxel_pc_entry_t){.name = "rays_per_pixel", .offset = 16 * sizeof(float) + sizeof(float), .size = sizeof(int)});
+        (raxel_pc_entry_t){.name = "rays_per_pixel", .offset = 16 * sizeof(float) + sizeof(float), .size = sizeof(int)},
+        (raxel_pc_entry_t){.name = "debug_mode", .offset = 16 * sizeof(float) + sizeof(float) + sizeof(int), .size = sizeof(int)},
+    );
     raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/voxel.comp.spv", &pc_desc);
 
     // Create a compute pass context.
@@ -168,6 +170,28 @@ int main(void) {
         if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_LEFT_SHIFT)) {
             camera_position[1] -= 0.1f;
         }
+
+        if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_ESCAPE)) {
+            break;
+        }
+
+        // use the number keys to switch debug modes 1 is normal, 2 is raymarch debug, 3 is data debug
+        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_1)) {
+            int debug_mode = 0;\
+            RAXEL_APP_LOG("Setting debug mode to 0\n");
+            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+        }
+        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_2)) {
+            int debug_mode = 1;
+            RAXEL_APP_LOG("Setting debug mode to 1\n");
+            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+        }
+        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_3)) {
+            int debug_mode = 2;
+            RAXEL_APP_LOG("Setting debug mode to 2\n");
+            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+        }
+
 
         // RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 

@@ -1,25 +1,18 @@
 #version 450
 
+// Compute workgroup size.
 layout(local_size_x = 16, local_size_y = 16) in;
 
 // Output storage image (set = 0, binding = 0)
 layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 
-// Push constants: view matrix, fov (in radians), and rays per pixel.
-layout(push_constant) uniform PC {
-    mat4 view;
-    float fov;
-    int rays_per_pixel;
-} pc;
-
 #define EPSILON 0.001
 #define MAX_DISTANCE 100.0
-#define MAX_STEPS 64
+#define MAX_STEPS 256
 #define RAXEL_VOXEL_CHUNK_SIZE 32
-#define RAXEL_MAX_LOADED_CHUNKS 16
+#define RAXEL_MAX_LOADED_CHUNKS 8
 #define MAX_RAYS 8
 
-// Structures matching the flattened voxel world sent by the CPU.
 struct VoxelChunkMeta {
     int x;
     int y;
@@ -28,7 +21,6 @@ struct VoxelChunkMeta {
 };
 
 struct VoxelChunk {
-    // Voxel material is stored as uint8_t (host is uint8_t) via the 8-bit storage extension.
     uint voxels[RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE][RAXEL_VOXEL_CHUNK_SIZE];
 };
 
@@ -43,18 +35,19 @@ layout(std430, set = 0, binding = 1) buffer VoxelWorldBuffer {
     GPUVoxelWorld voxel_world;
 };
 
-// New structure to hold the raymarch result.
-struct RaymarchResult {
-    vec3 pos;     // hit position
-    vec3 normal;  // estimated normal (if hit)
-    float tHit;   // distance along ray
-    bool hit;     // whether a hit occurred
-};
+// Push constants: view matrix, fov (radians), rays_per_pixel, and debug_mode.
+// debug_mode: 0 = normal, 1 = SDF debug, 2 = display raw voxel data.
+layout(push_constant) uniform PC {
+    mat4 view;
+    float fov;
+    int rays_per_pixel;
+    int debug_mode;
+} pc;
 
 //
 // Sample the voxel world at a given world position.
 // Returns the voxel material value (0 means air).
-// This loop now iterates over a constant maximum.
+//
 uint sampleVoxelWorld(vec3 pos) {
     for (int i = 0; i < RAXEL_MAX_LOADED_CHUNKS; i++) {
         if (i >= int(voxel_world.num_loaded_chunks))
@@ -76,6 +69,7 @@ uint sampleVoxelWorld(vec3 pos) {
 // Voxel world SDF function.
 // If a voxel is present (nonzero), returns a small negative value (hit),
 // otherwise returns a positive value estimated from the fractional part of pos.
+//
 float sdfVoxelWorld(vec3 pos) {
     uint voxel = sampleVoxelWorld(pos);
     if (voxel > 0u) {
@@ -101,6 +95,13 @@ vec3 estimateNormal(vec3 pos) {
 // Raymarch function: marches along rd from ro until a hit (sdf < EPSILON)
 // or max distance is reached. Returns a RaymarchResult structure.
 //
+struct RaymarchResult {
+    vec3 pos;
+    vec3 normal;
+    float tHit;
+    bool hit;
+};
+
 RaymarchResult raymarch(vec3 ro, vec3 rd) {
     RaymarchResult res;
     res.hit = false;
@@ -116,7 +117,8 @@ RaymarchResult raymarch(vec3 ro, vec3 rd) {
             return res;
         }
         t += d;
-        if (t > MAX_DISTANCE) break;
+        if (t > MAX_DISTANCE)
+            break;
     }
     res.tHit = t;
     res.pos = ro + rd * t;
@@ -125,7 +127,9 @@ RaymarchResult raymarch(vec3 ro, vec3 rd) {
 }
 
 //
-// Main entry: cast multiple rays per pixel (up to MAX_RAYS) and average the result.
+// Main entry: cast multiple rays per pixel and average the result.
+// In debug mode 1, output SDF value at ray origin.
+// In debug mode 2, display raw voxel data from the first chunk.
 //
 void main() {
     ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
@@ -133,10 +137,9 @@ void main() {
     if (pix.x >= int(iResolution.x) || pix.y >= int(iResolution.y))
         return;
     
-    vec3 finalColor = vec3(0.0);
-    int validRays = 0;
+    vec3 final_color = vec3(0.0);
+    int valid_rays = 0;
     
-    // Fixed loop over MAX_RAYS; break when r >= pc.rays_per_pixel.
     for (int r = 0; r < MAX_RAYS; r++) {
         if (r >= pc.rays_per_pixel)
             break;
@@ -144,38 +147,54 @@ void main() {
         // Jitter the pixel UV slightly.
         vec2 jitter = vec2(fract(float(r) * 12.34), fract(float(r) * 56.78));
         vec2 uv = (vec2(pix) + jitter) / iResolution;
-        // Map to normalized device coordinates [-1,1].
         vec2 ndc = (uv - 0.5) * 2.0;
         ndc.x *= iResolution.x / iResolution.y;
         
-        // Compute camera-space ray direction.
-        float halfFov = pc.fov * 0.5;
-        vec3 rdCam = normalize(vec3(ndc * tan(halfFov), -1.0));
+        float half_fov = pc.fov * 0.5;
+        vec3 rd_cam = normalize(vec3(ndc * tan(half_fov), -1.0));
         
         // Transform to world space.
-        mat4 invView = inverse(pc.view);
-        vec3 ro = (invView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-        vec3 rd = normalize((invView * vec4(rdCam, 0.0)).xyz);
-        rd.y = -rd.y; // adjust if necessary
+        mat4 inv_view = inverse(pc.view);
+        vec3 ro = (inv_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        vec3 rd = normalize((inv_view * vec4(rd_cam, 0.0)).xyz);
+        rd.y = -rd.y;
         
+        // Normal raymarching.
         RaymarchResult rr = raymarch(ro, rd);
         vec3 col = vec3(0.0);
-        if (rr.hit) {
-            // For testing, use a fixed color (or you can use rr.normal for lighting).
-            col = rr.normal * 0.5 + 0.5;
-            // multiply it by the distance to get a depth effect
-            col *= 1.0 - clamp(rr.tHit / MAX_DISTANCE, 0.0, 1.0);
+        
+        if (pc.debug_mode == 1) {
+            // Debug mode 1: output SDF value at ray origin as grayscale.
+            float d = sdfVoxelWorld(ro);
+            col = vec3(clamp(d, 0.0, 1.0));
+        } else if (pc.debug_mode == 2) {
+            // Debug mode 2: display raw voxel data.
+            // Map pixel coordinates to a 32x32 region.
+            ivec2 voxel_coord = ivec2(floor((vec2(pix) / iResolution) * float(RAXEL_VOXEL_CHUNK_SIZE)));
+            // For simplicity, sample from chunk 0.
+            vec3 chunk_origin = vec3(voxel_world.chunk_meta[0].x,
+                                     voxel_world.chunk_meta[0].y,
+                                     voxel_world.chunk_meta[0].z) * float(RAXEL_VOXEL_CHUNK_SIZE);
+            vec3 sample_pos = chunk_origin + vec3(voxel_coord.x, voxel_coord.y, 0);
+            // Get the voxel material.
+            uint material = sampleVoxelWorld(sample_pos);
+            // Map material (0-255) to grayscale (0.0-1.0).
+            float mat_norm = float(material) / 255.0;
+            col = vec3(mat_norm);
+        } else {
+            // Normal mode.
+            if (rr.hit) {
+                // Use the estimated normal for shading.
+                col = rr.normal * 0.5 + 0.5;
+            }
         }
-        finalColor += col;
-        validRays++;
+        
+        final_color += col;
+        valid_rays++;
     }
     
-    if (validRays > 0)
-        finalColor /= float(validRays);
+    if (valid_rays > 0)
+        final_color /= float(valid_rays);
     
-    // For debugging, blend the final color with a UV gradient.
-    vec4 uvColor = vec4(pix.x / iResolution.x, pix.y / iResolution.y, 0.0, 1.0);
-    finalColor = mix(finalColor, uvColor.rgb, 0.5);
-    
-    imageStore(outImage, pix, vec4(finalColor, 1.0));
+    imageStore(outImage, pix, vec4(final_color, 1.0));
 }
