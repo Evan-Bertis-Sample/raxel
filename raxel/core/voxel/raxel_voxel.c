@@ -196,7 +196,7 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
 void raxel_voxel_world_update(raxel_voxel_world_t *world,
                               raxel_voxel_world_update_options_t *options) {
     // Determine the camera's chunk coordinates.
-    RAXEL_CORE_LOG("Updating voxel world\n");
+    // RAXEL_CORE_LOG("Updating voxel world\n");
     raxel_coord_t cam_chunk_x = options->camera_position[0] / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t cam_chunk_y = options->camera_position[1] / RAXEL_VOXEL_CHUNK_SIZE;
     raxel_coord_t cam_chunk_z = options->camera_position[2] / RAXEL_VOXEL_CHUNK_SIZE;
@@ -225,24 +225,24 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     }
     world->__num_loaded_chunks = num_loaded_chunks;
 
-    // print out some information about the voxel world
-    printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
-    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
-        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
-        printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
+    // // print out some information about the voxel world
+    // printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
+    // for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+    //     raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
+    //     printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
 
-        // count the number of non-air voxels in this chunk
-        int count = 0;
-        raxel_voxel_chunk_t *chunk = &world->chunks[i];
+    //     // count the number of non-air voxels in this chunk
+    //     int count = 0;
+    //     raxel_voxel_chunk_t *chunk = &world->chunks[i];
 
-        for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
-            if (chunk->voxels[j].material != 0) {
-                count++;
-            }
-        }
+    //     for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+    //         if (chunk->voxels[j].material != 0) {
+    //             count++;
+    //         }
+    //     }
 
-        printf("  Non-air voxels: %d\n", count);
-    }
+    //     printf("  Non-air voxels: %d\n", count);
+    // }
 }
 
 void raxel_voxel_world_set_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline) {
@@ -264,7 +264,6 @@ void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world, raxel_compute_sha
     gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
     for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
         gpu_world->chunk_meta[i] = world->chunk_meta[i];
-        RAXEL_CORE_LOG("Copying chunk %d, size %lu\n", i, sizeof(raxel_voxel_chunk_t));
         memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
     }
 

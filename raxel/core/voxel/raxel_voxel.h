@@ -14,7 +14,7 @@ typedef struct raxel_voxel {
 } raxel_voxel_t;
 
 #define RAXEL_VOXEL_CHUNK_SIZE 32
-#define RAXEL_MAX_LOADED_CHUNKS 16
+#define RAXEL_MAX_LOADED_CHUNKS 32
 
 typedef enum raxel_voxel_chunk_state {
     RAXEL_VOXEL_CHUNK_STATE_COUNT = 0, // not used atm

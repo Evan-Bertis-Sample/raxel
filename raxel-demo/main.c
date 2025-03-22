@@ -78,7 +78,7 @@ int main(void) {
     raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
     // Create a giant sphere at the origin
-    int radius = 50;
+    int radius = 100;
 
     for (int x = -radius; x <= radius; x++) {
         for (int y = -radius; y <= radius; y++) {
@@ -195,10 +195,12 @@ int main(void) {
         options.camera_position[2] = camera_position[2];
         options.view_distance = 100.0f;
 
-        RAXEL_CORE_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
+        // RAXEL_CORE_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
         // raxel_voxel_world_update(world, &options);
-        // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline)
+        // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
+
+        RAXEL_APP_LOG("Rendering %u chunks, from (%f, %f, %f)\n", world->__num_loaded_chunks, camera_position[0], camera_position[1], camera_position[2]);
 
         raxel_pipeline_update(pipeline);
     }
