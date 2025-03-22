@@ -174,12 +174,12 @@ int main(void) {
         glm_rotate(view, camera_rotation, (vec3){0.0f, 1.0f, 0.0f});
 
         // Translate the view matrix by the negative camera position.
-        glm_translate(view, (vec3){-camera_position[0], -camera_position[1], -camera_position[2]});
+        glm_translate(view, (vec3){camera_position[0], camera_position[1], camera_position[2]});
 
         raxel_pc_buffer_set(compute_shader->pc_buffer, "view", view);
 
-        // Update fov (e.g., 90 degrees converted to radians).
-        float fov = glm_rad(90.0f);
+        // Update fov (e.g., 60 degrees converted to radians).
+        float fov = glm_rad(60.0f);
         raxel_pc_buffer_set(compute_shader->pc_buffer, "fov", &fov);
 
         // Update rays per pixel (e.g., 4 rays per pixel).
@@ -192,7 +192,7 @@ int main(void) {
         options.camera_position[0] = camera_position[0];
         options.camera_position[1] = camera_position[1];
         options.camera_position[2] = camera_position[2];
-        options.view_distance = 100.0f;
+        options.view_distance = 1000.0f;
 
         // RAXEL_CORE_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
