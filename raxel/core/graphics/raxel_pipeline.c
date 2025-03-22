@@ -561,10 +561,16 @@ static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
 static void __present_target(raxel_pipeline_globals_t *globals,
                              raxel_pipeline_targets_t *targets,
                              raxel_pipeline_swapchain_t *swapchain) {
-    VkImage src_image = targets->internal[targets->debug_target].image;
-    // For simplicity, assume we use the first swapchain image.
+    // Acquire the next swapchain image.
     uint32_t image_index = 0;
+    VK_CHECK(vkAcquireNextImageKHR(globals->device,
+                                   swapchain->swapchain,
+                                   UINT64_MAX,
+                                   globals->image_available_semaphore,
+                                   VK_NULL_HANDLE,
+                                   &image_index));
     VkImage dst_image = swapchain->targets[image_index].image;
+    VkImage src_image = targets->internal[targets->debug_target].image;
 
     // Allocate a temporary command buffer.
     VkCommandBufferAllocateInfo alloc_info = {0};
@@ -581,7 +587,7 @@ static void __present_target(raxel_pipeline_globals_t *globals,
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
 
-    // Barrier 1: Transition src_image from GENERAL to TRANSFER_SRC_OPTIMAL.
+    // Transition src_image from GENERAL to TRANSFER_SRC_OPTIMAL.
     VkImageMemoryBarrier src_barrier = {0};
     src_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     src_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -602,10 +608,9 @@ static void __present_target(raxel_pipeline_globals_t *globals,
                          0, NULL,
                          1, &src_barrier);
 
-    // Barrier 2: Transition dst_image from PRESENT_SRC_KHR (or UNDEFINED) to TRANSFER_DST_OPTIMAL.
+    // Transition dst_image from PRESENT_SRC_KHR to TRANSFER_DST_OPTIMAL.
     VkImageMemoryBarrier dst_barrier = {0};
     dst_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    // Assuming the swapchain image is in PRESENT_SRC_KHR when acquired.
     dst_barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -635,13 +640,12 @@ static void __present_target(raxel_pipeline_globals_t *globals,
     blit.dstSubresource = blit.srcSubresource;
     blit.dstOffsets[0] = (VkOffset3D){0, 0, 0};
     blit.dstOffsets[1] = (VkOffset3D){(int32_t)swapchain->extent.width, (int32_t)swapchain->extent.height, 1};
-
     vkCmdBlitImage(cmd_buf,
                    src_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                    dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                    1, &blit, VK_FILTER_LINEAR);
 
-    // Barrier 3: Transition dst_image from TRANSFER_DST_OPTIMAL to PRESENT_SRC_KHR.
+    // Transition dst_image from TRANSFER_DST_OPTIMAL to PRESENT_SRC_KHR.
     VkImageMemoryBarrier present_barrier = {0};
     present_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     present_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -685,6 +689,7 @@ static void __present_target(raxel_pipeline_globals_t *globals,
 
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 
+    // Submit the command buffer.
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
@@ -699,6 +704,7 @@ static void __present_target(raxel_pipeline_globals_t *globals,
     vkQueueWaitIdle(globals->queue_graphics);
     vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
 
+    // Present the image.
     VkPresentInfoKHR present_info = {0};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
