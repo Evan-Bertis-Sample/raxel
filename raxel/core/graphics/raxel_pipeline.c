@@ -317,16 +317,16 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
         vkGetPhysicalDeviceMemoryProperties(globals->device_physical, &mem_props);
 
         // Find a memory type that is allowed and device-local.
-        uint32_t memoryTypeIndex = UINT32_MAX;
+        uint32_t memory_type_index = UINT32_MAX;
         for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
             VkMemoryPropertyFlags flags = mem_props.memoryTypes[i].propertyFlags;
             if ((mem_reqs.memoryTypeBits & (1 << i)) &&
                 (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-                memoryTypeIndex = i;
+                memory_type_index = i;
                 break;
             }
         }
-        if (memoryTypeIndex == UINT32_MAX) {
+        if (memory_type_index == UINT32_MAX) {
             fprintf(stderr, "Failed to find a device-local memory type for color image.\n");
             exit(EXIT_FAILURE);
         }
@@ -335,7 +335,7 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
         VkMemoryAllocateInfo alloc_info = {0};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize = mem_reqs.size;
-        alloc_info.memoryTypeIndex = memoryTypeIndex;
+        alloc_info.memoryTypeIndex = memory_type_index;
         VK_CHECK(vkAllocateMemory(
             globals->device,
             &alloc_info,
@@ -371,18 +371,18 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
         // Transition the color image from UNDEFINED to GENERAL.
         // ----------------------------------------------------------
         {
-            VkCommandBufferAllocateInfo allocInfo = {0};
-            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            allocInfo.commandPool = globals->cmd_pool_graphics;
-            allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocInfo.commandBufferCount = 1;
-            VkCommandBuffer cmdBuf;
-            VK_CHECK(vkAllocateCommandBuffers(globals->device, &allocInfo, &cmdBuf));
+            VkCommandBufferAllocateInfo alloc_info = {0};
+            alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            alloc_info.commandPool = globals->cmd_pool_graphics;
+            alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            alloc_info.commandBufferCount = 1;
+            VkCommandBuffer cmd_buf;
+            VK_CHECK(vkAllocateCommandBuffers(globals->device, &alloc_info, &cmd_buf));
 
-            VkCommandBufferBeginInfo beginInfo = {0};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            VK_CHECK(vkBeginCommandBuffer(cmdBuf, &beginInfo));
+            VkCommandBufferBeginInfo begin_info = {0};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
 
             VkImageMemoryBarrier barrier = {0};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -397,24 +397,24 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
             barrier.subresourceRange.baseArrayLayer = 0;
             barrier.subresourceRange.layerCount = 1;
 
-            vkCmdPipelineBarrier(cmdBuf,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,   // srcStageMask
-                VK_PIPELINE_STAGE_TRANSFER_BIT,        // dstStageMask
-                0,
-                0, NULL,
-                0, NULL,
-                1, &barrier);
+            vkCmdPipelineBarrier(cmd_buf,
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,  // srcStageMask
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,     // dstStageMask
+                                 0,
+                                 0, NULL,
+                                 0, NULL,
+                                 1, &barrier);
 
-            VK_CHECK(vkEndCommandBuffer(cmdBuf));
+            VK_CHECK(vkEndCommandBuffer(cmd_buf));
 
-            VkSubmitInfo submitInfo = {0};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &cmdBuf;
-            VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submitInfo, VK_NULL_HANDLE));
+            VkSubmitInfo submit_info = {0};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &cmd_buf;
+            VK_CHECK(vkQueueSubmit(globals->queue_graphics, 1, &submit_info, VK_NULL_HANDLE));
             vkQueueWaitIdle(globals->queue_graphics);
 
-            vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmdBuf);
+            vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
         }
     }
 
@@ -452,16 +452,16 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
         VkPhysicalDeviceMemoryProperties mem_props;
         vkGetPhysicalDeviceMemoryProperties(globals->device_physical, &mem_props);
 
-        uint32_t memoryTypeIndex = UINT32_MAX;
+        uint32_t memory_type_index = UINT32_MAX;
         for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
             VkMemoryPropertyFlags flags = mem_props.memoryTypes[i].propertyFlags;
             if ((mem_reqs.memoryTypeBits & (1 << i)) &&
                 (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-                memoryTypeIndex = i;
+                memory_type_index = i;
                 break;
             }
         }
-        if (memoryTypeIndex == UINT32_MAX) {
+        if (memory_type_index == UINT32_MAX) {
             fprintf(stderr, "Failed to find a device-local memory type for depth image.\n");
             exit(EXIT_FAILURE);
         }
@@ -469,7 +469,7 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
         VkMemoryAllocateInfo alloc_info = {0};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize = mem_reqs.size;
-        alloc_info.memoryTypeIndex = memoryTypeIndex;
+        alloc_info.memoryTypeIndex = memory_type_index;
         VK_CHECK(vkAllocateMemory(
             globals->device,
             &alloc_info,
@@ -506,7 +506,6 @@ static int __create_targets(raxel_pipeline_globals_t *globals, raxel_pipeline_ta
     targets->debug_target = RAXEL_PIPELINE_TARGET_COLOR;
     return 0;
 }
-
 
 static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
     VkDescriptorPoolSize pool_sizes[3] = {0};
@@ -777,6 +776,7 @@ void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
     }
 
     raxel_size_t num_passes = raxel_list_size(pipeline->passes);
+
     for (size_t i = 0; i < num_passes; i++) {
         raxel_pipeline_pass_t *pass = &pipeline->passes[i];
 
@@ -788,7 +788,7 @@ void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
         }
 
         RAXEL_CORE_LOG("On end\n");
-        
+
         if (pass->on_end) {
             pass->on_end(pass, &pipeline->resources);
         }

@@ -157,9 +157,11 @@ void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_
 // Compute Pass Implementation
 // -----------------------------------------------------------------------------
 
-static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+static void __compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = globals->device;
+
+    RAXEL_CORE_LOG("Initializing compute pass\n");
 
     // Count valid targets using the -1 sentinel.
     int valid_count = 0;
@@ -188,10 +190,9 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
     if (valid_count > 0) {
         fallback = globals->targets.internal[ctx->targets[0]].view;
     } else {
-        // Ideally, you must have at least one valid target.
-        fprintf(stderr, "No valid target found for compute pass!\n");
-        exit(EXIT_FAILURE);
+        RAXEL_CORE_FATAL_ERROR("No valid targets for compute pass\n");
     }
+
     for (int i = valid_count; i < full_count; i++) {
         ctx->image_infos[i].imageView = fallback;
         ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -210,7 +211,7 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
     vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 }
 
-static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+static void __compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = globals->device;
 
@@ -252,7 +253,7 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 }
 
-static void compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
+static void __compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     VkDevice device = globals->device;
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -276,9 +277,9 @@ raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *co
     pass.name = raxel_string_create(&allocator, strlen("compute_pass") + 1);
     raxel_string_append(&pass.name, "compute_pass");
     pass.pass_data = context;
-    pass.initialize = compute_pass_initialize;
-    pass.on_begin = compute_pass_on_begin;
-    pass.on_end = compute_pass_on_end;
+    pass.initialize = __compute_pass_initialize;
+    pass.on_begin = __compute_pass_on_begin;
+    pass.on_end = __compute_pass_on_end;
     pass.allocator = allocator;
 
     return pass;
