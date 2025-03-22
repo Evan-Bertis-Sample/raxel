@@ -16,7 +16,7 @@ typedef struct raxel_voxel {
 
 #define RAXEL_VOXEL_CHUNK_SIZE 32
 #define RAXEL_MAX_LOADED_CHUNKS 32
-#define RAXEL_BVH_MAX_NODES 1024
+#define RAXEL_BVH_MAX_NODES 4096 
 
 typedef enum raxel_voxel_chunk_state {
     RAXEL_VOXEL_CHUNK_STATE_COUNT = 0,  // not used atm
@@ -79,13 +79,13 @@ typedef struct raxel_bvh_bounds {
     vec3 max;
 } raxel_bvh_bounds_t;
 
-typedef struct raxel_bvh_build_node_t {
+typedef struct __raxel_bvh_build_node {
     raxel_bvh_bounds_t bounds;
     int first_prim_offset;  // valid for leaf nodes
     int n_primitives;       // >0 for leaf, 0 for interior
     int split_axis;         // splitting axis: 0=x, 1=y, 2=z
-    struct raxel_bvh_build_node_t *children[2];
-} raxel_bvh_build_node_t;
+    struct __raxel_bvh_build_node_t *children[2];
+} __raxel_bvh_build_node_t;
 
 typedef struct raxel_linear_bvh_node_t {
     raxel_bvh_bounds_t bounds;
@@ -115,6 +115,8 @@ void raxel_bvh_accel_destroy(raxel_bvh_accel_t *bvh, raxel_allocator_t *allocato
 raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *world,
                                                           int max_leaf_size,
                                                           raxel_allocator_t *allocator);
+                                                          
+void raxel_bvh_accel_print(raxel_bvh_accel_t *bvh);
 
 typedef struct __raxel_voxel_world_gpu {
     raxel_bvh_accel_t bvh;

@@ -162,71 +162,6 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
     chunk->voxels[index] = voxel;
 }
 
-// -----------------------------------------------------------------------------
-// Voxel World Update (Chunk Loading / Unloading)
-// -----------------------------------------------------------------------------
-void raxel_voxel_world_update(raxel_voxel_world_t *world,
-                              raxel_voxel_world_update_options_t *options,
-                              raxel_compute_shader_t *compute_shader,
-                              raxel_pipeline_t *pipeline) {
-    raxel_coord_t cam_chunk_x, cam_chunk_y, cam_chunk_z;
-    __raxel_voxel_world_from_world_to_chunk_coords(world,
-                                                   options->camera_position[0],
-                                                   options->camera_position[1],
-                                                   options->camera_position[2],
-                                                   &cam_chunk_x, &cam_chunk_y, &cam_chunk_z);
-
-    raxel_coord_t prev_cam_chunk_x, prev_cam_chunk_y, prev_cam_chunk_z;
-    __raxel_voxel_world_from_world_to_chunk_coords(world,
-                                                   world->prev_update_options.camera_position[0],
-                                                   world->prev_update_options.camera_position[1],
-                                                   world->prev_update_options.camera_position[2],
-                                                   &prev_cam_chunk_x, &prev_cam_chunk_y, &prev_cam_chunk_z);
-
-    world->prev_update_options = *options;
-
-    if (cam_chunk_x == prev_cam_chunk_x &&
-        cam_chunk_y == prev_cam_chunk_y &&
-        cam_chunk_z == prev_cam_chunk_z) {
-        return;
-    }
-
-    raxel_size_t num_chunks = raxel_list_size(world->chunk_meta);
-    raxel_size_t num_loaded_chunks = 0;
-    for (raxel_size_t i = 0; i < num_chunks; i++) {
-        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
-        raxel_coord_t dx = meta->x - cam_chunk_x;
-        raxel_coord_t dy = meta->y - cam_chunk_y;
-        raxel_coord_t dz = meta->z - cam_chunk_z;
-        float dist = sqrtf(dx * dx + dy * dy + dz * dz);
-        if (dist < options->view_distance) {
-            if (num_loaded_chunks != i) {
-                __raxel_voxel_world_swap_chunks(world, num_loaded_chunks, i);
-            }
-            num_loaded_chunks++;
-        }
-        if (num_loaded_chunks >= RAXEL_MAX_LOADED_CHUNKS) {
-            break;
-        }
-    }
-    world->__num_loaded_chunks = num_loaded_chunks;
-
-    // --- Build the BVH from the currently loaded chunks ---
-    int max_leaf_size = 4;
-    raxel_bvh_accel_t *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size, world->allocator);
-
-    // Update GPU world buffer with voxel data and BVH.
-    __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
-    gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
-    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
-        gpu_world->chunk_meta[i] = world->chunk_meta[i];
-        memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
-    }
-    memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
-    raxel_bvh_accel_destroy(bvh, world->allocator);
-    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
-}
-
 void raxel_voxel_world_set_sb(raxel_voxel_world_t *world,
                               raxel_compute_shader_t *compute_shader,
                               raxel_pipeline_t *pipeline) {
@@ -234,7 +169,6 @@ void raxel_voxel_world_set_sb(raxel_voxel_world_t *world,
         (raxel_sb_entry_t){.name = "voxel_world", .offset = 0, .size = sizeof(__raxel_voxel_world_gpu_t)});
     raxel_compute_shader_set_sb(compute_shader, pipeline, &sb_desc);
 }
-
 
 // -----------------------------------------------------------------------------
 // BVH Utility Functions
@@ -266,8 +200,8 @@ static inline void __raxel_bounds3f_centroid(const raxel_bvh_bounds_t *b, vec3 o
 // -----------------------------------------------------------------------------
 // BVH Build (Temporary Tree) with Node Limit
 // -----------------------------------------------------------------------------
-static raxel_bvh_build_node_t *__raxel_bvh_build_node_create(raxel_allocator_t *allocator) {
-    raxel_bvh_build_node_t *node = (raxel_bvh_build_node_t *)raxel_malloc(allocator, sizeof(raxel_bvh_build_node_t));
+static __raxel_bvh_build_node_t *__raxel_bvh_build_node_create(raxel_allocator_t *allocator) {
+    __raxel_bvh_build_node_t *node = (__raxel_bvh_build_node_t *)raxel_malloc(allocator, sizeof(__raxel_bvh_build_node_t));
     node->children[0] = node->children[1] = NULL;
     node->n_primitives = 0;
     node->first_prim_offset = -1;
@@ -276,21 +210,21 @@ static raxel_bvh_build_node_t *__raxel_bvh_build_node_create(raxel_allocator_t *
     return node;
 }
 
-static void __raxel_bvh_build_tree_free(raxel_bvh_build_node_t *node, raxel_allocator_t *allocator) {
+static void __raxel_bvh_build_tree_free(__raxel_bvh_build_node_t *node, raxel_allocator_t *allocator) {
     if (!node) return;
     __raxel_bvh_build_tree_free(node->children[0], allocator);
     __raxel_bvh_build_tree_free(node->children[1], allocator);
     raxel_free(allocator, node);
 }
 
-static raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *primitive_bounds,
-                                                       int *primitive_indices,
-                                                       int start,
-                                                       int end,
-                                                       int max_leaf_size,
-                                                       int *node_counter,
-                                                       raxel_allocator_t *allocator) {
-    raxel_bvh_build_node_t *node = __raxel_bvh_build_node_create(allocator);
+static __raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *primitive_bounds,
+                                                           int *primitive_indices,
+                                                           int start,
+                                                           int end,
+                                                           int max_leaf_size,
+                                                           int *node_counter,
+                                                           raxel_allocator_t *allocator) {
+    __raxel_bvh_build_node_t *node = __raxel_bvh_build_node_create(allocator);
     raxel_bvh_bounds_t bounds = __raxel_bounds3f_empty();
     for (int i = start; i < end; i++) {
         bounds = __raxel_bounds3f_union(&bounds, &primitive_bounds[primitive_indices[i]]);
@@ -335,21 +269,21 @@ static raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *pri
         qsort(primitive_indices + start, n_primitives, sizeof(int), cmp);
         *node_counter += 2;
         node->children[0] = __build_raxel_bvh_limited(primitive_bounds, primitive_indices,
-                                                    start, mid, max_leaf_size, node_counter, allocator);
+                                                      start, mid, max_leaf_size, node_counter, allocator);
         node->children[1] = __build_raxel_bvh_limited(primitive_bounds, primitive_indices,
-                                                    mid, end, max_leaf_size, node_counter, allocator);
+                                                      mid, end, max_leaf_size, node_counter, allocator);
         return node;
     }
 }
 
-static int __count_raxel_bvh_nodes(raxel_bvh_build_node_t *node) {
+static int __count_raxel_bvh_nodes(__raxel_bvh_build_node_t *node) {
     if (!node) return 0;
     if (node->n_primitives > 0)
         return 1;
     return 1 + __count_raxel_bvh_nodes(node->children[0]) + __count_raxel_bvh_nodes(node->children[1]);
 }
 
-static int __flatten_bvh_tree(raxel_bvh_build_node_t *node, int *offset, raxel_linear_bvh_node_t *nodes) {
+static int __flatten_bvh_tree(__raxel_bvh_build_node_t *node, int *offset, raxel_linear_bvh_node_t *nodes) {
     int my_offset = (*offset);
     raxel_linear_bvh_node_t *linear_node = &nodes[my_offset];
     (*offset)++;
@@ -366,9 +300,23 @@ static int __flatten_bvh_tree(raxel_bvh_build_node_t *node, int *offset, raxel_l
     return my_offset;
 }
 
+static void __print_bvh_build_structure(__raxel_bvh_build_node_t *node, int depth) {
+    for (int i = 0; i < depth; i++) {
+        printf("  ");
+    }
+    if (node->n_primitives > 0) {
+        printf("Leaf: %d primitives\n", node->n_primitives);
+    } else {
+        printf("Interior: Axis %d\n", node->split_axis);
+        __print_bvh_build_structure(node->children[0], depth + 1);
+        __print_bvh_build_structure(node->children[1], depth + 1);
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Public BVH Accelerator API
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
                                          int *primitive_indices,
                                          int n,
@@ -377,7 +325,8 @@ raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
     raxel_bvh_accel_t *bvh = (raxel_bvh_accel_t *)raxel_malloc(allocator, sizeof(raxel_bvh_accel_t));
     bvh->max_leaf_size = max_leaf_size;
     int node_counter = 1;
-    raxel_bvh_build_node_t *root = __build_raxel_bvh_limited(primitive_bounds, primitive_indices, 0, n, max_leaf_size, &node_counter, allocator);
+    __raxel_bvh_build_node_t *root = __build_raxel_bvh_limited(primitive_bounds, primitive_indices, 0, n, max_leaf_size, &node_counter, allocator);
+    __print_bvh_build_structure(root, 0);
     bvh->n_nodes = __count_raxel_bvh_nodes(root);
     int offset = 0;
     __flatten_bvh_tree(root, &offset, bvh->nodes);
@@ -441,8 +390,94 @@ raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *w
             index++;
         }
     }
+
     raxel_bvh_accel_t *bvh = raxel_bvh_accel_build(prim_bounds, prim_indices, total_prims, max_leaf_size, allocator);
     raxel_free(allocator, prim_bounds);
     raxel_free(allocator, prim_indices);
     return bvh;
+}
+
+void raxel_bvh_accel_print(raxel_bvh_accel_t *bvh) {
+    printf("BVH Accelerator:\n");
+    printf("  Max Leaf Size: %d\n", bvh->max_leaf_size);
+    printf("  Num Nodes: %d\n", bvh->n_nodes);
+    for (int i = 0; i < bvh->n_nodes; i++) {
+        raxel_linear_bvh_node_t *node = &bvh->nodes[i];
+        printf("  Node %d:\n", i);
+        printf("    Bounds: (%f, %f, %f) - (%f, %f, %f)\n", node->bounds.min[0], node->bounds.min[1], node->bounds.min[2],
+               node->bounds.max[0], node->bounds.max[1], node->bounds.max[2]);
+        if (node->n_primitives > 0) {
+            printf("    Leaf Node: %d primitives starting at %d\n", node->n_primitives, node->primitives_offset);
+        } else {
+            printf("    Interior Node: Split Axis %d, Second Child Offset %d\n", node->axis, node->second_child_offset);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Voxel World Update (Chunk Loading / Unloading)
+// -----------------------------------------------------------------------------
+void raxel_voxel_world_update(raxel_voxel_world_t *world,
+                              raxel_voxel_world_update_options_t *options,
+                              raxel_compute_shader_t *compute_shader,
+                              raxel_pipeline_t *pipeline) {
+    raxel_coord_t cam_chunk_x, cam_chunk_y, cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world,
+                                                   options->camera_position[0],
+                                                   options->camera_position[1],
+                                                   options->camera_position[2],
+                                                   &cam_chunk_x, &cam_chunk_y, &cam_chunk_z);
+
+    raxel_coord_t prev_cam_chunk_x, prev_cam_chunk_y, prev_cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world,
+                                                   world->prev_update_options.camera_position[0],
+                                                   world->prev_update_options.camera_position[1],
+                                                   world->prev_update_options.camera_position[2],
+                                                   &prev_cam_chunk_x, &prev_cam_chunk_y, &prev_cam_chunk_z);
+
+    world->prev_update_options = *options;
+
+    if (cam_chunk_x == prev_cam_chunk_x &&
+        cam_chunk_y == prev_cam_chunk_y &&
+        cam_chunk_z == prev_cam_chunk_z) {
+        return;
+    }
+
+    raxel_size_t num_chunks = raxel_list_size(world->chunk_meta);
+    raxel_size_t num_loaded_chunks = 0;
+    for (raxel_size_t i = 0; i < num_chunks; i++) {
+        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
+        raxel_coord_t dx = meta->x - cam_chunk_x;
+        raxel_coord_t dy = meta->y - cam_chunk_y;
+        raxel_coord_t dz = meta->z - cam_chunk_z;
+        float dist = sqrtf(dx * dx + dy * dy + dz * dz);
+        if (dist < options->view_distance) {
+            if (num_loaded_chunks != i) {
+                __raxel_voxel_world_swap_chunks(world, num_loaded_chunks, i);
+            }
+            num_loaded_chunks++;
+        }
+        if (num_loaded_chunks >= RAXEL_MAX_LOADED_CHUNKS) {
+            break;
+        }
+    }
+    world->__num_loaded_chunks = num_loaded_chunks;
+
+    // --- Build the BVH from the currently loaded chunks ---
+    int max_leaf_size = 4;
+    raxel_bvh_accel_t *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size, world->allocator);
+
+    // Update GPU world buffer with voxel data and BVH.
+    __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
+    gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
+    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+        gpu_world->chunk_meta[i] = world->chunk_meta[i];
+        memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
+    }
+    memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
+
+    // raxel_bvh_accel_print(bvh);
+
+    raxel_bvh_accel_destroy(bvh, world->allocator);
+    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
 }
