@@ -7,9 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-// -----------------------------------------------------------------------------
-// Voxel World Creation / Destruction
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 1. Voxel World Creation / Destruction and Materials
+// =============================================================================
+
 raxel_voxel_world_t *raxel_voxel_world_create(raxel_allocator_t *allocator) {
     raxel_voxel_world_t *world = raxel_malloc(allocator, sizeof(raxel_voxel_world_t));
     world->allocator = allocator;
@@ -34,9 +35,6 @@ void raxel_voxel_world_destroy(raxel_voxel_world_t *world) {
     raxel_free(world->allocator, world);
 }
 
-// -----------------------------------------------------------------------------
-// Materials
-// -----------------------------------------------------------------------------
 void raxel_voxel_world_add_material(raxel_voxel_world_t *world, raxel_string_t name, raxel_voxel_material_attributes_t attributes) {
     raxel_voxel_material_t material = {
         .name = name,
@@ -54,14 +52,15 @@ raxel_material_handle_t raxel_voxel_world_get_material_handle(raxel_voxel_world_
     return 0;
 }
 
-// -----------------------------------------------------------------------------
-// Chunk Access
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 2. Chunk Access and Helper Functions
+// =============================================================================
+
 static raxel_voxel_chunk_t *__raxel_voxel_world_create_chunk(raxel_voxel_world_t *world,
-                                                             raxel_coord_t x,
-                                                             raxel_coord_t y,
-                                                             raxel_coord_t z) {
-    raxel_voxel_chunk_meta_t meta = {x, y, z, RAXEL_VOXEL_CHUNK_STATE_COUNT};
+                                                               raxel_coord_t x,
+                                                               raxel_coord_t y,
+                                                               raxel_coord_t z) {
+    raxel_voxel_chunk_meta_t meta = { x, y, z, RAXEL_VOXEL_CHUNK_STATE_COUNT };
     raxel_list_push_back(world->chunk_meta, meta);
     raxel_voxel_chunk_t chunk;
     raxel_list_push_back(world->chunks, chunk);
@@ -162,17 +161,35 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
     chunk->voxels[index] = voxel;
 }
 
+// =============================================================================
+// 3. Voxel World Storage Buffer Functions
+// =============================================================================
+
 void raxel_voxel_world_set_sb(raxel_voxel_world_t *world,
                               raxel_compute_shader_t *compute_shader,
                               raxel_pipeline_t *pipeline) {
     raxel_sb_buffer_desc_t sb_desc = RAXEL_SB_DESC(
-        (raxel_sb_entry_t){.name = "voxel_world", .offset = 0, .size = sizeof(__raxel_voxel_world_gpu_t)});
+        (raxel_sb_entry_t){ .name = "voxel_world", .offset = 0, .size = sizeof(__raxel_voxel_world_gpu_t) }
+    );
     raxel_compute_shader_set_sb(compute_shader, pipeline, &sb_desc);
 }
 
-// -----------------------------------------------------------------------------
-// BVH Utility Functions
-// -----------------------------------------------------------------------------
+void raxel_voxel_world_dispatch_sb(raxel_voxel_world_t *world,
+                                   raxel_compute_shader_t *compute_shader,
+                                   raxel_pipeline_t *pipeline) {
+    __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
+    gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
+    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+        gpu_world->chunk_meta[i] = world->chunk_meta[i];
+        memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
+    }
+    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
+}
+
+// =============================================================================
+// 4. BVH Utility Functions
+// =============================================================================
+
 static inline raxel_bvh_bounds_t __raxel_bounds3f_empty(void) {
     raxel_bvh_bounds_t b;
     b.min[0] = b.min[1] = b.min[2] = 1e30f;
@@ -197,9 +214,11 @@ static inline void __raxel_bounds3f_centroid(const raxel_bvh_bounds_t *b, vec3 o
     out_centroid[2] = 0.5f * (b->min[2] + b->max[2]);
 }
 
-// -----------------------------------------------------------------------------
-// BVH Build (Temporary Tree) with Node Limit
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 5. BVH Build (Temporary Tree) with Node Limit
+// =============================================================================
+
+// Create a new BVH build node.
 static __raxel_bvh_build_node_t *__raxel_bvh_build_node_create(raxel_allocator_t *allocator) {
     __raxel_bvh_build_node_t *node = (__raxel_bvh_build_node_t *)raxel_malloc(allocator, sizeof(__raxel_bvh_build_node_t));
     node->children[0] = node->children[1] = NULL;
@@ -210,6 +229,7 @@ static __raxel_bvh_build_node_t *__raxel_bvh_build_node_create(raxel_allocator_t
     return node;
 }
 
+// Recursively free the BVH build tree.
 static void __raxel_bvh_build_tree_free(__raxel_bvh_build_node_t *node, raxel_allocator_t *allocator) {
     if (!node) return;
     __raxel_bvh_build_tree_free(node->children[0], allocator);
@@ -217,6 +237,7 @@ static void __raxel_bvh_build_tree_free(__raxel_bvh_build_node_t *node, raxel_al
     raxel_free(allocator, node);
 }
 
+// Build the BVH with a limit on the maximum number of nodes.
 static __raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *primitive_bounds,
                                                            int *primitive_indices,
                                                            int start,
@@ -261,10 +282,8 @@ static __raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *p
             vec3 ca, cb;
             __raxel_bounds3f_centroid(&primitive_bounds[ia], ca);
             __raxel_bounds3f_centroid(&primitive_bounds[ib], cb);
-            float diff = (axis == 0 ? ca[0] - cb[0] : axis == 1 ? ca[1] - cb[1]
-                                                                : ca[2] - cb[2]);
-            return (diff < 0) ? -1 : (diff > 0) ? 1
-                                                : 0;
+            float diff = (axis == 0 ? ca[0] - cb[0] : axis == 1 ? ca[1] - cb[1] : ca[2] - cb[2]);
+            return (diff < 0) ? -1 : (diff > 0) ? 1 : 0;
         }
         qsort(primitive_indices + start, n_primitives, sizeof(int), cmp);
         *node_counter += 2;
@@ -313,21 +332,22 @@ static void __print_bvh_build_structure(__raxel_bvh_build_node_t *node, int dept
     }
 }
 
-// -----------------------------------------------------------------------------
-// Public BVH Accelerator API
-// ----------------------------------------------------------------------------
+// =============================================================================
+// 6. Public BVH Accelerator API
+// =============================================================================
 
 raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
-                                         int *primitive_indices,
-                                         int n,
-                                         int max_leaf_size,
-                                         raxel_allocator_t *allocator) {
+                                          int *primitive_indices,
+                                          int n,
+                                          int max_leaf_size,
+                                          raxel_allocator_t *allocator) {
     raxel_bvh_accel_t *bvh = (raxel_bvh_accel_t *)raxel_malloc(allocator, sizeof(raxel_bvh_accel_t));
     bvh->max_leaf_size = max_leaf_size;
     int node_counter = 1;
     __raxel_bvh_build_node_t *root = __build_raxel_bvh_limited(primitive_bounds, primitive_indices, 0, n, max_leaf_size, &node_counter, allocator);
     __print_bvh_build_structure(root, 0);
     bvh->n_nodes = __count_raxel_bvh_nodes(root);
+    bvh->nodes = (raxel_linear_bvh_node_t *)raxel_malloc(allocator, bvh->n_nodes * sizeof(raxel_linear_bvh_node_t));
     int offset = 0;
     __flatten_bvh_tree(root, &offset, bvh->nodes);
     __raxel_bvh_build_tree_free(root, allocator);
@@ -346,7 +366,7 @@ raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *w
     for (size_t i = 0; i < world->__num_loaded_chunks; i++) {
         raxel_voxel_chunk_t *chunk = &world->chunks[i];
         raxel_voxel_chunk_meta_t meta = world->chunk_meta[i];
-        vec3 chunk_origin = {(float)meta.x, (float)meta.y, (float)meta.z};
+        vec3 chunk_origin = { (float)meta.x, (float)meta.y, (float)meta.z };
         glm_vec3_scale(chunk_origin, (float)RAXEL_VOXEL_CHUNK_SIZE, chunk_origin);
         for (int j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
             if (chunk->voxels[j].material != 0) {
@@ -364,7 +384,7 @@ raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *w
     for (size_t i = 0; i < world->__num_loaded_chunks; i++) {
         raxel_voxel_chunk_meta_t meta = world->chunk_meta[i];
         raxel_voxel_chunk_t *chunk = &world->chunks[i];
-        vec3 chunk_origin = {(float)meta.x, (float)meta.y, (float)meta.z};
+        vec3 chunk_origin = { (float)meta.x, (float)meta.y, (float)meta.z };
         glm_vec3_scale(chunk_origin, (float)RAXEL_VOXEL_CHUNK_SIZE, chunk_origin);
         for (int j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
             if (chunk->voxels[j].material == 0)
@@ -390,7 +410,6 @@ raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *w
             index++;
         }
     }
-
     raxel_bvh_accel_t *bvh = raxel_bvh_accel_build(prim_bounds, prim_indices, total_prims, max_leaf_size, allocator);
     raxel_free(allocator, prim_bounds);
     raxel_free(allocator, prim_indices);
@@ -404,7 +423,8 @@ void raxel_bvh_accel_print(raxel_bvh_accel_t *bvh) {
     for (int i = 0; i < bvh->n_nodes; i++) {
         raxel_linear_bvh_node_t *node = &bvh->nodes[i];
         printf("  Node %d:\n", i);
-        printf("    Bounds: (%f, %f, %f) - (%f, %f, %f)\n", node->bounds.min[0], node->bounds.min[1], node->bounds.min[2],
+        printf("    Bounds: (%f, %f, %f) - (%f, %f, %f)\n", 
+               node->bounds.min[0], node->bounds.min[1], node->bounds.min[2],
                node->bounds.max[0], node->bounds.max[1], node->bounds.max[2]);
         if (node->n_primitives > 0) {
             printf("    Leaf Node: %d primitives starting at %d\n", node->n_primitives, node->primitives_offset);
@@ -414,9 +434,10 @@ void raxel_bvh_accel_print(raxel_bvh_accel_t *bvh) {
     }
 }
 
-// -----------------------------------------------------------------------------
-// Voxel World Update (Chunk Loading / Unloading)
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 7. Voxel World Update and Buffer Dispatch
+// =============================================================================
+
 void raxel_voxel_world_update(raxel_voxel_world_t *world,
                               raxel_voxel_world_update_options_t *options,
                               raxel_compute_shader_t *compute_shader,
@@ -464,8 +485,8 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     world->__num_loaded_chunks = num_loaded_chunks;
 
     // --- Build the BVH from the currently loaded chunks ---
-    int max_leaf_size = 4;
-    raxel_bvh_accel_t *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size, world->allocator);
+    int max_leaf_size_bvh = 4;
+    raxel_bvh_accel_t *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size_bvh, world->allocator);
 
     // Update GPU world buffer with voxel data and BVH.
     __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
@@ -475,9 +496,9 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
         memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
     }
     memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
-
+    // Optional: print BVH structure for debugging.
     // raxel_bvh_accel_print(bvh);
-
     raxel_bvh_accel_destroy(bvh, world->allocator);
-    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
+    RAXEL_CORE_LOG("Dispatching updated chunks and BVH!\n");
+    raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 }
