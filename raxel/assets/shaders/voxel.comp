@@ -7,8 +7,8 @@ layout(local_size_x = 16, local_size_y = 16) in;
 layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 
 #define EPSILON 0.01
-#define MAX_DISTANCE 100.0
-#define MAX_STEPS 100
+#define MAX_DISTANCE 1000.0
+#define MAX_STEPS 1000
 #define RAXEL_VOXEL_CHUNK_SIZE 32
 #define RAXEL_MAX_LOADED_CHUNKS 32
 #define MAX_RAYS 8
@@ -141,7 +141,7 @@ RaymarchResult raymarch(vec3 origin, vec3 dir) {
             result.normal = estimateNormal(pos);
             break;
         }
-        result.tHit += 0.1;
+        result.tHit += 0.05;
         if (result.tHit > MAX_DISTANCE) {
             break;
         }
@@ -169,15 +169,20 @@ void main() {
     } else {
         // --- Other Debug Modes: Raymarching ---
         // Map pixel coordinates to normalized device coordinates (range [-1, 1]).
+        // Compute the inverse of the view matrix.
+        mat4 invView = inverse(pc.view);
+
+        // Map pixel coordinates to normalized device coordinates (range [-1, 1]).
         vec2 uv = (vec2(pixelCoord) / vec2(imageSizeVec)) * 2.0 - 1.0;
         float aspect = float(imageSizeVec.x) / float(imageSizeVec.y);
         uv.x *= aspect;
-
-        // Compute the ray direction by applying the fov and view matrix.
         float tanFov = tan(pc.fov * 0.5);
-        vec3 rayDir = normalize((pc.view * vec4(uv.x * tanFov, uv.y * tanFov, -1.0, 0.0)).xyz);
-        // Assume the camera is located at the origin in view space.
-        vec3 rayOrigin = (pc.view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+        // Use the inverse view matrix to compute ray origin and direction.
+        vec3 rayOrigin = (invView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        vec3 rayDir = normalize((invView * vec4(uv.x * tanFov, uv.y * tanFov, -1.0, 0.0)).xyz);
+        // flip the ray direction, so Y is up
+        rayDir.y = -rayDir.y;
 
         RaymarchResult result = raymarch(rayOrigin, rayDir);
 
@@ -195,6 +200,9 @@ void main() {
             float depth = result.hit ? result.tHit / MAX_DISTANCE : 1.0;
             color = vec4(vec3(depth), 1.0);
         }
+
+        // blend the color with the ray direction, just for debugging
+        color = mix(color, vec4(rayDir * 0.5 + 0.5, 1.0), 0.5);
     }
 
     imageStore(outImage, pixelCoord, color);
