@@ -11,6 +11,65 @@
 #include "raxel_surface.h"
 
 // -----------------------------------------------------------------------------
+// Debug Messenger Setup for Validation Layers
+// -----------------------------------------------------------------------------
+
+// Global debug messenger (will be destroyed during cleanup)
+static VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+
+static VkResult __create_debug_utils_messenger_ext(
+    VkInstance instance,
+    const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDebugUtilsMessengerEXT *pDebugMessenger) {
+    PFN_vkCreateDebugUtilsMessengerEXT func =
+        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    if (func != NULL) {
+        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+    }
+    return VK_ERROR_EXTENSION_NOT_PRESENT;
+}
+
+static void __destroy_debug_utils_messenger_ext(
+    VkInstance instance,
+    VkDebugUtilsMessengerEXT debugMessenger,
+    const VkAllocationCallbacks *pAllocator) {
+    PFN_vkDestroyDebugUtilsMessengerEXT func =
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != NULL) {
+        func(instance, debugMessenger, pAllocator);
+    }
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL __debug_clbk(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+    void *pUserData) {
+    fprintf(stderr, "Validation layer: %s\n", pCallbackData->pMessage);
+    return VK_FALSE;
+}
+
+static void __setup_debug_messanger(VkInstance instance) {
+    VkDebugUtilsMessengerCreateInfoEXT createInfo = {0};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    createInfo.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.pfnUserCallback = __debug_clbk;
+    createInfo.pUserData = NULL;  // Optional
+
+    if (__create_debug_utils_messenger_ext(instance, &createInfo, NULL, &debugMessenger) != VK_SUCCESS) {
+        fprintf(stderr, "Failed to set up debug messenger!\n");
+    }
+}
+
+// -----------------------------------------------------------------------------
 // Internal helper functions (static, snake_case)
 // -----------------------------------------------------------------------------
 
@@ -28,13 +87,33 @@ static void __create_instance(raxel_pipeline_globals_t *globals) {
         exit(EXIT_FAILURE);
     }
 
+    // Add the debug utils extension
+    const char *debugExtension = "VK_EXT_debug_utils";
+    uint32_t extensionCount = glfw_extension_count + 1;
+    const char **extensions = malloc(extensionCount * sizeof(const char *));
+    for (uint32_t i = 0; i < glfw_extension_count; i++) {
+        extensions[i] = glfw_extensions[i];
+    }
+    extensions[glfw_extension_count] = debugExtension;
+
+    // Specify validation layers.
+    const char *validationLayers[] = {
+        "VK_LAYER_KHRONOS_validation"};
+
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &app_info;
-    create_info.enabledExtensionCount = glfw_extension_count;
-    create_info.ppEnabledExtensionNames = glfw_extensions;
+    create_info.enabledExtensionCount = extensionCount;
+    create_info.ppEnabledExtensionNames = extensions;
+    create_info.enabledLayerCount = 1;
+    create_info.ppEnabledLayerNames = validationLayers;
 
     VK_CHECK(vkCreateInstance(&create_info, NULL, &globals->instance));
+
+    free(extensions);
+
+    // Set up the debug messenger
+    __setup_debug_messanger(globals->instance);
 }
 
 static void __pick_physical_device(raxel_pipeline_globals_t *globals) {
@@ -390,7 +469,7 @@ static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
     pool_sizes[0].descriptorCount = 1;
     pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     pool_sizes[1].descriptorCount = 1;
-    pool_sizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Added for large data buffers.
+    pool_sizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;  // Added for large data buffers.
     pool_sizes[2].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo pool_info = {0};

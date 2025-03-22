@@ -14,6 +14,7 @@ typedef enum raxel_compute_descriptor_binding {
 typedef struct raxel_compute_shader {
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
+    VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSet descriptor_set; // Bound to a storage image (set=0, binding=0)
     raxel_pc_buffer_t *pc_buffer;
     raxel_sb_buffer_t *sb_buffer;

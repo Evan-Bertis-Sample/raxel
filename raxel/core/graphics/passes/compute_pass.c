@@ -41,7 +41,7 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
         fprintf(stderr, "Failed to allocate compute shader\n");
         exit(EXIT_FAILURE);
     }
-    
+
     VkShaderModule comp_module = __load_shader_module(device, shader_path);
 
     // Create descriptor set layout bindings using the enum to avoid magic numbers.
@@ -94,19 +94,18 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     ds_alloc.pSetLayouts = &desc_set_layout;
     VK_CHECK(vkAllocateDescriptorSets(device, &ds_alloc, &shader->descriptor_set));
 
-    // Clean up the temporary descriptor set layout.
-    vkDestroyDescriptorSetLayout(device, desc_set_layout, NULL);
-
+    // Instead of destroying the descriptor set layout immediately, store it for later cleanup.
+    shader->descriptor_set_layout = desc_set_layout;
     shader->allocator = &pipeline->resources.allocator;
 
     return shader;
 }
 
-
 void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline) {
     VkDevice device = pipeline->resources.device;
     vkDestroyPipeline(device, shader->pipeline, NULL);
     vkDestroyPipelineLayout(device, shader->pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(device, shader->descriptor_set_layout, NULL);
     free(shader);
 }
 
@@ -186,7 +185,7 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
     VkWriteDescriptorSet write = {0};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = ctx->compute_shader->descriptor_set;
-    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE; // use enum here
+    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;  // use enum here
     write.dstArrayElement = 0;
     write.descriptorCount = ctx->num_image_infos;
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -220,7 +219,6 @@ static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_gl
 
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 }
-
 
 static void compute_pass_on_end(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
     VkDevice device = globals->device;
