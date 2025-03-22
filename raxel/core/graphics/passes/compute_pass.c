@@ -41,7 +41,7 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
         fprintf(stderr, "Failed to allocate compute shader\n");
         exit(EXIT_FAILURE);
     }
-    
+
     VkShaderModule comp_module = __load_shader_module(device, shader_path);
 
     // Create descriptor set layout bindings.
@@ -110,7 +110,6 @@ raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, 
     return shader;
 }
 
-
 void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline) {
     VkDevice device = pipeline->resources.device;
     vkDestroyPipeline(device, shader->pipeline, NULL);
@@ -162,26 +161,53 @@ static void compute_pass_initialize(raxel_pipeline_pass_t *pass, raxel_pipeline_
     raxel_compute_pass_context_t *ctx = (raxel_compute_pass_context_t *)pass->pass_data;
     VkDevice device = globals->device;
 
-    // Count valid targets in the context's targets array.
+    // Count valid targets using the -1 sentinel.
     int valid_count = 0;
     for (int i = 0; i < RAXEL_PIPELINE_TARGET_COUNT; i++) {
-        RAXEL_CORE_LOG("ctx->targets[%d]: %d\n", i, ctx->targets[i]);
-        if (ctx->targets[i] < 0)
+        if (ctx->targets[i] < 0) {
             break;
+        }
         valid_count++;
     }
-    valid_count -= 1;  // Exclude the sentinel value.
 
-    // Build an array of descriptor image infos from the pipeline's targets.
-    ctx->image_infos = raxel_malloc(&globals->allocator, valid_count * sizeof(VkDescriptorImageInfo));
-    RAXEL_CORE_LOG("valid_count: %d\n", valid_count);
+    // Our descriptor set layout was created with a fixed count.
+    int full_count = RAXEL_PIPELINE_TARGET_COUNT;
+    ctx->num_image_infos = full_count;
+    ctx->image_infos = raxel_malloc(&globals->allocator, full_count * sizeof(VkDescriptorImageInfo));
+
+    // Fill in valid entries.
     for (int i = 0; i < valid_count; i++) {
         int target_index = ctx->targets[i];
         ctx->image_infos[i].imageView = globals->targets.internal[target_index].view;
         ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         ctx->image_infos[i].sampler = VK_NULL_HANDLE;
     }
-    ctx->num_image_infos = valid_count;
+
+    // For any remaining entries, use a fallback.
+    VkImageView fallback = VK_NULL_HANDLE;
+    if (valid_count > 0) {
+        fallback = globals->targets.internal[ctx->targets[0]].view;
+    } else {
+        // Ideally, you must have at least one valid target.
+        fprintf(stderr, "No valid target found for compute pass!\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = valid_count; i < full_count; i++) {
+        ctx->image_infos[i].imageView = fallback;
+        ctx->image_infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        ctx->image_infos[i].sampler = VK_NULL_HANDLE;
+    }
+
+    // Update the descriptor set for the full array.
+    VkWriteDescriptorSet write = {0};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = ctx->compute_shader->descriptor_set;
+    write.dstBinding = RAXEL_COMPUTE_BINDING_STORAGE_IMAGE;
+    write.dstArrayElement = 0;
+    write.descriptorCount = ctx->num_image_infos;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write.pImageInfo = ctx->image_infos;
+    vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 }
 
 static void compute_pass_on_begin(raxel_pipeline_pass_t *pass, raxel_pipeline_globals_t *globals) {
@@ -254,6 +280,6 @@ raxel_pipeline_pass_t raxel_compute_pass_create(raxel_compute_pass_context_t *co
     pass.on_begin = compute_pass_on_begin;
     pass.on_end = compute_pass_on_end;
     pass.allocator = allocator;
-    
+
     return pass;
 }
