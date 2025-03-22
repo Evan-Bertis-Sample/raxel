@@ -243,7 +243,10 @@ void main() {
     if (pc.debug_mode == 2) {
         // Debug mode 2: Depth + BVH debug visualization.
         float depth = result.hit ? result.tHit / MAX_DISTANCE : 1.0;
-        color = vec4(depth);
+        float red = result.prim_offset >= 0 ? float(result.prim_offset) / MAX_PRIM_OFFSET : 0.0;
+        float green = result.leaf_id >= 0 ? float(result.leaf_id) / float(RAXEL_BVH_MAX_NODES) : 0.0;
+        color = vec4(red, green, depth, 1.0);
+
     } else if (pc.debug_mode == 1) {
         // Debug mode 1: BVH debug visualization.
         // Encode leaf ID (green), primitive offset (red), and number of primitives (blue).
