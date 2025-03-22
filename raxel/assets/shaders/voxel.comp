@@ -33,9 +33,9 @@ struct VoxelChunk {
 };
 
 struct GPUVoxelWorld {
-    uint num_loaded_chunks;
     VoxelChunkMeta chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
     VoxelChunk chunks[RAXEL_MAX_LOADED_CHUNKS];
+    uint num_loaded_chunks;
 };
 
 // Storage buffer (set = 0, binding = 1) holding the voxel world.

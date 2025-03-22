@@ -809,7 +809,7 @@ void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_
 }
 
 void raxel_pipeline_present(raxel_pipeline_t *pipeline) {
-    RAXEL_CORE_LOG("Presenting target\n");
+    // RAXEL_CORE_LOG("Presenting target\n");
     __present_target(&pipeline->resources, &pipeline->resources.targets, &pipeline->resources.swapchain);
 }
 
