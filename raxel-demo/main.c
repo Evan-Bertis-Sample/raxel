@@ -78,7 +78,7 @@ int main(void) {
     raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
     // Create a giant sphere at the origin
-    int radius = 100;
+    int radius = 50;
 
     for (int x = -radius; x <= radius; x++) {
         for (int y = -radius; y <= radius; y++) {
