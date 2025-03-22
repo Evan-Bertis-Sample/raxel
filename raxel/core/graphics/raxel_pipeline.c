@@ -228,9 +228,11 @@ static void __create_sync_objects(raxel_pipeline_globals_t *globals) {
 // Swapchain and target helpers
 // -----------------------------------------------------------------------------
 
-static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
+static void __create_swapchain(raxel_pipeline_globals_t *globals, int width, int height, raxel_pipeline_swapchain_t *swapchain) {
     VkSurfaceCapabilitiesKHR surface_caps;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical, globals->surface->context.vk_surface, &surface_caps));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(globals->device_physical,
+                                                       globals->surface->context.vk_surface,
+                                                       &surface_caps));
 
     // Determine desired image count.
     uint32_t desired_image_count = surface_caps.minImageCount + 1;
@@ -255,7 +257,8 @@ static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int 
     create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     create_info.imageExtent = extent;
     create_info.imageArrayLayers = 1;
-    create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    // Updated usage flags to support transfer operations.
+    create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     create_info.preTransform = surface_caps.currentTransform;
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -291,7 +294,6 @@ static int __create_swapchain(raxel_pipeline_globals_t *globals, int width, int 
     raxel_free(&globals->allocator, images);
     swapchain->image_format = VK_FORMAT_B8G8R8A8_UNORM;
     swapchain->extent = extent;
-    return 0;
 }
 
 static void __destroy_swapchain(raxel_pipeline_globals_t *globals, raxel_pipeline_swapchain_t *swapchain) {
@@ -556,11 +558,15 @@ static void __create_descriptor_pool(raxel_pipeline_t *pipeline) {
     VK_CHECK(vkCreateDescriptorPool(pipeline->resources.device, &pool_info, NULL, &pipeline->resources.descriptor_pool));
 }
 
-// Record and submit a command buffer to blit the selected target to a swapchain image.
-static void __present_target(raxel_pipeline_globals_t *globals, raxel_pipeline_targets_t *targets, raxel_pipeline_swapchain_t *swapchain) {
+static void __present_target(raxel_pipeline_globals_t *globals,
+                             raxel_pipeline_targets_t *targets,
+                             raxel_pipeline_swapchain_t *swapchain) {
     VkImage src_image = targets->internal[targets->debug_target].image;
+    // For simplicity, assume we use the first swapchain image.
+    uint32_t image_index = 0;
+    VkImage dst_image = swapchain->targets[image_index].image;
 
-    // Create a temporary command buffer from the graphics command pool.
+    // Allocate a temporary command buffer.
     VkCommandBufferAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.commandPool = globals->cmd_pool_graphics;
@@ -575,9 +581,50 @@ static void __present_target(raxel_pipeline_globals_t *globals, raxel_pipeline_t
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(cmd_buf, &begin_info));
 
-    // (Transition src_image and the swapchain image to proper layouts, then blit.)
-    // For simplicity, assume the images are already in TRANSFER_SRC and TRANSFER_DST layouts.
-    // Record a blit command:
+    // Barrier 1: Transition src_image from GENERAL to TRANSFER_SRC_OPTIMAL.
+    VkImageMemoryBarrier src_barrier = {0};
+    src_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    src_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    src_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    src_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    src_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    src_barrier.image = src_image;
+    src_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    src_barrier.subresourceRange.baseMipLevel = 0;
+    src_barrier.subresourceRange.levelCount = 1;
+    src_barrier.subresourceRange.baseArrayLayer = 0;
+    src_barrier.subresourceRange.layerCount = 1;
+    vkCmdPipelineBarrier(cmd_buf,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         0,
+                         0, NULL,
+                         0, NULL,
+                         1, &src_barrier);
+
+    // Barrier 2: Transition dst_image from PRESENT_SRC_KHR (or UNDEFINED) to TRANSFER_DST_OPTIMAL.
+    VkImageMemoryBarrier dst_barrier = {0};
+    dst_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    // Assuming the swapchain image is in PRESENT_SRC_KHR when acquired.
+    dst_barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    dst_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    dst_barrier.image = dst_image;
+    dst_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    dst_barrier.subresourceRange.baseMipLevel = 0;
+    dst_barrier.subresourceRange.levelCount = 1;
+    dst_barrier.subresourceRange.baseArrayLayer = 0;
+    dst_barrier.subresourceRange.layerCount = 1;
+    vkCmdPipelineBarrier(cmd_buf,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         0,
+                         0, NULL,
+                         0, NULL,
+                         1, &dst_barrier);
+
+    // Record the blit command.
     VkImageBlit blit = {0};
     blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit.srcSubresource.baseArrayLayer = 0;
@@ -589,19 +636,55 @@ static void __present_target(raxel_pipeline_globals_t *globals, raxel_pipeline_t
     blit.dstOffsets[0] = (VkOffset3D){0, 0, 0};
     blit.dstOffsets[1] = (VkOffset3D){(int32_t)swapchain->extent.width, (int32_t)swapchain->extent.height, 1};
 
-    // For brevity, we assume one swapchain image.
-    // In production, you should acquire an image index via vkAcquireNextImageKHR.
-    uint32_t image_index = 0;
-
-    // Transition swapchain image to TRANSFER_DST layout (omitted: add barriers).
-    vkCmdBlitImage(cmd_buf, src_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                   swapchain->targets[image_index].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    vkCmdBlitImage(cmd_buf,
+                   src_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                    1, &blit, VK_FILTER_LINEAR);
-    // Transition swapchain image back to PRESENT_SRC layout (omitted: add barriers).
+
+    // Barrier 3: Transition dst_image from TRANSFER_DST_OPTIMAL to PRESENT_SRC_KHR.
+    VkImageMemoryBarrier present_barrier = {0};
+    present_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    present_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    present_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    present_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    present_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    present_barrier.image = dst_image;
+    present_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    present_barrier.subresourceRange.baseMipLevel = 0;
+    present_barrier.subresourceRange.levelCount = 1;
+    present_barrier.subresourceRange.baseArrayLayer = 0;
+    present_barrier.subresourceRange.layerCount = 1;
+    vkCmdPipelineBarrier(cmd_buf,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         0,
+                         0, NULL,
+                         0, NULL,
+                         1, &present_barrier);
+
+    // Optionally, transition src_image back to GENERAL.
+    VkImageMemoryBarrier src_to_general = {0};
+    src_to_general.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    src_to_general.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    src_to_general.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    src_to_general.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    src_to_general.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    src_to_general.image = src_image;
+    src_to_general.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    src_to_general.subresourceRange.baseMipLevel = 0;
+    src_to_general.subresourceRange.levelCount = 1;
+    src_to_general.subresourceRange.baseArrayLayer = 0;
+    src_to_general.subresourceRange.layerCount = 1;
+    vkCmdPipelineBarrier(cmd_buf,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         0,
+                         0, NULL,
+                         0, NULL,
+                         1, &src_to_general);
 
     VK_CHECK(vkEndCommandBuffer(cmd_buf));
 
-    // Submit the command buffer.
     VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
@@ -616,7 +699,6 @@ static void __present_target(raxel_pipeline_globals_t *globals, raxel_pipeline_t
     vkQueueWaitIdle(globals->queue_graphics);
     vkFreeCommandBuffers(globals->device, globals->cmd_pool_graphics, 1, &cmd_buf);
 
-    // Present the image.
     VkPresentInfoKHR present_info = {0};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
@@ -723,6 +805,7 @@ void raxel_pipeline_set_debug_target(raxel_pipeline_t *pipeline, raxel_pipeline_
 }
 
 void raxel_pipeline_present(raxel_pipeline_t *pipeline) {
+    RAXEL_CORE_LOG("Presenting target\n");
     __present_target(&pipeline->resources, &pipeline->resources.targets, &pipeline->resources.swapchain);
 }
 
@@ -771,6 +854,7 @@ void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
             pass->on_end(pass, &pipeline->resources);
         }
     }
+
     raxel_pipeline_present(pipeline);
 }
 
