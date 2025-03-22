@@ -19,6 +19,7 @@ raxel_voxel_world_t *raxel_voxel_world_create(raxel_allocator_t *allocator) {
     world->chunk_meta = raxel_list_create_reserve(raxel_voxel_chunk_meta_t, allocator, RAXEL_MAX_LOADED_CHUNKS);
     world->__num_loaded_chunks = 0;
     world->materials = raxel_list_create_reserve(raxel_voxel_material_t, allocator, 16);
+    world->prev_update_options = (raxel_voxel_world_update_options_t){0};
     return world;
 }
 
@@ -194,12 +195,27 @@ void raxel_voxel_world_place_voxel(raxel_voxel_world_t *world,
 // loading new chunks within the view distance. The loaded chunks (and their meta)
 // remain contiguous in the arrays (i.e. indices [0, __num_loaded_chunks-1]).
 void raxel_voxel_world_update(raxel_voxel_world_t *world,
-                              raxel_voxel_world_update_options_t *options) {
+                              raxel_voxel_world_update_options_t *options, raxel_compute_shader_t *compute_shader,
+                              raxel_pipeline_t *pipeline) {
     // Determine the camera's chunk coordinates.
     // RAXEL_CORE_LOG("Updating voxel world\n");
-    raxel_coord_t cam_chunk_x = options->camera_position[0] / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t cam_chunk_y = options->camera_position[1] / RAXEL_VOXEL_CHUNK_SIZE;
-    raxel_coord_t cam_chunk_z = options->camera_position[2] / RAXEL_VOXEL_CHUNK_SIZE;
+    raxel_coord_t cam_chunk_x, cam_chunk_y, cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world, options->camera_position[0], options->camera_position[1],
+                                                   options->camera_position[2], &cam_chunk_x, &cam_chunk_y, &cam_chunk_z);
+
+    raxel_coord_t prev_cam_chunk_x, prev_cam_chunk_y, prev_cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world, world->prev_update_options.camera_position[0],
+                                                   world->prev_update_options.camera_position[1],
+                                                   world->prev_update_options.camera_position[2], &prev_cam_chunk_x,
+                                                   &prev_cam_chunk_y, &prev_cam_chunk_z);
+
+    world->prev_update_options = *options;
+
+    // If the camera has moved to a new chunk, we need to update the loaded chunks.
+    // Otherwise, if we are basically in the same chunk, we don't need to do anything.
+    if (cam_chunk_x == prev_cam_chunk_x && cam_chunk_y == prev_cam_chunk_y && cam_chunk_z == prev_cam_chunk_z) {
+        return;
+    }
 
     // find the number chunks that are actually within the view distance
     raxel_size_t num_chunks = raxel_list_size(world->chunk_meta);
@@ -221,28 +237,30 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
         if (num_loaded_chunks >= RAXEL_MAX_LOADED_CHUNKS) {
             break;
         }
-
     }
     world->__num_loaded_chunks = num_loaded_chunks;
 
-    // print out some information about the voxel world
-    printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
-    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
-        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
-        printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
+    // // print out some information about the voxel world
+    // printf("Loaded chunks: %d\n", world->__num_loaded_chunks);
+    // for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+    //     raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
+    //     printf("Chunk %d: (%d, %d, %d)\n", i, meta->x, meta->y, meta->z);
 
-        // count the number of non-air voxels in this chunk
-        int count = 0;
-        raxel_voxel_chunk_t *chunk = &world->chunks[i];
+    //     // count the number of non-air voxels in this chunk
+    //     int count = 0;
+    //     raxel_voxel_chunk_t *chunk = &world->chunks[i];
 
-        for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
-            if (chunk->voxels[j].material != 0) {
-                count++;
-            }
-        }
+    //     for (raxel_size_t j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+    //         if (chunk->voxels[j].material != 0) {
+    //             count++;
+    //         }
+    //     }
 
-        printf("  Non-air voxels: %d\n", count);
-    }
+    //     printf("  Non-air voxels: %d\n", count);
+    // }
+
+    RAXEL_CORE_LOG("Dispatching updated chunks!\n");
+    raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 }
 
 void raxel_voxel_world_set_sb(raxel_voxel_world_t *world, raxel_compute_shader_t *compute_shader, raxel_pipeline_t *pipeline) {

@@ -104,8 +104,7 @@ int main(void) {
     initial_options.camera_position[1] = camera_position[1];
     initial_options.camera_position[2] = camera_position[2];
     initial_options.view_distance = 100.0f;
-    raxel_voxel_world_update(world, &initial_options);
-    raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
+    raxel_voxel_world_update(world, &initial_options, compute_shader, pipeline);
 
     raxel_pipeline_start(pipeline);
 
@@ -197,7 +196,7 @@ int main(void) {
 
         // RAXEL_CORE_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
-        // raxel_voxel_world_update(world, &options);
+        raxel_voxel_world_update(world, &options, compute_shader, pipeline);
         // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 
         RAXEL_APP_LOG("Rendering %u chunks, from (%f, %f, %f)\n", world->__num_loaded_chunks, camera_position[0], camera_position[1], camera_position[2]);
