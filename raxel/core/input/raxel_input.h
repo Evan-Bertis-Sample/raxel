@@ -169,8 +169,6 @@ typedef struct raxel_input_manager {
     raxel_surface_t *__surface;
     raxel_allocator_t *__allocator;
     raxel_key_state_t __key_state[RAXEL_KEY_COUNT];
-    raxel_size_t __keys_up_this_frame[30]; // for updating per-frame key state
-    raxel_size_t __num_keys_up_this_frame;
     raxel_list(raxel_key_callback_t) key_callbacks;
     raxel_list(raxel_mouse_callback_t) mouse_callbacks;
 } raxel_input_manager_t;
