@@ -470,7 +470,7 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     world->__num_loaded_chunks = num_loaded_chunks;
 
     // --- Build the BVH from the currently loaded chunks ---
-    int max_leaf_size_bvh = 4;
+    int max_leaf_size_bvh = MAX_LEAF_SIZE_BVH;
     raxel_bvh_accel_t *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size_bvh, world->allocator);
 
     // Update GPU world buffer with voxel data and BVH.
@@ -480,9 +480,16 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
         gpu_world->chunk_meta[i] = world->chunk_meta[i];
         memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
     }
+
+    if (!bvh) {
+        RAXEL_CORE_LOG("No primitives to build BVH!\n");
+        raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
+        return;
+    }
+    
     memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
     // Optional: print BVH structure for debugging.
-    // raxel_bvh_accel_print(bvh);
+    raxel_bvh_accel_print(bvh);
     raxel_bvh_accel_destroy(bvh, world->allocator);
     RAXEL_CORE_LOG("Dispatching updated chunks and BVH!\n");
     raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
