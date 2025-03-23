@@ -5,17 +5,47 @@
 ██╔══██╗██╔══██║ ██╔██╗ ██╔══╝  ██║
 ██║  ██║██║  ██║██╔╝ ██╗███████╗███████╗
 ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
-```
 
-# raxel
-
-**A Raymarched Voxel Engine Developed with Vulkan, in C99**
-
-```
 Author: Evan Bertis-Sample
 Date: 3/21/2025
 Course: COMP_SCI 499 (Prof. Geisler)
 ```
+
+**A Raymarched Voxel Engine Developed with Vulkan, in C99**
+
+# Table of Contents
+
+- [Table of Contents](#table-of-contents)
+- [Overview](#overview)
+- [Engine](#engine)
+  - [Objectives](#objectives)
+  - [Directory Structure](#directory-structure)
+  - [Build System](#build-system)
+  - [Raxel CLI Tools](#raxel-cli-tools)
+- [Rendering Systems](#rendering-systems)
+  - [Core Renderer](#core-renderer)
+    - [Compute Shader-Driven Graphics Pipeline](#compute-shader-driven-graphics-pipeline)
+    - [Pipeline and Pass Implementations and Interface](#pipeline-and-pass-implementations-and-interface)
+    - [Compute Shader Interface](#compute-shader-interface)
+  - [Voxel Renderer](#voxel-renderer)
+    - [Raymarching at a Glance](#raymarching-at-a-glance)
+    - [Voxels in Memory](#voxels-in-memory)
+      - [Individual Voxels](#individual-voxels)
+      - [Voxel Chunks \& Worlds](#voxel-chunks--worlds)
+    - [Chunk Determination and Loading/Unloading](#chunk-determination-and-loadingunloading)
+    - [Sending to the GPU](#sending-to-the-gpu)
+  - [Naive Voxel Rendering](#naive-voxel-rendering)
+  - [Accelerated Voxel Rendering with BVH](#accelerated-voxel-rendering-with-bvh)
+    - [Constructing the BVH](#constructing-the-bvh)
+      - [1. Calculating Bounding Volumes for Voxels](#1-calculating-bounding-volumes-for-voxels)
+      - [2. Building the Hierarchical Tree](#2-building-the-hierarchical-tree)
+      - [3. Flattening the BVH](#3-flattening-the-bvh)
+      - [4. Uploading the BVH to the GPU](#4-uploading-the-bvh-to-the-gpu)
+    - [Traversing the BVH](#traversing-the-bvh)
+    - [Results of Accelerated Voxel Rendering](#results-of-accelerated-voxel-rendering)
+- [Reflections \& Further Work](#reflections--further-work)
+- [Miscellaneous Development Photos](#miscellaneous-development-photos)
+
 
 # Overview
 
@@ -29,29 +59,7 @@ This report covers the development of `raxel` within the past quarter. These dev
 - The implementation of a basic memory allocator that is used throughout the engine.
 - The creation of a command line interface that allows for easy building and running of the engine, and for the creation of new projects.
 
-The report mainly aims to highlight some of the challenges faced during development, the techniques used, and design decisions made. It also aims to provide a high-level overview of the engine, and to provide a demonstration of the engine in action. It isn't overly formal/comprhensive of *everything* that was done, but it does cover the most important parts of the engine.
-
-# Table of Contents
-
-- [Engine](#engine)
-  - [Objectives](#objectives)
-  - [High Level Description](#high-level-description)
-  - [Notable Design Choices](#notable-design-choices)
-- [Rendering Systems](#rendering-systems)
-  - [Core Renderer](#core-renderer)
-    - [Compute Shader-Driven Graphics Pipeline](#compute-shader-driven-graphics-pipeline)
-    - [Abstractions of the Core Renderer](#abstractions-of-the-core-renderer)
-  - [Voxel Renderer](#voxel-renderer)
-    - [Objectives of the Voxel Renderer](#objectives-of-the-voxel-renderer)
-    - [Voxels in Memory](#voxels-in-memory)
-    - [Memory Management](#memory-management)
-    - [Acceleration Structures (BVH)](#acceleration-structures-bvh)
-    - [Rendering Voxels in Compute Shader](#rendering-voxels-in-compute-shader)
-- [Demonstration](#demonstration)
-  - [Building and Running the Demo](#building-and-running-the-demo)
-- [Reflections \& Further Work](#reflections--further-work)
-  - [Workflow of using my own Engine](#workflow-of-using-my-own-engine)
-  - [Plans for the Spring](#plans-for-the-spring)
+The report mainly aims to highlight some of the challenges faced during development, the techniques used, and design decisions made. It also aims to provide a high-level overview of the engine, and to provide a demonstration of the engine in action. It isn't overly formal/comprhensive of _everything_ that was done, but it does cover the most important parts of the engine.
 
 # Engine
 
@@ -352,8 +360,6 @@ This effect, where the output of one pass is the input of the next is why `raxel
 
 `raxel_pipeline_t` doesn't even have to be used for rendering. It can be used for any series of compute passes, and can be used to do any kind of computation on the GPU. This is a powerful abstraction, and allows for a wide variety of effects to be achieved.
 
-![Compute Shader Pipeline](./images/compute_shader_pipeline.png)
-
 In pseudocode, we can think of the pipeline as doing the following:
 
 ```py
@@ -580,7 +586,7 @@ At the same time however, usage of the function pointers, void pointers, hides a
 The compute shader abstraction was heavily inspired by Unity's compute shader interface.
 
 With Unity, you can use compute shaders like this:
-    
+
 ```cs
 public class Example : MonoBehaviour {
     public ComputeShader computeShader;
@@ -641,7 +647,7 @@ void raxel_compute_shader_set_pc(raxel_compute_shader_t *shader, raxel_pc_buffer
 
 /**
  * @brief Passes the push-constant buffer to the compute shader.
- * 
+ *
  * @param shader Pointer to the compute shader.
  * @param cmd_buffer The command buffer to record the push-constant update.
  */
@@ -650,7 +656,7 @@ void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffe
 
 /**
  * @brief Passes the storage buffer to the compute shader.
- * 
+ *
  * @param shader Pointer to the compute shader.
  * @param desc Descriptor for the storage buffer.
  */
@@ -673,19 +679,21 @@ This is perfectly suited for the abstractions created by `raxel`'s core renderin
 
 ### Raymarching at a Glance
 
-Raymarching is a very intuive technique, moreso than traditional rasterization. With raymarching, we effectively simulate the path of a ray of light through the scene, and sample the scene at each point along the ray. 
+Raymarching is a very intuive technique, moreso than traditional rasterization. With raymarching, we effectively simulate the path of a ray of light through the scene, and sample the scene at each point along the ray.
 
 To simulate the path of a ray of light, we move in discrete steps, "marching" along the ray. At each step, we sample the scene, and determine if the ray has hit an object. If the ray has hit an object, we can determine the color of the object, and the ray is done. If the ray has not hit an object, we continue to march along the ray. You can extend the technique to to further bouncing of light rays, to achieve effects like shadows, reflections, and refractions.
 
 ![Raymarching](./images/raymarching.png)
 
 Although simple in theory, there are a few things to consider when implementing raymarching:
-* What is the step size of the ray?
-* How do we determine if the ray has hit an object?
+
+- What is the step size of the ray?
+- How do we determine if the ray has hit an object?
 
 With voxels (at least the way they are implemented in `raxel`), there are a few things to consider:
-* If the ray has hit a voxel, how do we determine the normal of the voxel?
-* How do we determine the color of the voxel?
+
+- If the ray has hit a voxel, how do we determine the normal of the voxel?
+- How do we determine the color of the voxel?
 
 These become unknowns with `raxel`'s implementations of voxels because of the way that voxels, are stored in memory (covered in the [voxel renderer](#voxel-renderer) section).
 
@@ -759,7 +767,7 @@ Only the first `__num_loaded_chunks` are actually sent to the GPU. When chunks a
 
 Whenever the camera moves a significant amount (e.g, more than half the size of a chunk), we need to load/unload chunks.
 
-To load and unload chunks effectively means determining which chunks are in the first `__num_loaded_chunks` chunks, and which chunks are not. 
+To load and unload chunks effectively means determining which chunks are in the first `__num_loaded_chunks` chunks, and which chunks are not.
 
 We can very poorly do this by iteraing over all the chunks, and checking if the chunk is within the a certain distance of the camera. This is a naive way to do this, but it is fast for small scenes. Once we find the maximum amount of loaded chunks that we can have, we are done.
 
@@ -818,6 +826,7 @@ typedef struct __raxel_voxel_world_gpu {
 ## Naive Voxel Rendering
 
 Using these structures, we can naively render voxels by using a fixed step size, and checking every voxel along the ray. This is a simple, but slow way to render voxels, and is not suitable for large scenes. This is the most basic way to render voxels. Here is the shader for doing so:
+
 ```glsl
 #version 450
 
@@ -1000,7 +1009,6 @@ void main() {
 }
 ```
 
-
 Right now, the shader is concerned about materials, and entirely focused on determining if a ray has hit a voxel or not. Here are the results of rendering a simple scene with this shader. At the origin, a sphere of voxels with a radius of 50 was placed:
 
 ![Naive Voxel Rendering](./images/naive_voxel_rendering.png)
@@ -1021,7 +1029,6 @@ This was my first attempt at rendering voxels. For some reason, the scene was st
 
 This was another attempt at rendering voxels. I was extremely confused as to why the scene was rendering like this. Turns out, the distance that rays were allowed to travel was too short, and the step size was too large. This resulted in only a tiny portion of the scene being rendered, and the rest of the scene being black.
 
-
 ## Accelerated Voxel Rendering with BVH
 
 When rendering a scene, checking every single voxel for intersections with a ray is too slow, especially as the scene grows in size. To speed up this process, raxel uses an acceleration structure called a Bounding Volume Hierarchy (BVH).
@@ -1033,6 +1040,7 @@ By using this technique, we are able to quickly determine which voxels are poten
 This means that we can render larger scenes with more voxels, and still get good performance. The BVH is built on the CPU, and then uploaded to the GPU, where it is used to accelerate the rendering process.
 
 Accelerating our voxel rendering with a BVH involves three main steps:
+
 1. Building the BVH from the voxel data, which is easiest using a non-flat tree structure.
 2. Flattening the BVH into a linear array, which is then uploaded to the GPU.
 3. Traversing the BVH on the GPU to determine which voxels are intersected by a ray.
@@ -1044,6 +1052,7 @@ Constructing the Bounding Volume Hierarchy (BVH) is a key step in accelerating v
 #### 1. Calculating Bounding Volumes for Voxels
 
 Every solid voxel in the loaded chunks is represented by a simple axis-aligned bounding box (AABB). Because voxels are uniformly sized cubes, each AABB is defined by:
+
 - **Minimum Point:** The voxel’s world-space position.
 - **Maximum Point:** The voxel’s position plus one unit along each axis.
 
@@ -1058,7 +1067,6 @@ Once the AABBs are calculated, we construct a binary tree structure to organize 
   The voxel primitives are sorted along this axis and divided into two groups. This division continues recursively until one of the following conditions is met:
   - The number of primitives in a node is less than or equal to a specified threshold (max leaf size).
   - Further splitting would exceed a pre-set maximum number of BVH nodes. We have a fixed-size buffer for the BVH, so we need to ensure that we don't exceed this size.
-
 
 This does add a lot of complexity to the CPU-side of rendering, however, we build this structure infrequently enough (and its actually relatively fast, once we determine which chunks are worth loading), that the performance hit is acceptable.
 
@@ -1183,7 +1191,6 @@ typedef struct __raxel_voxel_world_gpu {
 } __raxel_voxel_world_gpu_t;
 ```
 
-
 ### Traversing the BVH
 
 To traverse the BVH, we use a stack-based approach. Because we are using GLSL, we can't use recursion, and have to use a stack to keep track of the nodes that we need to traverse.
@@ -1268,9 +1275,9 @@ RaymarchResult raymarch(vec3 ro, vec3 rd) {
 
 ### Results of Accelerated Voxel Rendering
 
-The BVH was faster. Performance was at ~200 FPS for 800x600 resolution, on a debug build. However, the implementation was non-functional. The scene would render, you could only see the root node of the BVH, which manifested as a single, large voxel. 
+The BVH was faster. Performance was at ~200 FPS for 800x600 resolution, on a debug build. However, the implementation was non-functional. The scene would render, you could only see the root node of the BVH, which manifested as a single, large voxel.
 
-I was unable to determine the cause of this issue. Looking through the output of creating the BVH on the CPU, the BVH was built correctly, it seemed, and *some* data was being sent to the GPU. However, either, the BVH was not being traversed correctly, or the data was not being sent to the GPU correctly.
+I was unable to determine the cause of this issue. Looking through the output of creating the BVH on the CPU, the BVH was built correctly, it seemed, and _some_ data was being sent to the GPU. However, either, the BVH was not being traversed correctly, or the data was not being sent to the GPU correctly.
 
 Anyway, here is the result of the accelerated voxel rendering:
 
@@ -1278,4 +1285,37 @@ Anyway, here is the result of the accelerated voxel rendering:
 
 # Reflections & Further Work
 
-...
+Although the results of the accelerated voxel rendering were subpar, I am happy with the progress that I made on this project. Taking on such an endeavour taught me a lot about C, graphics programming, Vulkan, but also my own limitations as a programmer.
+
+I have built a few large project before, even other "game engines," but this building `raxel` was a different experience. Prior to this, I never built a project that was so polarizing -- at times, I wanted to do anything but work on this project. I felt stuck in the abyss of Vulkan, and the amount of work that I had to do to get the simplest things working was overwhelming. At the same time, however, the joy of even seeing a red square on the screen was immense.
+
+Every single picture in this report was a victory. Behind each one of them was hours fiddling with the code, trying to get the simplest things to work. I am proud of the work that I did, and the progress that I made.
+
+If I had to start again, I would have done many things differently:
+
+- I would have gotten Vulkan validation layers working from the start. Near the end of the project, I finally implemented them, and they were a godsend. They helped me catch many bugs that I would have otherwise missed, and gave better error messages than Vulkan's default error messages (`VULKAN_ERROR_UNKNOWN` my beloved).
+- I would have done more reading on Vulkan, and specifically actual codebases that use Vulkan. Most of my learning was from the Vulkan documentation, which is good, but not great. A problem I consistently had was assuming that Vulkan worked in a certain way, and then finding out that it didn't. This was a problem that could have been solved by reading more code.
+- I would have tampered my expectations. I expected to have a fully functional voxel engine by the end of this project, but that was unrealistic. I should have set more realistic goals, and been more patient with myself. Even around ~200 commits in, and I still didn't have a fully functional voxel engine. I should have been more patient with myself, and more realistic with my goals.
+
+I am proud of the work that I did, and the progress that I made. I learned a lot, and I am happy with the results of this project. I am excited to continue working on this project, and see where it goes.
+
+# Miscellaneous Development Photos
+
+Here are some photos of the development process of `raxel`:
+
+![The Thing](./images/the_thing.png)
+
+I lovingly call putting UV coordinates on the screen "The Thing." It started out as a joke between my roomate and I, where was confused at what I was trying to get working, and I would just say "The Thing." This took an abusrd amount of time to get working, after abstracting the Vulkan code into my pipeline system.
+
+![The Other Thing](./images/the_other_thing.png)
+
+This was a recreation of my first multi-pass render from `raxel`. This was a huge victory for me, as it showed that my system of passing data between shaders was working. 
+
+
+![Sphere SDF](./images/sphere_sdf.png)
+
+Earlier on in the development, when I was focused on the engine portion of `raxel`, I implemented a sphere SDF. At that point, I thought voxels were going to be easy. I was wrong.
+
+![Half Life Easter Egg](./images/half_life.png)
+
+Engineers are nerds.
