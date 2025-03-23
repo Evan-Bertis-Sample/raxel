@@ -23,9 +23,6 @@ static void on_destroy(raxel_surface_t *surface) {
 }
 
 int main(void) {
-    // Initialize random seed.
-    srand((unsigned)time(NULL));
-
     // Create a default allocator.
     raxel_allocator_t allocator = raxel_default_allocator();
 
@@ -48,7 +45,6 @@ int main(void) {
     // Create a clear pass to clear the internal color target.
     raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.3f, 0.8f, 1.0f});
     raxel_pipeline_add_pass(pipeline, clear_pass);
-
 
     // Create the compute shader and pass.
     raxel_pc_buffer_desc_t pc_desc = RAXEL_PC_DESC(

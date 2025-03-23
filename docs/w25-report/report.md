@@ -1,5 +1,12 @@
-rcdaxel
-======
+```
+██████╗  █████╗ ██╗  ██╗███████╗██╗     
+██╔══██╗██╔══██╗╚██╗██╔╝██╔════╝██║     
+██████╔╝███████║ ╚███╔╝ █████╗  ██║     
+██╔══██╗██╔══██║ ██╔██╗ ██╔══╝  ██║
+██║  ██║██║  ██║██╔╝ ██╗███████╗███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+```
+# raxel
 
 **A Raymarched Voxel Engine Developed with Vulkan, in C99**
 ```
@@ -68,23 +75,237 @@ As of writing this report, the responsibilities of the engine and the rendering 
 
 Building the engine was a semi-selfish effort, and it's design is to cater to my (Evan's) workflow. This workflow involves minimum usage of GUI's, a reliance on the CLI, and creating the minimum possible friction to get a project up and running.
 
-      
+The engine is designed to be a tool that I can use to quickly prototype ideas, and to build small games and technical demos. It is not designed to be a full-fledged game engine, nor is it designed to be a general purpose engine. It is designed to be a tool that I can use to quickly prototype ideas, and to build small games and technical demos. To make it an actually full-fledged engine, I would need to additional features -- right now, all of the features are for rendering. Building any game logic would require me to build it from scratch.
 
-## High Level Description
+## Directory Structure
 
-...
+The engine is split into several directories, and the main focus of the engine thus far have been the `core` and `scripts` directories.
 
-## Notable Design Choices
+The `core` directory contains the core engine code, and is split into several subdirectories:
+* `graphics` - Contains the code for the rendering systems, notably, the implementation of `raxel_surface_t`, `raxel_pipeline_t`, and other Vulkan wrappers. It also contains implementations of `raxel_pipeline_pass_t` which is the bulk, and most important part of the rendering system.
+* `util` - Contains common utilities that are used throughout the engine, such as memory allocators, logging, and standard data structures, like lists, arrays, hashtables and strings.
+* `input` - Contains the code for the input system, which is used to handle user input, such as keyboard and mouse events. This is a very thin wrapper around GLFW's input system.
+* `voxel` - Contains the code for the voxel rendering system, which is used to render voxel data. This is a thin wrapper around the core rendering system, and is used to provide a higher level abstraction for rendering voxels. It also contains the implementation of things like the BVH acceleration structure, and the voxel data structure.
 
-...
+Within this directory, we have a suite of header files that include the headers contained within the subdirectories of `core`. These headers are used to provide a single include point for the user.
+
+In practice, using the engine involves using include statements like this:
+
+```c
+#include <raxel/core/graphics.h>
+#include <raxel/core/util.h>
+```
+
+The `scripts` directory contains the scripts that are used to build and run the engine. These scripts are used to build the engine, build games, run games, and update the engine. The scripts are written in Python, and are used to automate the process of building and running the engine.
+
+Here, you'll find the `raxel.py` script, which is invoked whenever you use a `raxel` command in the terminal. This script simply scans within the `scripts/tools` directory for the subcommands, and runs the appropriate one. Within `scripts/tools`, you'll find the implementation of commands like `build`, `run`, `update`, etc. These are located in files that are named `raxel_<command>.py`. Any files that are not named in this format are not considered subcommands, and cannot be driectly run by the `raxel.py` script.
+
+Before using any of the scripts, you can optionally run `scripts/raxel_install.sh`, which will place `raxel.py` in your path, and allow you to run `raxel` commands from anywhere in your terminal. This is rather important for the use of the engine, as per the [build system section](#build-system), the core raxel engine and the user's game code are seperated, and the user's game code is dynamically linked with the engine.
+
+## Build System
+
+The engine dynamically links with the user's game code. The build system for the engine is built in a manner such that it is not opinionated about the structure of the user's game code.
+
+This choice was made in able to enforce a seperation of concerns between the engine and the user's game code. The engine is responsible for rendering, and the user's game code is responsible for game logic. The engine is not responsible for the user's game logic, and the user's game logic is not responsible for rendering. This seperation of concerns allows for the user to build their game in any way they see fit, and to use any libraries that they may need. 
+
+By setting up this system early in the processs, it has pushed for a more modular design of the engine. In order to create a demo, the engine would have to provide a series of abstractions to build the demo on top of. This has manifested via the creation of thing like the `raxel_voxel_world_t`, and `raxel_input_manager_t` abstractions.
+
+The only requirement of building a game with `raxel` is that the user must provide an entry point, via `main`, and provide a `raxel.cmake` file within the directory of the game. The `raxel.cmake` file is used to specify the name of the game, and any additional dependencies that the game may have. This system enables the user to build their game in any way they see fit, and to use any libraries that they may need.
+
+Here is an example of such a `raxel.cmake` file:
+
+```cmake
+# This will be called from raxel's internal cmake
+# The objective of this file is to add the sources and includes to the project
+# Then, raxel will take care of linking the libraries and setting the flags
+
+set(SOURCES
+    ${RAXEL_PROJECT_ROOT_DIR}/main.c
+)
+
+set(INCLUDES
+    ${RAXEL_PROJECT_ROOT_DIR}
+)
+
+# add the sources and includes to PROJECT executable
+target_sources(${PROJECT} PRIVATE ${SOURCES})
+target_include_directories(${PROJECT} PRIVATE ${INCLUDES})
+```
+
+This builds one of the simplest possible games, with a single source file, `main.c`. The `raxel.cmake` file specifies that the game should be built with this source file, and that the source file should be included in the project.
+
+Internally, the raxel build system uses it's own `CMakeLists.txt` file to build the engine, the dependencies, and the user's game code. The abridged version of the build process is as follows:
+```
+1. Set up CMake, specifying the project name, minimum version, the languages used, and the project version
+2. Find if the user has a `raxel.cmake` file in their project directory. If not, throw an error.
+3. Compile the raxel engine as a static library, recursively searching for folders within the raxel/core directory
+4. Build and find the dependencies of raxel. These dependencies are Vulkan, GLFW, and CGLM (which is the C version of GLM)
+5. Compile the user's game code, in accordance with the `raxel.cmake` file.
+6. Link the user's game code with the raxel engine, and the dependencies
+```
+
+Creating such a build system required leveraging a work-directory `.raxel`, which gets automatically created to the game's root directory.
+
+For the most part, this folder is used to store the build artifacts of the engine, and the user's game code. This folder is also used to store the `CMakeCache.txt` file, which is used to store the configuration of the build system. This folder is also used to store the `CMakeFiles` folder, which is used to store the build files of the engine, and the user's game code.
+
+A few book-keeping files are also added to this directory. The most useful for development has been the `checksum.txt` file, which is used to store the checksum of the user's game code, and the source files of the engine. This file is used to determine if the user's game code has changed, and if the engine needs to be rebuilt. Whenever the user attemps to run their game, the checksum of the user's game code is compared to the checksum stored in the `checksum.txt` file. If the checksums do not match, the user is alerted that either the engine/game code has changed, and that the engine needs to be rebuilt.
+
+Furthermore, assets are stored in the `.raxel` directory, and are copied to the build directory whenever the user runs their game. This is done to ensure that the assets are always in the correct location, and that the user does not have to worry about copying the assets to the build directory.
+
+## Raxel CLI Tools
+
+There are a few commands that are available:
+
+* `raxel build` - This command is used to build the engine, and the user's game code. This command is used to compile the engine, and the user's game code in the manner described in the [build system](#build-system) section. 
+* `raxel run` - This command is used to run the user's game code. This command is used to run the user's game code. This simply runs the executable that is created within the `.raxel` directory.
+* `raxel update` - Updates the user's version of raxel by pulling the latest version of the core engine from the repository. Because the user's game code is seperate from the engine, this is one of the affordances that the engine provides. The user can update the engine without having to worry about their game code being affected. In development, this has not been used much.
+* `raxel index` - Creates necessary JSON files (`c_cpp_properties.json`) for intellisense in VSCode. Because the game code is seperate from the engine, intellisense doesn't work outside the box, one of the drawbacks from seperating engine and game code so strictly.
+* `raxel test` - Runs the core raxel unit tests. The unit testing system is a raxel "game" located next to the engine code. This is an end-to-end test of the engine, as running the testing suite involves actually building a "game," which in reality, is just a series of unit tests.
+* `raxel sc` - Compiles the shaders in the user's and raxel's code, and places them in the `.raxel` directory. The shaders are compiled into `SPIR-V` format, which is the format that Vulkan uses. Shaders that are part of the engine core are placed in a seperate directory within `.raxel`, `shaders/internal`, and the user's shaders are placed in `shaders/` directly.
+* `raxel clean` - Cleans the build directory, and removes the `.raxel` directory. This is useful for cleaning up the build artifacts, and for starting fresh.
+* `raxel br` - Compiles the engine, user's game code, and shaders, and runs the game. This is a convenience command that is used to combine `raxel build`, `raxel run`, and `raxel sc` into a single command.
+
+Each of these commands have different subcommands, and can be run with the `--help` flag to see the available subcommands. For example, running `raxel build --help` will show the available subcommands for the `raxel build` command.
+
 
 # Rendering Systems
 
-...
+The most developed part of `raxel` are the rendering systems. The rendering systems are split into two parts, the core renderer, and the voxel renderer. The core renderer is the wrapper around the Vulkan API, and is used to set up the graphics resources, and make lower level calls to the graphics libraries. The voxel renderer is the wrapper around the core renderer, and is used to provide a higher level abstraction for rendering voxels.
+
+Because the engine is a voxel engine, the voxel renderer has been developed such that the interface is as simple as possible, with minimal knowledged of graphics programming required. The core renderer is more complex, but it is significantly easier than programming directly with Vulkan.
+
+The core renderer achieves:
+* Initialization of Vulkan, and all of the boilerplate code that is required to set up the graphics resources
+* Creating graphics pipelines and resources
+* Taking care of the synchronization of the graphics resources
+* Abstracting multi-pass rendering into an easy, declarative interface
+* Abstracting over compute shaders
+* Passing data between the CPU and GPU
+
+Whereas the voxel renderer achieves:
+* Storing voxel data in memory
+* Rendering voxels in a compute shader
+* Creating acceleration structures for the voxels
+* Handling the memory management of the voxel data
+
 
 ## Core Renderer
 
-...
+Below is an abridged version of the demonstration code that will be discussedin the [demonstration](#demonstration) section. This code demonstrates the core renderer and voxel renderer, and how it is used to create a simple raymarched voxel scene.
+
+```cpp
+// Called when the surface is destroyed.
+static void on_destroy(raxel_surface_t *surface) {
+    RAXEL_CORE_LOG("Destroying surface...\n");
+    raxel_pipeline_t *pipeline = (raxel_pipeline_t *)surface->user_data;
+    raxel_pipeline_cleanup(pipeline);
+    raxel_pipeline_destroy(pipeline);
+}
+
+int main(void) {
+    // Create a default allocator.
+    raxel_allocator_t allocator = raxel_default_allocator();
+
+    // Create a window and Vulkan surface.
+    raxel_surface_t *surface = raxel_surface_create(&allocator, "Voxel Raymarch", WIDTH, HEIGHT);
+    surface->callbacks.on_destroy = on_destroy;
+
+    // Setup input.
+    raxel_input_manager_t *input_manager = raxel_input_manager_create(&allocator, surface);
+
+    // Create the pipeline.
+    raxel_pipeline_t *pipeline = raxel_pipeline_create(&allocator, surface);
+    surface->user_data = pipeline;
+
+    // Initialize the pipeline (creates instance, device, swapchain, etc.).
+    raxel_pipeline_initialize(pipeline);
+
+    // Set the debug target to the internal color target.
+    raxel_pipeline_set_debug_target(pipeline, RAXEL_PIPELINE_TARGET_COLOR);
+
+    // Create a clear pass to clear the internal color target.
+    raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.3f, 0.8f, 1.0f});
+    raxel_pipeline_add_pass(pipeline, clear_pass);
+
+    // Create the compute shader and pass.
+    raxel_pc_buffer_desc_t pc_desc = RAXEL_PC_DESC(
+        (raxel_pc_entry_t){.name = "view", .offset = 0, .size = 16 * sizeof(float)},
+        (raxel_pc_entry_t){.name = "fov", .offset = 16 * sizeof(float), .size = sizeof(float)},
+        (raxel_pc_entry_t){.name = "rays_per_pixel", .offset = 16 * sizeof(float) + sizeof(float), .size = sizeof(int)},
+        (raxel_pc_entry_t){.name = "debug_mode", .offset = 16 * sizeof(float) + sizeof(float) + sizeof(int), .size = sizeof(int)}, );
+    raxel_compute_shader_t *compute_shader = raxel_compute_shader_create(pipeline, "internal/shaders/voxel.comp.spv", &pc_desc);
+
+    // Create a compute pass context, which is just a struct that holds information about how to dispatch the compute shader.
+    raxel_compute_pass_context_t *compute_ctx = raxel_malloc(&allocator, sizeof(raxel_compute_pass_context_t));
+    compute_ctx->compute_shader = compute_shader;
+    // Set dispatch dimensions based on our window size and workgroup size.
+    compute_ctx->dispatch_x = (WIDTH + 15) / 16;
+    compute_ctx->dispatch_y = (HEIGHT + 15) / 16;
+    compute_ctx->dispatch_z = 1;
+    // What resources are we writing to?
+    compute_ctx->targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
+    compute_ctx->targets[1] = -1;  // Sentinel.
+    // You can set a callback to be called when the dispatch is finished.
+    compute_ctx->on_dispatch_finished = NULL;
+
+    // Create the compute pass and add it to the pipeline.
+    raxel_pipeline_pass_t compute_pass = raxel_compute_pass_create(compute_ctx);
+    raxel_pipeline_add_pass(pipeline, compute_pass);
+
+    // Create and populate a voxel world
+    raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
+
+    // Code to populate the voxel world...
+
+    vec3 camera_position = {0.0f, 0.0f, -50.0f};
+    float camera_rotation = 0.0f;
+
+    // Code to initially load/unload chunks based on camera position, and pass the voxel world to the compute shader...
+
+    raxel_pipeline_start(pipeline);
+
+    // Main loop
+    // For demonstration, we update the push constants per frame.
+    double time = 0.0;
+    double delta_time = 0.01;
+
+    while (!raxel_pipeline_should_close(pipeline)) {
+        // Poor man's delta time.
+        time += delta_time;
+
+        // Simple WASD and QE controls to move the camera.
+        if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_W)) {
+            camera_position[2] += 0.1f;
+        }
+        // Code to handle other key presses...
+
+        // Update the view matrix.
+        mat4 view;
+        glm_mat4_identity(view);
+        // Rotate the view matrix by the camera rotation.
+        glm_rotate(view, camera_rotation, (vec3){0.0f, 1.0f, 0.0f});
+        // Translate the view matrix by the negative camera position.
+        glm_translate(view, (vec3){camera_position[0], camera_position[1], camera_position[2]});
+
+        // Update the push constants
+        raxel_pc_buffer_set(compute_shader->pc_buffer, "view", view);
+        // Update fov (e.g., 60 degrees converted to radians).
+        float fov = glm_rad(60.0f);
+        raxel_pc_buffer_set(compute_shader->pc_buffer, "fov", &fov);
+        // Update rays per pixel (e.g., 4 rays per pixel).
+        int rpp = 1;
+        raxel_pc_buffer_set(compute_shader->pc_buffer, "rays_per_pixel", &rpp);
+
+        // Code to load/unload chunks based on camera position, and pass the voxel world to the compute shader...
+
+        raxel_pipeline_update(pipeline);
+    }
+
+    return 0;
+}
+```
+
+This code is only slightly abridged, only really removing the code for populating the voxel world, and loading/unloading chunks based on camera position. The code demonstrates how the core renderer and voxel renderer are used to create a simple raymarched voxel scene. The code is split into several parts:
 
 ### Compute Shader-Driven Graphics Pipeline
 
