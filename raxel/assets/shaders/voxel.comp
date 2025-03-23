@@ -1,21 +1,22 @@
 #version 450
 
-// Compute workgroup size.
-layout(local_size_x = 16, local_size_y = 16) in;
-
-// Output storage image (set = 0, binding = 0)
-layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
-
+// -----------------------------------------------------------------------------
+// Macros
+// -----------------------------------------------------------------------------
+#define RAXEL_VOXEL_CHUNK_SIZE 32
+#define RAXEL_MAX_LOADED_CHUNKS 32
+#define RAXEL_BVH_MAX_NODES 1024
 #define EPSILON 0.01
 #define MAX_DISTANCE 1000.0
 #define MAX_STEPS 1000
-#define RAXEL_VOXEL_CHUNK_SIZE 32
-#define RAXEL_MAX_LOADED_CHUNKS 32
-#define MAX_RAYS 8
 
-//
-// A chunk’s metadata stores its integer coordinates in chunk space and a state value.
-//
+// Normalization factors for BVH debug visualization:
+#define MAX_PRIM_OFFSET 256.0
+#define MAX_PRIMS_PER_LEAF 32.0
+
+// -----------------------------------------------------------------------------
+// Voxel World Structures
+// -----------------------------------------------------------------------------
 struct VoxelChunkMeta {
     int x;
     int y;
@@ -23,32 +24,46 @@ struct VoxelChunkMeta {
     int state;
 };
 
-//
-// Each chunk now stores its voxels as a flat array.
-// The total number of voxels per chunk is RAXEL_VOXEL_CHUNK_SIZE³.
-//
 struct VoxelChunk {
     uint voxels[RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE];
 };
 
-//
-// The GPUVoxelWorld holds up to RAXEL_MAX_LOADED_CHUNKS chunks and their metadata.
-//
+// -----------------------------------------------------------------------------
+// BVH Structures
+// -----------------------------------------------------------------------------
+struct BVHNode {
+    vec3 bounds_min;
+    vec3 bounds_max;
+    // For leaf nodes, child_offset holds the first primitive offset.
+    // For interior nodes, child_offset holds the index of the second child.
+    int child_offset;
+    uint n_primitives;  // if > 0 then leaf; if 0 then interior
+    uint axis;          // valid for interior nodes
+};
+
+struct BVHAccel {
+    BVHNode nodes[RAXEL_BVH_MAX_NODES];
+    int n_nodes;
+    int max_leaf_size;
+};
+
+// -----------------------------------------------------------------------------
+// Combined GPU Voxel World Structure
+// -----------------------------------------------------------------------------
 struct GPUVoxelWorld {
+    BVHAccel bvh;
     VoxelChunkMeta chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
     VoxelChunk chunks[RAXEL_MAX_LOADED_CHUNKS];
     uint num_loaded_chunks;
 };
 
-// Storage buffer (set = 0, binding = 1) holding the voxel world.
 layout(std430, set = 0, binding = 1) buffer VoxelWorldBuffer {
     GPUVoxelWorld voxel_world;
 };
 
-// Push constants: view matrix, fov (radians), rays_per_pixel, and debug_mode.
-// debug_mode: 0 = normal shaded rendering,
-//             1 = depth visualization,
-//             2 = raw voxel data display.
+// -----------------------------------------------------------------------------
+// Push Constants
+// -----------------------------------------------------------------------------
 layout(push_constant) uniform PC {
     mat4 view;
     float fov;
@@ -56,39 +71,76 @@ layout(push_constant) uniform PC {
     int debug_mode;
 } pc;
 
-//
-// A structure to hold the result of raymarching.
-//
-struct RaymarchResult {
-    vec3 pos;
-    vec3 normal;
-    float tHit;
-    bool hit;
-};
+// -----------------------------------------------------------------------------
+// Output Image
+// -----------------------------------------------------------------------------
+layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 
-//
-// Helper function: compute a flat index into the voxel array for a given local coordinate.
-//
+// -----------------------------------------------------------------------------
+// Compute Workgroup Size
+// -----------------------------------------------------------------------------
+layout(local_size_x = 16, local_size_y = 16) in;
+
+// -----------------------------------------------------------------------------
+// Utility Functions
+// -----------------------------------------------------------------------------
 int flatIndex(int lx, int ly, int lz) {
     return lx + ly * RAXEL_VOXEL_CHUNK_SIZE + lz * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
 }
 
-//
-// Given a world-space voxel coordinate, look through the loaded chunks to find the voxel value.
-// This mimics the CPU function that computes chunk coordinates and local coordinates.
-// Voxels with value 0 are treated as air; any non-zero voxel is solid.
-//
+bool intersectAABB(vec3 ro, vec3 rd, vec3 inv_rd, vec3 bmin, vec3 bmax, out float tmin, out float tmax) {
+    vec3 t0 = (bmin - ro) * inv_rd;
+    vec3 t1 = (bmax - ro) * inv_rd;
+    vec3 tsmaller = min(t0, t1);
+    vec3 tbigger = max(t0, t1);
+    tmin = max(max(tsmaller.x, tsmaller.y), tsmaller.z);
+    tmax = min(min(tbigger.x, tbigger.y), tbigger.z);
+    return tmax >= max(tmin, 0.0);
+}
+
+
+bool traverseBVH(vec3 ro, vec3 rd, out float t_hit, out int leaf_id) {
+    vec3 inv_rd = 1.0 / rd;
+    int stack[64];
+    int stack_ptr = 0;
+    stack[stack_ptr++] = 0; // start at root (index 0)
+    bool hit_found = false;
+    t_hit = 1e30;
+    leaf_id = -1;
+    while (stack_ptr > 0) {
+        int node_index = stack[--stack_ptr];
+        if (node_index < 0 || node_index >= voxel_world.bvh.n_nodes)
+            continue;
+        BVHNode node = voxel_world.bvh.nodes[node_index];
+        float tmin, tmax;
+        if (!intersectAABB(ro, rd, inv_rd, node.bounds_min, node.bounds_max, tmin, tmax))
+            continue;
+        if (node.n_primitives > 0) {
+            if (tmin < t_hit) {
+                t_hit = tmin;
+                leaf_id = node_index;
+                hit_found = true;
+            }
+        } else {
+            stack[stack_ptr++] = node_index + 1;
+            stack[stack_ptr++] = node.child_offset;
+        }
+    }
+    return hit_found;
+}
+
+// -----------------------------------------------------------------------------
+// Voxel Query Functions
+// -----------------------------------------------------------------------------
 uint getVoxelAtWorldPos(ivec3 worldPos) {
-    for (int i = 0; i < voxel_world.num_loaded_chunks; i++) {
+    for (int i = 0; i < int(voxel_world.num_loaded_chunks); i++) {
         VoxelChunkMeta meta = voxel_world.chunk_meta[i];
         int chunkOriginX = meta.x * RAXEL_VOXEL_CHUNK_SIZE;
         int chunkOriginY = meta.y * RAXEL_VOXEL_CHUNK_SIZE;
         int chunkOriginZ = meta.z * RAXEL_VOXEL_CHUNK_SIZE;
-        // Check if the world coordinate lies within this chunk.
         if (worldPos.x >= chunkOriginX && worldPos.x < (chunkOriginX + RAXEL_VOXEL_CHUNK_SIZE) &&
             worldPos.y >= chunkOriginY && worldPos.y < (chunkOriginY + RAXEL_VOXEL_CHUNK_SIZE) &&
             worldPos.z >= chunkOriginZ && worldPos.z < (chunkOriginZ + RAXEL_VOXEL_CHUNK_SIZE)) {
-            // Compute local voxel coordinates.
             int localX = worldPos.x - chunkOriginX;
             int localY = worldPos.y - chunkOriginY;
             int localZ = worldPos.z - chunkOriginZ;
@@ -99,111 +151,138 @@ uint getVoxelAtWorldPos(ivec3 worldPos) {
     return 0u;
 }
 
-//
-// Returns true if the voxel at the given world coordinate is solid (non-zero).
-//
 bool isVoxelSolid(ivec3 worldPos) {
     return getVoxelAtWorldPos(worldPos) != 0u;
 }
 
-//
-// Returns 1.0 for solid and 0.0 for air. Used when estimating normals.
-//
 float voxelValue(vec3 pos) {
     ivec3 voxelPos = ivec3(floor(pos));
     return isVoxelSolid(voxelPos) ? 1.0 : 0.0;
 }
 
-//
-// Estimate a surface normal at a given point using central differences.
-// We sample the voxelValue offset by EPSILON along each axis.
-//
 vec3 estimateNormal(vec3 pos) {
-    float dx = voxelValue(pos + vec3(EPSILON, 0.0, 0.0)) - voxelValue(pos - vec3(EPSILON, 0.0, 0.0));
-    float dy = voxelValue(pos + vec3(0.0, EPSILON, 0.0)) - voxelValue(pos - vec3(0.0, EPSILON, 0.0));
-    float dz = voxelValue(pos + vec3(0.0, 0.0, EPSILON)) - voxelValue(pos - vec3(0.0, 0.0, EPSILON));
+    float eps = 0.01;
+    float dx = voxelValue(pos + vec3(eps, 0.0, 0.0)) - voxelValue(pos - vec3(eps, 0.0, 0.0));
+    float dy = voxelValue(pos + vec3(0.0, eps, 0.0)) - voxelValue(pos - vec3(0.0, eps, 0.0));
+    float dz = voxelValue(pos + vec3(0.0, 0.0, eps)) - voxelValue(pos - vec3(0.0, 0.0, eps));
     return normalize(vec3(dx, dy, dz));
 }
 
-//
-// Raymarching function: starting from 'origin' along 'dir', step through space until a solid voxel is hit
-// or the maximum distance/steps is reached. On a hit, estimate the surface normal.
-//
-RaymarchResult raymarch(vec3 origin, vec3 dir) {
+// -----------------------------------------------------------------------------
+// Extended RaymarchResult Structure (includes BVH debug info)
+// -----------------------------------------------------------------------------
+struct RaymarchResult {
+    vec3 pos;
+    vec3 normal;
+    float tHit;
+    bool hit;
+    int leaf_id;     // The BVH leaf node that was hit.
+    int prim_offset; // The first primitive offset in the leaf.
+    int n_primitives; // Number of primitives in the leaf.
+    int num_aabb_tests;
+    int deepest_stack;
+    int num_steps;
+};
+
+RaymarchResult raymarch(vec3 ro, vec3 rd) {
     RaymarchResult result;
-    result.tHit = 0.0;
     result.hit = false;
-    for (int i = 0; i < MAX_STEPS; i++) {
-        vec3 pos = origin + result.tHit * dir;
-        if (isVoxelSolid(ivec3(floor(pos)))) {
-            result.pos = pos;
-            result.hit = true;
-            result.normal = estimateNormal(pos);
-            break;
-        }
-        result.tHit += 0.05;
-        if (result.tHit > MAX_DISTANCE) {
-            break;
-        }
+    result.tHit = 0.0;
+    result.leaf_id = -1;
+    result.prim_offset = -1;
+    result.n_primitives = 0;
+    result.num_aabb_tests = 0;
+    result.deepest_stack = 0;
+    result.num_steps = 0;
+    float t;
+    int leaf;
+    if (traverseBVH(ro, rd, t, leaf)) {
+        result.hit = true;
+        result.tHit = t;
+        result.leaf_id = leaf;
+        result.pos = ro + t * rd;
+        BVHNode leafNode = voxel_world.bvh.nodes[leaf];
+        result.prim_offset = leafNode.child_offset;
+        result.n_primitives = int(leafNode.n_primitives);
+        float eps = 0.01;
+        float dx = (isVoxelSolid(ivec3(result.pos + vec3(eps, 0.0, 0.0))) ? 1.0 : 0.0) -
+                   (isVoxelSolid(ivec3(result.pos - vec3(eps, 0.0, 0.0))) ? 1.0 : 0.0);
+        float dy = (isVoxelSolid(ivec3(result.pos + vec3(0.0, eps, 0.0))) ? 1.0 : 0.0) -
+                   (isVoxelSolid(ivec3(result.pos - vec3(0.0, eps, 0.0))) ? 1.0 : 0.0);
+        float dz = (isVoxelSolid(ivec3(result.pos + vec3(0.0, 0.0, eps))) ? 1.0 : 0.0) -
+                   (isVoxelSolid(ivec3(result.pos - vec3(0.0, 0.0, eps))) ? 1.0 : 0.0);
+        result.normal = normalize(vec3(dx, dy, dz));
     }
     return result;
 }
 
+// -----------------------------------------------------------------------------
+// Main Shader Entry
+// Shared code computed outside the if statements.
+// -----------------------------------------------------------------------------
 void main() {
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 imageSizeVec = imageSize(outImage);
-    vec4 color = vec4(0.0);
+    
+    // Common ray setup.
+    mat4 invView = inverse(pc.view);
+    vec2 uv = (vec2(pixelCoord) / vec2(imageSizeVec)) * 2.0 - 1.0;
+    float aspect = float(imageSizeVec.x) / float(imageSizeVec.y);
+    uv.x *= aspect;
+    float tanFov = tan(pc.fov * 0.5);
+    vec3 rayOrigin = (invView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec3 rayDir = normalize((invView * vec4(uv.x * tanFov, uv.y * tanFov, -1.0, 0.0)).xyz);
 
+    RaymarchResult result = raymarch(rayOrigin, rayDir);
+    vec4 color = vec4(0.0);
+    
+    // Debug mode selection.
     if (pc.debug_mode == 2) {
-        // Debug mode 2: display raw voxel data.
-        // use pix as an index into the large array
+        // Debug mode 2: Depth visualization.
+        float depth = result.hit ? result.tHit / MAX_DISTANCE : 1.0;
+        color = vec4(vec3(depth), 1.0);
+    } else if (pc.debug_mode == 1) {
+        // Debug mode 1: BVH debug visualization.
+        // Encode: red = normalized primitive offset, green = normalized leaf id, blue = normalized n_primitives.
+        float red   = result.prim_offset >= 0 ? float(result.prim_offset) / MAX_PRIM_OFFSET : 0.0;
+        float green = result.leaf_id >= 0 ? float(result.leaf_id) / float(RAXEL_BVH_MAX_NODES) : 0.0;
+        float blue  = result.n_primitives > 0 ? float(result.n_primitives) / MAX_PRIMS_PER_LEAF : 0.0;
+        color = vec4(red, green, blue, 1.0);
+    } else if (pc.debug_mode == 3) {
+        // Debug mode 3: Raw BVH data.
         int idx = pixelCoord.y * imageSizeVec.x + pixelCoord.x;
-        int chunk_idx = idx % RAXEL_MAX_LOADED_CHUNKS;
+        int node_index = idx % voxel_world.bvh.n_nodes;
+        BVHNode node = voxel_world.bvh.nodes[node_index];
+        // Map bounds_min.x from [-10,10] to [0,1] (adjust as needed).
+        float r = (node.bounds_min.x + 10.0) / 20.0;
+        // Map bounds_max.x similarly.
+        float g = (node.bounds_max.x + 10.0) / 20.0;
+        // Use child_offset (mod 100) for blue.
+        float b = float((node.child_offset % 100)) / 100.0;
+        color = vec4(r, g, b, 1.0);
+    } else if (pc.debug_mode == 4) {
+        // Debug mode 4: Raw Voxel Data.
+        int idx = pixelCoord.y * imageSizeVec.x + pixelCoord.x;
+        int chunk_idx = idx % int(voxel_world.num_loaded_chunks);
         int voxel_x = idx % RAXEL_VOXEL_CHUNK_SIZE;
         int voxel_y = (idx / RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
         int voxel_z = (idx / (RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE)) % RAXEL_VOXEL_CHUNK_SIZE;
-
         uint voxel = voxel_world.chunks[chunk_idx].voxels[flatIndex(voxel_x, voxel_y, voxel_z)];
-        color = vec4(float(voxel) / 255.0, 0.0, float(chunk_idx) / float(RAXEL_MAX_LOADED_CHUNKS), 1.0);
-
-    } else {
-        // --- Other Debug Modes: Raymarching ---
-        // Map pixel coordinates to normalized device coordinates (range [-1, 1]).
-        // Compute the inverse of the view matrix.
-        mat4 invView = inverse(pc.view);
-
-        // Map pixel coordinates to normalized device coordinates (range [-1, 1]).
-        vec2 uv = (vec2(pixelCoord) / vec2(imageSizeVec)) * 2.0 - 1.0;
-        float aspect = float(imageSizeVec.x) / float(imageSizeVec.y);
-        uv.x *= aspect;
-        float tanFov = tan(pc.fov * 0.5);
-
-        // Use the inverse view matrix to compute ray origin and direction.
-        vec3 rayOrigin = (invView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-        vec3 rayDir = normalize((invView * vec4(uv.x * tanFov, uv.y * tanFov, -1.0, 0.0)).xyz);
-        // flip the ray direction, so Y is up
-        rayDir.y = -rayDir.y;
-
-        RaymarchResult result = raymarch(rayOrigin, rayDir);
-
-        if (pc.debug_mode == 0) {
-            // Normal shaded rendering using simple diffuse lighting.
-            if (result.hit) {
-                vec3 lightDir = normalize(vec3(1.0, 1.0, -1.0));
-                float diff = max(dot(result.normal, lightDir), 0.0);
-                color = vec4(vec3(diff), 1.0);
-            } else {
-                color = vec4(0.0);
-            }
-        } else if (pc.debug_mode == 1) {
-            // Depth visualization: grayscale based on hit distance.
-            float depth = result.hit ? result.tHit / MAX_DISTANCE : 1.0;
-            color = vec4(vec3(depth), 1.0);
+        float v = float(voxel) / 255.0;
+        float c = chunk_idx / float(voxel_world.num_loaded_chunks);
+        color = vec4(v, c, 0.0, 1.0);
+    } else if (pc.debug_mode == 0) {
+        // Debug mode 0: Normal shaded rendering.
+        if (result.hit) {
+            vec3 lightDir = normalize(vec3(1.0, 1.0, -1.0));
+            float diff = max(dot(result.normal, lightDir), 0.0);
+            color = vec4(vec3(diff), 1.0);
+        } else {
+            color = vec4(0.0);
         }
-
-        // blend the color with the ray direction, just for debugging
-        color = mix(color, vec4(rayDir * 0.5 + 0.5, 1.0), 0.5);
+    } else {
+        color = vec4(0.0);
     }
-
+    
     imageStore(outImage, pixelCoord, color);
 }

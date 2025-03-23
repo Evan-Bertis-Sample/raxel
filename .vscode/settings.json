@@ -24,6 +24,7 @@
         "span": "c",
         "vector": "c",
         "xstring": "c",
-        "xutility": "c"
+        "xutility": "c",
+        "compute_pass.h": "c"
     }
 }

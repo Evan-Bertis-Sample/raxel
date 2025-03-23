@@ -23,9 +23,6 @@ static void on_destroy(raxel_surface_t *surface) {
 }
 
 int main(void) {
-    // Initialize random seed.
-    srand((unsigned)time(NULL));
-
     // Create a default allocator.
     raxel_allocator_t allocator = raxel_default_allocator();
 
@@ -48,7 +45,6 @@ int main(void) {
     // Create a clear pass to clear the internal color target.
     raxel_pipeline_pass_t clear_pass = clear_color_pass_create((vec4){0.0f, 0.3f, 0.8f, 1.0f});
     raxel_pipeline_add_pass(pipeline, clear_pass);
-
 
     // Create the compute shader and pass.
     raxel_pc_buffer_desc_t pc_desc = RAXEL_PC_DESC(
@@ -78,7 +74,7 @@ int main(void) {
     raxel_voxel_world_t *world = raxel_voxel_world_create(&allocator);
 
     // Create a giant sphere at the origin
-    int radius = 50;
+    int radius = 20;
 
     for (int x = -radius; x <= radius; x++) {
         for (int y = -radius; y <= radius; y++) {
@@ -147,22 +143,15 @@ int main(void) {
             break;
         }
 
-        // use the number keys to switch debug modes 1 is normal, 2 is raymarch debug, 3 is data debug
-        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_1)) {
-            int debug_mode = 0;
-            RAXEL_APP_LOG("Setting debug mode to 0\n");
-            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+        // use the number keys to switch debug moddes
+        for (int i = 0; i < 5; i++) {
+            if (raxel_input_manager_is_key_down(input_manager, RAXEL_KEY_1 + i)) {
+                int debug_mode = i;
+                raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
+                RAXEL_APP_LOG("Setting debug mode to %d\n", debug_mode);
+            }
         }
-        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_2)) {
-            int debug_mode = 1;
-            RAXEL_APP_LOG("Setting debug mode to 1\n");
-            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
-        }
-        if (raxel_input_manager_is_key_pressed(input_manager, RAXEL_KEY_3)) {
-            int debug_mode = 2;
-            RAXEL_APP_LOG("Setting debug mode to 2\n");
-            raxel_pc_buffer_set(compute_shader->pc_buffer, "debug_mode", &debug_mode);
-        }
+
 
         // RAXEL_APP_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
@@ -197,9 +186,8 @@ int main(void) {
         // RAXEL_CORE_LOG("Camera position: (%f, %f, %f)\n", camera_position[0], camera_position[1], camera_position[2]);
 
         raxel_voxel_world_update(world, &options, compute_shader, pipeline);
-        // raxel_voxel_world_dispatch_sb(world, compute_shader, pipeline);
 
-        RAXEL_APP_LOG("Rendering %u chunks, from (%f, %f, %f)\n", world->__num_loaded_chunks, camera_position[0], camera_position[1], camera_position[2]);
+        // RAXEL_APP_LOG("Rendering %u chunks, from (%f, %f, %f)\n", world->__num_loaded_chunks, camera_position[0], camera_position[1], camera_position[2]);
 
         raxel_pipeline_update(pipeline);
     }
