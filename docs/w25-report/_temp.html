@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>@font-face {
+  font-family: octicons-link;
+  src: url(data:font/woff;charset=utf-8;base64,d09GRgABAAAAAAZwABAAAAAACFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEU0lHAAAGaAAAAAgAAAAIAAAAAUdTVUIAAAZcAAAACgAAAAoAAQAAT1MvMgAAAyQAAABJAAAAYFYEU3RjbWFwAAADcAAAAEUAAACAAJThvmN2dCAAAATkAAAABAAAAAQAAAAAZnBnbQAAA7gAAACyAAABCUM+8IhnYXNwAAAGTAAAABAAAAAQABoAI2dseWYAAAFsAAABPAAAAZwcEq9taGVhZAAAAsgAAAA0AAAANgh4a91oaGVhAAADCAAAABoAAAAkCA8DRGhtdHgAAAL8AAAADAAAAAwGAACfbG9jYQAAAsAAAAAIAAAACABiATBtYXhwAAACqAAAABgAAAAgAA8ASm5hbWUAAAToAAABQgAAAlXu73sOcG9zdAAABiwAAAAeAAAAME3QpOBwcmVwAAAEbAAAAHYAAAB/aFGpk3jaTY6xa8JAGMW/O62BDi0tJLYQincXEypYIiGJjSgHniQ6umTsUEyLm5BV6NDBP8Tpts6F0v+k/0an2i+itHDw3v2+9+DBKTzsJNnWJNTgHEy4BgG3EMI9DCEDOGEXzDADU5hBKMIgNPZqoD3SilVaXZCER3/I7AtxEJLtzzuZfI+VVkprxTlXShWKb3TBecG11rwoNlmmn1P2WYcJczl32etSpKnziC7lQyWe1smVPy/Lt7Kc+0vWY/gAgIIEqAN9we0pwKXreiMasxvabDQMM4riO+qxM2ogwDGOZTXxwxDiycQIcoYFBLj5K3EIaSctAq2kTYiw+ymhce7vwM9jSqO8JyVd5RH9gyTt2+J/yUmYlIR0s04n6+7Vm1ozezUeLEaUjhaDSuXHwVRgvLJn1tQ7xiuVv/ocTRF42mNgZGBgYGbwZOBiAAFGJBIMAAizAFoAAABiAGIAznjaY2BkYGAA4in8zwXi+W2+MjCzMIDApSwvXzC97Z4Ig8N/BxYGZgcgl52BCSQKAA3jCV8CAABfAAAAAAQAAEB42mNgZGBg4f3vACQZQABIMjKgAmYAKEgBXgAAeNpjYGY6wTiBgZWBg2kmUxoDA4MPhGZMYzBi1AHygVLYQUCaawqDA4PChxhmh/8ODDEsvAwHgMKMIDnGL0x7gJQCAwMAJd4MFwAAAHjaY2BgYGaA4DAGRgYQkAHyGMF8NgYrIM3JIAGVYYDT+AEjAwuDFpBmA9KMDEwMCh9i/v8H8sH0/4dQc1iAmAkALaUKLgAAAHjaTY9LDsIgEIbtgqHUPpDi3gPoBVyRTmTddOmqTXThEXqrob2gQ1FjwpDvfwCBdmdXC5AVKFu3e5MfNFJ29KTQT48Ob9/lqYwOGZxeUelN2U2R6+cArgtCJpauW7UQBqnFkUsjAY/kOU1cP+DAgvxwn1chZDwUbd6CFimGXwzwF6tPbFIcjEl+vvmM/byA48e6tWrKArm4ZJlCbdsrxksL1AwWn/yBSJKpYbq8AXaaTb8AAHja28jAwOC00ZrBeQNDQOWO//sdBBgYGRiYWYAEELEwMTE4uzo5Zzo5b2BxdnFOcALxNjA6b2ByTswC8jYwg0VlNuoCTWAMqNzMzsoK1rEhNqByEyerg5PMJlYuVueETKcd/89uBpnpvIEVomeHLoMsAAe1Id4AAAAAAAB42oWQT07CQBTGv0JBhagk7HQzKxca2sJCE1hDt4QF+9JOS0nbaaYDCQfwCJ7Au3AHj+LO13FMmm6cl7785vven0kBjHCBhfpYuNa5Ph1c0e2Xu3jEvWG7UdPDLZ4N92nOm+EBXuAbHmIMSRMs+4aUEd4Nd3CHD8NdvOLTsA2GL8M9PODbcL+hD7C1xoaHeLJSEao0FEW14ckxC+TU8TxvsY6X0eLPmRhry2WVioLpkrbp84LLQPGI7c6sOiUzpWIWS5GzlSgUzzLBSikOPFTOXqly7rqx0Z1Q5BAIoZBSFihQYQOOBEdkCOgXTOHA07HAGjGWiIjaPZNW13/+lm6S9FT7rLHFJ6fQbkATOG1j2OFMucKJJsxIVfQORl+9Jyda6Sl1dUYhSCm1dyClfoeDve4qMYdLEbfqHf3O/AdDumsjAAB42mNgYoAAZQYjBmyAGYQZmdhL8zLdDEydARfoAqIAAAABAAMABwAKABMAB///AA8AAQAAAAAAAAAAAAAAAAABAAAAAA==) format('woff');
+}
+
+.markdown-body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  color: #333;
+  font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-size: 16px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.markdown-body a {
+  background-color: transparent;
+}
+
+.markdown-body a:active,
+.markdown-body a:hover {
+  outline: 0;
+}
+
+.markdown-body strong {
+  font-weight: bold;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+}
+
+.markdown-body img {
+  border: 0;
+}
+
+.markdown-body hr {
+  box-sizing: content-box;
+  height: 0;
+}
+
+.markdown-body pre {
+  overflow: auto;
+}
+
+.markdown-body code,
+.markdown-body kbd,
+.markdown-body pre {
+  font-family: monospace, monospace;
+  font-size: 1em;
+}
+
+.markdown-body input {
+  color: inherit;
+  font: inherit;
+  margin: 0;
+}
+
+.markdown-body html input[disabled] {
+  cursor: default;
+}
+
+.markdown-body input {
+  line-height: normal;
+}
+
+.markdown-body input[type="checkbox"] {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.markdown-body td,
+.markdown-body th {
+  padding: 0;
+}
+
+.markdown-body * {
+  box-sizing: border-box;
+}
+
+.markdown-body input {
+  font: 13px / 1.4 Helvetica, arial, nimbussansl, liberationsans, freesans, clean, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+.markdown-body a {
+  color: #4078c0;
+  text-decoration: none;
+}
+
+.markdown-body a:hover,
+.markdown-body a:active {
+  text-decoration: underline;
+}
+
+.markdown-body hr {
+  height: 0;
+  margin: 15px 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.markdown-body hr:before {
+  display: table;
+  content: "";
+}
+
+.markdown-body hr:after {
+  display: table;
+  clear: both;
+  content: "";
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  line-height: 1.1;
+}
+
+.markdown-body h1 {
+  font-size: 30px;
+}
+
+.markdown-body h2 {
+  font-size: 21px;
+}
+
+.markdown-body h3 {
+  font-size: 16px;
+}
+
+.markdown-body h4 {
+  font-size: 14px;
+}
+
+.markdown-body h5 {
+  font-size: 12px;
+}
+
+.markdown-body h6 {
+  font-size: 11px;
+}
+
+.markdown-body blockquote {
+  margin: 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.markdown-body ol ol,
+.markdown-body ul ol {
+  list-style-type: lower-roman;
+}
+
+.markdown-body ul ul ol,
+.markdown-body ul ol ol,
+.markdown-body ol ul ol,
+.markdown-body ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+.markdown-body dd {
+  margin-left: 0;
+}
+
+.markdown-body code {
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 12px;
+}
+
+.markdown-body pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+
+.markdown-body .select::-ms-expand {
+  opacity: 0;
+}
+
+.markdown-body .octicon {
+  font: normal normal normal 16px/1 octicons-link;
+  display: inline-block;
+  text-decoration: none;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.markdown-body .octicon-link:before {
+  content: '\f05c';
+}
+
+.markdown-body:before {
+  display: table;
+  content: "";
+}
+
+.markdown-body:after {
+  display: table;
+  clear: both;
+  content: "";
+}
+
+.markdown-body>*:first-child {
+  margin-top: 0 !important;
+}
+
+.markdown-body>*:last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.markdown-body .anchor {
+  display: inline-block;
+  padding-right: 2px;
+  margin-left: -18px;
+}
+
+.markdown-body .anchor:focus {
+  outline: none;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 1em;
+  margin-bottom: 16px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.markdown-body h1 .octicon-link,
+.markdown-body h2 .octicon-link,
+.markdown-body h3 .octicon-link,
+.markdown-body h4 .octicon-link,
+.markdown-body h5 .octicon-link,
+.markdown-body h6 .octicon-link {
+  color: #000;
+  vertical-align: middle;
+  visibility: hidden;
+}
+
+.markdown-body h1:hover .anchor,
+.markdown-body h2:hover .anchor,
+.markdown-body h3:hover .anchor,
+.markdown-body h4:hover .anchor,
+.markdown-body h5:hover .anchor,
+.markdown-body h6:hover .anchor {
+  text-decoration: none;
+}
+
+.markdown-body h1:hover .anchor .octicon-link,
+.markdown-body h2:hover .anchor .octicon-link,
+.markdown-body h3:hover .anchor .octicon-link,
+.markdown-body h4:hover .anchor .octicon-link,
+.markdown-body h5:hover .anchor .octicon-link,
+.markdown-body h6:hover .anchor .octicon-link {
+  visibility: visible;
+}
+
+.markdown-body h1 {
+  padding-bottom: 0.3em;
+  font-size: 2.25em;
+  line-height: 1.2;
+  border-bottom: 1px solid #eee;
+}
+
+.markdown-body h1 .anchor {
+  line-height: 1;
+}
+
+.markdown-body h2 {
+  padding-bottom: 0.3em;
+  font-size: 1.75em;
+  line-height: 1.225;
+  border-bottom: 1px solid #eee;
+}
+
+.markdown-body h2 .anchor {
+  line-height: 1;
+}
+
+.markdown-body h3 {
+  font-size: 1.5em;
+  line-height: 1.43;
+}
+
+.markdown-body h3 .anchor {
+  line-height: 1.2;
+}
+
+.markdown-body h4 {
+  font-size: 1.25em;
+}
+
+.markdown-body h4 .anchor {
+  line-height: 1.2;
+}
+
+.markdown-body h5 {
+  font-size: 1em;
+}
+
+.markdown-body h5 .anchor {
+  line-height: 1.1;
+}
+
+.markdown-body h6 {
+  font-size: 1em;
+  color: #777;
+}
+
+.markdown-body h6 .anchor {
+  line-height: 1.1;
+}
+
+.markdown-body p,
+.markdown-body blockquote,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body dl,
+.markdown-body table,
+.markdown-body pre {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body hr {
+  height: 4px;
+  padding: 0;
+  margin: 16px 0;
+  background-color: #e7e7e7;
+  border: 0 none;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+}
+
+.markdown-body ul ul,
+.markdown-body ul ol,
+.markdown-body ol ol,
+.markdown-body ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.markdown-body li>p {
+  margin-top: 16px;
+}
+
+.markdown-body dl {
+  padding: 0;
+}
+
+.markdown-body dl dt {
+  padding: 0;
+  margin-top: 16px;
+  font-size: 1em;
+  font-style: italic;
+  font-weight: bold;
+}
+
+.markdown-body dl dd {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+.markdown-body blockquote {
+  padding: 0 15px;
+  color: #777;
+  border-left: 4px solid #ddd;
+}
+
+.markdown-body blockquote>:first-child {
+  margin-top: 0;
+}
+
+.markdown-body blockquote>:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body table {
+  display: block;
+  width: 100%;
+  overflow: auto;
+  word-break: normal;
+  word-break: keep-all;
+}
+
+.markdown-body table th {
+  font-weight: bold;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  padding: 6px 13px;
+  border: 1px solid #ddd;
+}
+
+.markdown-body table tr {
+  background-color: #fff;
+  border-top: 1px solid #ccc;
+}
+
+.markdown-body table tr:nth-child(2n) {
+  background-color: #f8f8f8;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  box-sizing: content-box;
+  background-color: #fff;
+}
+
+.markdown-body code {
+  padding: 0;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(0,0,0,0.04);
+  border-radius: 3px;
+}
+
+.markdown-body code:before,
+.markdown-body code:after {
+  letter-spacing: -0.2em;
+  content: "\00a0";
+}
+
+.markdown-body pre>code {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.markdown-body .highlight {
+  margin-bottom: 16px;
+}
+
+.markdown-body .highlight pre,
+.markdown-body pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f7f7f7;
+  border-radius: 3px;
+}
+
+.markdown-body .highlight pre {
+  margin-bottom: 0;
+  word-break: normal;
+}
+
+.markdown-body pre {
+  word-wrap: normal;
+}
+
+.markdown-body pre code {
+  display: inline;
+  max-width: initial;
+  padding: 0;
+  margin: 0;
+  overflow: initial;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+}
+
+.markdown-body pre code:before,
+.markdown-body pre code:after {
+  content: normal;
+}
+
+.markdown-body kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font-size: 11px;
+  line-height: 10px;
+  color: #555;
+  vertical-align: middle;
+  background-color: #fcfcfc;
+  border: solid 1px #ccc;
+  border-bottom-color: #bbb;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 #bbb;
+}
+
+.markdown-body .pl-c {
+  color: #969896;
+}
+
+.markdown-body .pl-c1,
+.markdown-body .pl-s .pl-v {
+  color: #0086b3;
+}
+
+.markdown-body .pl-e,
+.markdown-body .pl-en {
+  color: #795da3;
+}
+
+.markdown-body .pl-s .pl-s1,
+.markdown-body .pl-smi {
+  color: #333;
+}
+
+.markdown-body .pl-ent {
+  color: #63a35c;
+}
+
+.markdown-body .pl-k {
+  color: #a71d5d;
+}
+
+.markdown-body .pl-pds,
+.markdown-body .pl-s,
+.markdown-body .pl-s .pl-pse .pl-s1,
+.markdown-body .pl-sr,
+.markdown-body .pl-sr .pl-cce,
+.markdown-body .pl-sr .pl-sra,
+.markdown-body .pl-sr .pl-sre {
+  color: #183691;
+}
+
+.markdown-body .pl-v {
+  color: #ed6a43;
+}
+
+.markdown-body .pl-id {
+  color: #b52a1d;
+}
+
+.markdown-body .pl-ii {
+  background-color: #b52a1d;
+  color: #f8f8f8;
+}
+
+.markdown-body .pl-sr .pl-cce {
+  color: #63a35c;
+  font-weight: bold;
+}
+
+.markdown-body .pl-ml {
+  color: #693a17;
+}
+
+.markdown-body .pl-mh,
+.markdown-body .pl-mh .pl-en,
+.markdown-body .pl-ms {
+  color: #1d3e81;
+  font-weight: bold;
+}
+
+.markdown-body .pl-mq {
+  color: #008080;
+}
+
+.markdown-body .pl-mi {
+  color: #333;
+  font-style: italic;
+}
+
+.markdown-body .pl-mb {
+  color: #333;
+  font-weight: bold;
+}
+
+.markdown-body .pl-md {
+  background-color: #ffecec;
+  color: #bd2c00;
+}
+
+.markdown-body .pl-mi1 {
+  background-color: #eaffea;
+  color: #55a532;
+}
+
+.markdown-body .pl-mdr {
+  color: #795da3;
+  font-weight: bold;
+}
+
+.markdown-body .pl-mo {
+  color: #1d3e81;
+}
+
+.markdown-body kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font: 11px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  line-height: 10px;
+  color: #555;
+  vertical-align: middle;
+  background-color: #fcfcfc;
+  border: solid 1px #ccc;
+  border-bottom-color: #bbb;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 #bbb;
+}
+
+.markdown-body .task-list-item {
+  list-style-type: none;
+}
+
+.markdown-body .task-list-item+.task-list-item {
+  margin-top: 3px;
+}
+
+.markdown-body .task-list-item input {
+  margin: 0 0.35em 0.25em -1.6em;
+  vertical-align: middle;
+}
+
+.markdown-body :checked+.radio-label {
+  z-index: 1;
+  position: relative;
+  border-color: #4078c0;
+}
+</style><style>/*
+
+github.com style (c) Vasily Polovnyov <vast@whiteants.net>
+
+*/
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 0.5em;
+  color: #333;
+  background: #f8f8f8;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #998;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+  color: #333;
+  font-weight: bold;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag .hljs-attr {
+  color: #008080;
+}
+
+.hljs-string,
+.hljs-doctag {
+  color: #d14;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id {
+  color: #900;
+  font-weight: bold;
+}
+
+.hljs-subst {
+  font-weight: normal;
+}
+
+.hljs-type,
+.hljs-class .hljs-title {
+  color: #458;
+  font-weight: bold;
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-attribute {
+  color: #000080;
+  font-weight: normal;
+}
+
+.hljs-regexp,
+.hljs-link {
+  color: #009926;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #990073;
+}
+
+.hljs-built_in,
+.hljs-builtin-name {
+  color: #0086b3;
+}
+
+.hljs-meta {
+  color: #999;
+  font-weight: bold;
+}
+
+.hljs-deletion {
+  background: #fdd;
+}
+
+.hljs-addition {
+  background: #dfd;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+</style><style>.markdown-body {
+    font-size: 11px;
+}
+
+img.emoji-img.emoji {
+  max-width: 11px;
+  max-height: 11px;
+  vertical-align: middle;
+}
+</style>
+
+        <!--<script src=""></script>-->
+    </head>
+    <body class="markdown-body">
+        <html><head></head><body><pre><code class="hljs">██████╗  █████╗ ██╗  ██╗███████╗██╗
+██╔══██╗██╔══██╗╚██╗██╔╝██╔════╝██║
+██████╔╝███████║ ╚███╔╝ █████╗  ██║
+██╔══██╗██╔══██║ ██╔██╗ ██╔══╝  ██║
+██║  ██║██║  ██║██╔╝ ██╗███████╗███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+
+<span class="hljs-params">Author:</span> Evan Bertis-Sample
+<span class="hljs-params">Date:</span> <span class="hljs-number">3</span><span class="hljs-symbol">/21/2025</span>
+<span class="hljs-params">Course:</span> COMP_SCI <span class="hljs-number">499</span> (Prof. Geisler)</code></pre>
+<p><strong>A Raymarched Voxel Engine Developed with Vulkan, in C99</strong></p>
+<h1 id="table-of-contents">Table of Contents</h1>
+<ul>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#engine">Engine</a><ul>
+<li><a href="#objectives">Objectives</a></li>
+<li><a href="#directory-structure">Directory Structure</a></li>
+<li><a href="#build-system">Build System</a></li>
+<li><a href="#raxel-cli-tools">Raxel CLI Tools</a></li></ul></li>
+<li><a href="#rendering-systems">Rendering Systems</a><ul>
+<li><a href="#core-renderer">Core Renderer</a></li>
+<li><a href="#compute-shader-driven-graphics-pipeline">Compute Shader-Driven Graphics Pipeline</a></li>
+<li><a href="#pipeline-and-pass-implementations-and-interface">Pipeline and Pass Implementations and Interface</a></li>
+<li><a href="#compute-shader-interface">Compute Shader Interface</a></li>
+<li><a href="#voxel-renderer">Voxel Renderer</a></li>
+<li><a href="#raymarching-at-a-glance">Raymarching at a Glance</a></li>
+<li><a href="#voxels-in-memory">Voxels in Memory</a><ul>
+<li><a href="#individual-voxels">Individual Voxels</a></li>
+<li><a href="#voxel-chunks--worlds">Voxel Chunks \&amp; Worlds</a></li></ul></li>
+<li><a href="#chunk-determination-and-loadingunloading">Chunk Determination and Loading/Unloading</a></li>
+<li><a href="#sending-to-the-gpu">Sending to the GPU</a></li>
+<li><a href="#naive-voxel-rendering">Naive Voxel Rendering</a></li>
+<li><a href="#accelerated-voxel-rendering-with-bvh">Accelerated Voxel Rendering with BVH</a></li>
+<li><a href="#constructing-the-bvh">Constructing the BVH</a><ul>
+<li><a href="#1-calculating-bounding-volumes-for-voxels">1. Calculating Bounding Volumes for Voxels</a></li>
+<li><a href="#2-building-the-hierarchical-tree">2. Building the Hierarchical Tree</a></li>
+<li><a href="#3-flattening-the-bvh">3. Flattening the BVH</a></li>
+<li><a href="#4-uploading-the-bvh-to-the-gpu">4. Uploading the BVH to the GPU</a></li></ul></li>
+<li><a href="#traversing-the-bvh">Traversing the BVH</a></li>
+<li><a href="#results-of-accelerated-voxel-rendering">Results of Accelerated Voxel Rendering</a></li></ul></li>
+<li><a href="#reflections--further-work">Reflections \&amp; Further Work</a></li>
+<li><a href="#miscellaneous-development-photos">Miscellaneous Development Photos</a></li>
+</ul>
+<h1 id="overview">Overview</h1>
+<p>This report covers the development of <code>raxel</code> within the past quarter. These developments include, but are not limited to:</p>
+<ul>
+<li>The implementation of a Vulkan-based rendering pipeline, that relies on compute shaders for raymarching.</li>
+<li>The development of a voxel data structure that is used to store and render voxel data.</li>
+<li>The implementation of a basic input system that allows for user interaction with the engine.</li>
+<li>The creation of a basic logging system that allows for debugging and logging of engine events.</li>
+<li>The development of a basic windowing system that allows for the creation of windows and surfaces.</li>
+<li>The implementation of a basic memory allocator that is used throughout the engine.</li>
+<li>The creation of a command line interface that allows for easy building and running of the engine, and for the creation of new projects.</li>
+</ul>
+<p>The report mainly aims to highlight some of the challenges faced during development, the techniques used, and design decisions made. It also aims to provide a high-level overview of the engine, and to provide a demonstration of the engine in action. It isn't overly formal/comprhensive of <em>everything</em> that was done, but it does cover the most important parts of the engine.</p>
+<h1 id="engine">Engine</h1>
+<p><code>raxel</code> is split into two core parts, the <em>engine</em> and the <em>rendering systems.</em></p>
+<p>The engine encapsulates the <code>raxel</code> that aren't interacting directly with the Vulkan code. Rather, the engine is concerned with building an abstraction around the rendering systems, providing tooling, and making the developer experience better. It also provides many utilities that would be fundamental to building games and technical demos.</p>
+<p>Whereas the rendering systems is the portion of <code>raxel</code> that directly interact with graphics drivers and utilities, and the abstractions around them.</p>
+<p>As of writing this report, the responsibilities of the engine and the rendering systems are split as follows:</p>
+<ul>
+<li><strong>Engine</strong><ul>
+<li>Building and compiling games, and linking it with the engine</li>
+<li>Providing a standard library for the user, namely data structures and wrappers around the rendering system</li>
+<li>Providing a suite of tools to make development easier - handling unit tests, enabling intellisense (in VSCode), updating the engine, running raxel games, etc.</li></ul></li>
+<li><strong>Rendering Systems</strong><ul>
+<li>Setting up graphics resources, making lower level calls to graphics libraries</li>
+<li>Creating an abstraction above these resources, allowing the developer to focus on their application of these graphics tools</li>
+<li>Defining voxels, voxel worlds, and handling the rendering of them</li></ul></li>
+</ul>
+<h2 id="objectives">Objectives</h2>
+<p>Building the engine was a semi-selfish effort, and it's design is to cater to my (Evan's) workflow. This workflow involves minimum usage of GUI's, a reliance on the CLI, and creating the minimum possible friction to get a project up and running.</p>
+<p>The engine is designed to be a tool that I can use to quickly prototype ideas, and to build small games and technical demos. It is not designed to be a full-fledged game engine, nor is it designed to be a general purpose engine. It is designed to be a tool that I can use to quickly prototype ideas, and to build small games and technical demos. To make it an actually full-fledged engine, I would need to additional features -- right now, all of the features are for rendering. Building any game logic would require me to build it from scratch.</p>
+<h2 id="directory-structure">Directory Structure</h2>
+<p>The engine is split into several directories, and the main focus of the engine thus far have been the <code>core</code> and <code>scripts</code> directories.</p>
+<p>The <code>core</code> directory contains the core engine code, and is split into several subdirectories:</p>
+<ul>
+<li><code>graphics</code> - Contains the code for the rendering systems, notably, the implementation of <code>raxel_surface_t</code>, <code>raxel_pipeline_t</code>, and other Vulkan wrappers. It also contains implementations of <code>raxel_pipeline_pass_t</code> which is the bulk, and most important part of the rendering system.</li>
+<li><code>util</code> - Contains common utilities that are used throughout the engine, such as memory allocators, logging, and standard data structures, like lists, arrays, hashtables and strings.</li>
+<li><code>input</code> - Contains the code for the input system, which is used to handle user input, such as keyboard and mouse events. This is a very thin wrapper around GLFW's input system.</li>
+<li><code>voxel</code> - Contains the code for the voxel rendering system, which is used to render voxel data. This is a thin wrapper around the core rendering system, and is used to provide a higher level abstraction for rendering voxels. It also contains the implementation of things like the BVH acceleration structure, and the voxel data structure.</li>
+</ul>
+<p>Within this directory, we have a suite of header files that include the headers contained within the subdirectories of <code>core</code>. These headers are used to provide a single include point for the user.</p>
+<p>In practice, using the engine involves using include statements like this:</p>
+<pre><code class="hljs c language-c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;raxel/core/graphics.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;raxel/core/util.h&gt;</span></span></code></pre>
+<p>The <code>scripts</code> directory contains the scripts that are used to build and run the engine. These scripts are used to build the engine, build games, run games, and update the engine. The scripts are written in Python, and are used to automate the process of building and running the engine.</p>
+<p>Here, you'll find the <code>raxel.py</code> script, which is invoked whenever you use a <code>raxel</code> command in the terminal. This script simply scans within the <code>scripts/tools</code> directory for the subcommands, and runs the appropriate one. Within <code>scripts/tools</code>, you'll find the implementation of commands like <code>build</code>, <code>run</code>, <code>update</code>, etc. These are located in files that are named <code>raxel_&lt;command&gt;.py</code>. Any files that are not named in this format are not considered subcommands, and cannot be driectly run by the <code>raxel.py</code> script.</p>
+<p>Before using any of the scripts, you can optionally run <code>scripts/raxel_install.sh</code>, which will place <code>raxel.py</code> in your path, and allow you to run <code>raxel</code> commands from anywhere in your terminal. This is rather important for the use of the engine, as per the <a href="#build-system">build system section</a>, the core raxel engine and the user's game code are seperated, and the user's game code is dynamically linked with the engine.</p>
+<h2 id="build-system">Build System</h2>
+<p>The engine dynamically links with the user's game code. The build system for the engine is built in a manner such that it is not opinionated about the structure of the user's game code.</p>
+<p>This choice was made in able to enforce a seperation of concerns in development, and allow for the reusability of the engine. This was used a large amount of development. For example, the testing suite for the engine is built as a "game" that is linked with the engine, and run as a seperate executable, whereas development of the voxel rendering system was debugged in a seperate "game" that was linked with the engine.</p>
+<p>By setting up this system early in the processs, it has pushed for a more modular design of the engine. In order to create a demo, the engine would have to provide a series of abstractions to build the demo on top of. This has manifested via the creation of thing like the <code>raxel_voxel_world_t</code>, and <code>raxel_input_manager_t</code> abstractions.</p>
+<p>The only requirement of building a game with <code>raxel</code> is that the user must provide an entry point, via <code>main</code>, and provide a <code>raxel.cmake</code> file within the directory of the game. The <code>raxel.cmake</code> file is used to specify the name of the game, and any additional dependencies that the game may have. This system enables the user to build their game in any way they see fit, and to use any libraries that they may need.</p>
+<p>Here is an example of such a <code>raxel.cmake</code> file:</p>
+<pre><code class="hljs cmake language-cmake"><span class="hljs-comment"># This will be called from raxel's internal cmake</span>
+<span class="hljs-comment"># The objective of this file is to add the sources and includes to the project</span>
+<span class="hljs-comment"># Then, raxel will take care of linking the libraries and setting the flags</span>
+
+<span class="hljs-keyword">set</span>(SOURCES
+    <span class="hljs-variable">${RAXEL_PROJECT_ROOT_DIR}</span>/main.c
+)
+
+<span class="hljs-keyword">set</span>(INCLUDES
+    <span class="hljs-variable">${RAXEL_PROJECT_ROOT_DIR}</span>
+)
+
+<span class="hljs-comment"># add the sources and includes to PROJECT executable</span>
+<span class="hljs-keyword">target_sources</span>(<span class="hljs-variable">${PROJECT}</span> PRIVATE <span class="hljs-variable">${SOURCES}</span>)
+<span class="hljs-keyword">target_include_directories</span>(<span class="hljs-variable">${PROJECT}</span> PRIVATE <span class="hljs-variable">${INCLUDES}</span>)</code></pre>
+<p>This builds one of the simplest possible games, with a single source file, <code>main.c</code>. The <code>raxel.cmake</code> file specifies that the game should be built with this source file, and that the source file should be included in the project.</p>
+<p>Internally, the raxel build system uses it's own <code>CMakeLists.txt</code> file to build the engine, the dependencies, and the user's game code. The abridged version of the build process is as follows:</p>
+<pre><code class="hljs"><span class="hljs-number">1.</span> <span class="hljs-type">Set</span> up CMake, specifying the project name, minimum version, the languages used, <span class="hljs-keyword">and</span> the project version
+<span class="hljs-number">2.</span> Find <span class="hljs-keyword">if</span> the user has a `raxel.cmake` file <span class="hljs-keyword">in</span> their project directory. If <span class="hljs-keyword">not</span>, throw an error.
+<span class="hljs-number">3.</span> Compile the raxel engine <span class="hljs-keyword">as</span> a static library, recursively searching <span class="hljs-keyword">for</span> folders within the raxel/core directory
+<span class="hljs-number">4.</span> Build <span class="hljs-keyword">and</span> find the dependencies of raxel. These dependencies are Vulkan, GLFW, <span class="hljs-keyword">and</span> CGLM (which <span class="hljs-keyword">is</span> the C version of GLM)
+<span class="hljs-number">5.</span> Compile the use<span class="hljs-string">r's game code, in accordance with the `raxel.cmake` file.
+6. Link the user'</span>s game code <span class="hljs-keyword">with</span> the raxel engine, <span class="hljs-keyword">and</span> the dependencies</code></pre>
+<p>Creating such a build system required leveraging a work-directory <code>.raxel</code>, which gets automatically created to the game's root directory.</p>
+<p>For the most part, this folder is used to store the build artifacts of the engine, and the user's game code. This folder is also used to store the <code>CMakeCache.txt</code> file, which is used to store the configuration of the build system. This folder is also used to store the <code>CMakeFiles</code> folder, which is used to store the build files of the engine, and the user's game code.</p>
+<p>A few book-keeping files are also added to this directory. The most useful for development has been the <code>checksum.txt</code> file, which is used to store the checksum of the user's game code, and the source files of the engine. This file is used to determine if the user's game code has changed, and if the engine needs to be rebuilt. Whenever the user attemps to run their game, the checksum of the user's game code is compared to the checksum stored in the <code>checksum.txt</code> file. If the checksums do not match, the user is alerted that either the engine/game code has changed, and that the engine needs to be rebuilt.</p>
+<p>Furthermore, assets are stored in the <code>.raxel</code> directory, and are copied to the build directory whenever the user runs their game. This is done to ensure that the assets are always in the correct location, and that the user does not have to worry about copying the assets to the build directory.</p>
+<h2 id="raxel-cli-tools">Raxel CLI Tools</h2>
+<p>There are a few commands that are available:</p>
+<ul>
+<li><code>raxel build</code> - This command is used to build the engine, and the user's game code. This command is used to compile the engine, and the user's game code in the manner described in the <a href="#build-system">build system</a> section.</li>
+<li><code>raxel run</code> - This command is used to run the user's game code. This command is used to run the user's game code. This simply runs the executable that is created within the <code>.raxel</code> directory.</li>
+<li><code>raxel update</code> - Updates the user's version of raxel by pulling the latest version of the core engine from the repository. Because the user's game code is seperate from the engine, this is one of the affordances that the engine provides. The user can update the engine without having to worry about their game code being affected. In development, this has not been used much.</li>
+<li><code>raxel index</code> - Creates necessary JSON files (<code>c_cpp_properties.json</code>) for intellisense in VSCode. Because the game code is seperate from the engine, intellisense doesn't work outside the box, one of the drawbacks from seperating engine and game code so strictly.</li>
+<li><code>raxel test</code> - Runs the core raxel unit tests. The unit testing system is a raxel "game" located next to the engine code. This is an end-to-end test of the engine, as running the testing suite involves actually building a "game," which in reality, is just a series of unit tests.</li>
+<li><code>raxel sc</code> - Compiles the shaders in the user's and raxel's code, and places them in the <code>.raxel</code> directory. The shaders are compiled into <code>SPIR-V</code> format, which is the format that Vulkan uses. Shaders that are part of the engine core are placed in a seperate directory within <code>.raxel</code>, <code>shaders/internal</code>, and the user's shaders are placed in <code>shaders/</code> directly.</li>
+<li><code>raxel clean</code> - Cleans the build directory, and removes the <code>.raxel</code> directory. This is useful for cleaning up the build artifacts, and for starting fresh.</li>
+<li><code>raxel br</code> - Compiles the engine, user's game code, and shaders, and runs the game. This is a convenience command that is used to combine <code>raxel build</code>, <code>raxel run</code>, and <code>raxel sc</code> into a single command.</li>
+</ul>
+<p>Each of these commands have different subcommands, and can be run with the <code>--help</code> flag to see the available subcommands. For example, running <code>raxel build --help</code> will show the available subcommands for the <code>raxel build</code> command.</p>
+<h1 id="rendering-systems">Rendering Systems</h1>
+<p>The most developed part of <code>raxel</code> are the rendering systems. The rendering systems are split into two parts, the core renderer, and the voxel renderer. The core renderer is the wrapper around the Vulkan API, and is used to set up the graphics resources, and make lower level calls to the graphics libraries. The voxel renderer is the wrapper around the core renderer, and is used to provide a higher level abstraction for rendering voxels.</p>
+<p>Because the engine is a voxel engine, the voxel renderer has been developed such that the interface is as simple as possible, with minimal knowledged of graphics programming required. The core renderer is more complex, but it is significantly easier than programming directly with Vulkan.</p>
+<p>The core renderer achieves:</p>
+<ul>
+<li>Initialization of Vulkan, and all of the boilerplate code that is required to set up the graphics resources</li>
+<li>Creating graphics pipelines and resources</li>
+<li>Taking care of the synchronization of the graphics resources</li>
+<li>Abstracting multi-pass rendering into an easy, declarative interface</li>
+<li>Abstracting over compute shaders</li>
+<li>Passing data between the CPU and GPU</li>
+</ul>
+<p>Whereas the voxel renderer achieves:</p>
+<ul>
+<li>Storing voxel data in memory</li>
+<li>Rendering voxels in a compute shader</li>
+<li>Creating acceleration structures for the voxels</li>
+<li>Handling the memory management of the voxel data</li>
+</ul>
+<h2 id="core-renderer">Core Renderer</h2>
+<p>Below is an abridged version of the demonstration code that will be discussedin the <a href="#demonstration">demonstration</a> section. This code demonstrates the core renderer and voxel renderer, and how it is used to create a simple raymarched voxel scene.</p>
+<pre><code class="hljs cpp language-cpp"><span class="hljs-comment">// Called when the surface is destroyed.</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">on_destroy</span><span class="hljs-params">(<span class="hljs-type">raxel_surface_t</span> *surface)</span> </span>{
+    <span class="hljs-built_in">RAXEL_CORE_LOG</span>(<span class="hljs-string">"Destroying surface...\n"</span>);
+    <span class="hljs-type">raxel_pipeline_t</span> *pipeline = (<span class="hljs-type">raxel_pipeline_t</span> *)surface-&gt;user_data;
+    <span class="hljs-built_in">raxel_pipeline_cleanup</span>(pipeline);
+    <span class="hljs-built_in">raxel_pipeline_destroy</span>(pipeline);
+}
+
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span> </span>{
+    <span class="hljs-comment">// Create a default allocator.</span>
+    <span class="hljs-type">raxel_allocator_t</span> allocator = <span class="hljs-built_in">raxel_default_allocator</span>();
+
+    <span class="hljs-comment">// Create a window and Vulkan surface.</span>
+    <span class="hljs-type">raxel_surface_t</span> *surface = <span class="hljs-built_in">raxel_surface_create</span>(&amp;allocator, <span class="hljs-string">"Voxel Raymarch"</span>, WIDTH, HEIGHT);
+    surface-&gt;callbacks.on_destroy = on_destroy;
+
+    <span class="hljs-comment">// Setup input.</span>
+    <span class="hljs-type">raxel_input_manager_t</span> *input_manager = <span class="hljs-built_in">raxel_input_manager_create</span>(&amp;allocator, surface);
+
+    <span class="hljs-comment">// Create the pipeline.</span>
+    <span class="hljs-type">raxel_pipeline_t</span> *pipeline = <span class="hljs-built_in">raxel_pipeline_create</span>(&amp;allocator, surface);
+    surface-&gt;user_data = pipeline;
+
+    <span class="hljs-comment">// Initialize the pipeline (creates instance, device, swapchain, etc.).</span>
+    <span class="hljs-built_in">raxel_pipeline_initialize</span>(pipeline);
+
+    <span class="hljs-comment">// Set the debug target to the internal color target.</span>
+    <span class="hljs-built_in">raxel_pipeline_set_debug_target</span>(pipeline, RAXEL_PIPELINE_TARGET_COLOR);
+
+    <span class="hljs-comment">// Create a clear pass to clear the internal color target.</span>
+    <span class="hljs-type">raxel_pipeline_pass_t</span> clear_pass = <span class="hljs-built_in">clear_color_pass_create</span>((vec4){<span class="hljs-number">0.0f</span>, <span class="hljs-number">0.3f</span>, <span class="hljs-number">0.8f</span>, <span class="hljs-number">1.0f</span>});
+    <span class="hljs-built_in">raxel_pipeline_add_pass</span>(pipeline, clear_pass);
+
+    <span class="hljs-comment">// Create the compute shader and pass.</span>
+    <span class="hljs-type">raxel_pc_buffer_desc_t</span> pc_desc = <span class="hljs-built_in">RAXEL_PC_DESC</span>(
+        (<span class="hljs-type">raxel_pc_entry_t</span>){.name = <span class="hljs-string">"view"</span>, .offset = <span class="hljs-number">0</span>, .size = <span class="hljs-number">16</span> * <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>)},
+        (<span class="hljs-type">raxel_pc_entry_t</span>){.name = <span class="hljs-string">"fov"</span>, .offset = <span class="hljs-number">16</span> * <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>), .size = <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>)},
+        (<span class="hljs-type">raxel_pc_entry_t</span>){.name = <span class="hljs-string">"rays_per_pixel"</span>, .offset = <span class="hljs-number">16</span> * <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>) + <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>), .size = <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">int</span>)},
+        (<span class="hljs-type">raxel_pc_entry_t</span>){.name = <span class="hljs-string">"debug_mode"</span>, .offset = <span class="hljs-number">16</span> * <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>) + <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">float</span>) + <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">int</span>), .size = <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">int</span>)}, );
+    <span class="hljs-type">raxel_compute_shader_t</span> *compute_shader = <span class="hljs-built_in">raxel_compute_shader_create</span>(pipeline, <span class="hljs-string">"internal/shaders/voxel.comp.spv"</span>, &amp;pc_desc);
+
+    <span class="hljs-comment">// Create a compute pass context, which is just a struct that holds information about how to dispatch the compute shader.</span>
+    <span class="hljs-type">raxel_compute_pass_context_t</span> *compute_ctx = <span class="hljs-built_in">raxel_malloc</span>(&amp;allocator, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">raxel_compute_pass_context_t</span>));
+    compute_ctx-&gt;compute_shader = compute_shader;
+    <span class="hljs-comment">// Set dispatch dimensions based on our window size and workgroup size.</span>
+    compute_ctx-&gt;dispatch_x = (WIDTH + <span class="hljs-number">15</span>) / <span class="hljs-number">16</span>;
+    compute_ctx-&gt;dispatch_y = (HEIGHT + <span class="hljs-number">15</span>) / <span class="hljs-number">16</span>;
+    compute_ctx-&gt;dispatch_z = <span class="hljs-number">1</span>;
+    <span class="hljs-comment">// What resources are we writing to?</span>
+    compute_ctx-&gt;targets[<span class="hljs-number">0</span>] = RAXEL_PIPELINE_TARGET_COLOR;
+    compute_ctx-&gt;targets[<span class="hljs-number">1</span>] = <span class="hljs-number">-1</span>;  <span class="hljs-comment">// Sentinel.</span>
+    <span class="hljs-comment">// You can set a callback to be called when the dispatch is finished.</span>
+    compute_ctx-&gt;on_dispatch_finished = <span class="hljs-literal">NULL</span>;
+
+    <span class="hljs-comment">// Create the compute pass and add it to the pipeline.</span>
+    <span class="hljs-type">raxel_pipeline_pass_t</span> compute_pass = <span class="hljs-built_in">raxel_compute_pass_create</span>(compute_ctx);
+    <span class="hljs-built_in">raxel_pipeline_add_pass</span>(pipeline, compute_pass);
+
+    <span class="hljs-comment">// Create and populate a voxel world</span>
+    <span class="hljs-type">raxel_voxel_world_t</span> *world = <span class="hljs-built_in">raxel_voxel_world_create</span>(&amp;allocator);
+
+    <span class="hljs-comment">// Code to populate the voxel world...</span>
+
+    vec3 camera_position = {<span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">-50.0f</span>};
+    <span class="hljs-type">float</span> camera_rotation = <span class="hljs-number">0.0f</span>;
+
+    <span class="hljs-comment">// Code to initially load/unload chunks based on camera position, and pass the voxel world to the compute shader...</span>
+
+    <span class="hljs-built_in">raxel_pipeline_start</span>(pipeline);
+
+    <span class="hljs-comment">// Main loop</span>
+    <span class="hljs-comment">// For demonstration, we update the push constants per frame.</span>
+    <span class="hljs-type">double</span> time = <span class="hljs-number">0.0</span>;
+    <span class="hljs-type">double</span> delta_time = <span class="hljs-number">0.01</span>;
+
+    <span class="hljs-keyword">while</span> (!<span class="hljs-built_in">raxel_pipeline_should_close</span>(pipeline)) {
+        <span class="hljs-comment">// Poor man's delta time.</span>
+        time += delta_time;
+
+        <span class="hljs-comment">// Simple WASD and QE controls to move the camera.</span>
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">raxel_input_manager_is_key_down</span>(input_manager, RAXEL_KEY_W)) {
+            camera_position[<span class="hljs-number">2</span>] += <span class="hljs-number">0.1f</span>;
+        }
+        <span class="hljs-comment">// Code to handle other key presses...</span>
+
+        <span class="hljs-comment">// Update the view matrix.</span>
+        mat4 view;
+        <span class="hljs-built_in">glm_mat4_identity</span>(view);
+        <span class="hljs-comment">// Rotate the view matrix by the camera rotation.</span>
+        <span class="hljs-built_in">glm_rotate</span>(view, camera_rotation, (vec3){<span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>});
+        <span class="hljs-comment">// Translate the view matrix by the negative camera position.</span>
+        <span class="hljs-built_in">glm_translate</span>(view, (vec3){camera_position[<span class="hljs-number">0</span>], camera_position[<span class="hljs-number">1</span>], camera_position[<span class="hljs-number">2</span>]});
+
+        <span class="hljs-comment">// Update the push constants</span>
+        <span class="hljs-built_in">raxel_pc_buffer_set</span>(compute_shader-&gt;pc_buffer, <span class="hljs-string">"view"</span>, view);
+        <span class="hljs-comment">// Update fov (e.g., 60 degrees converted to radians).</span>
+        <span class="hljs-type">float</span> fov = <span class="hljs-built_in">glm_rad</span>(<span class="hljs-number">60.0f</span>);
+        <span class="hljs-built_in">raxel_pc_buffer_set</span>(compute_shader-&gt;pc_buffer, <span class="hljs-string">"fov"</span>, &amp;fov);
+        <span class="hljs-comment">// Update rays per pixel (e.g., 4 rays per pixel).</span>
+        <span class="hljs-type">int</span> rpp = <span class="hljs-number">1</span>;
+        <span class="hljs-built_in">raxel_pc_buffer_set</span>(compute_shader-&gt;pc_buffer, <span class="hljs-string">"rays_per_pixel"</span>, &amp;rpp);
+
+        <span class="hljs-comment">// Code to load/unload chunks based on camera position, and pass the voxel world to the compute shader...</span>
+
+        <span class="hljs-built_in">raxel_pipeline_update</span>(pipeline);
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+<p>This code is only slightly abridged, only really removing the code for populating the voxel world, and loading/unloading chunks based on camera position. The code demonstrates how the core renderer and voxel renderer are used to create a simple raymarched voxel scene.</p>
+<p>In plain English, the code does the following:</p>
+<ol>
+<li>Creates a window and a Vulkan surface</li>
+<li>Sets up input handling</li>
+<li>Creates a pipeline, and initializes it</li>
+<li>Creates a clear pass to clear the internal color target, making the screen blue</li>
+<li>Creates a compute shader and pass, which is used to render the voxel scene</li>
+<li>Creates a voxel world, and populates it with voxel data</li>
+<li>In the main loop, updates the camera position based on user input</li>
+<li>Updates the view matrix based on the camera position and rotation</li>
+<li>Updates the push constants for the compute shader, which includes the view matrix, field of view, and rays per pixel</li>
+<li>Updates the voxel world based on the camera position</li>
+<li>Updates the pipeline, which is rendering and presenting the scene</li>
+<li>Repeats the main loop until the window is closed</li>
+</ol>
+<p>To define some terminology, before covering it in greater detail:</p>
+<ul>
+<li>A <strong>raxel pipeline</strong> is a series of pipeline passes. This is <em>different</em> than a Vulkan pipeline.</li>
+<li>A <strong>pipeline pass</strong> is a single logical step in the pipeline. Steps can be like things like clearing the screen, computing the depth buffer, or composing the final image.</li>
+<li>A <strong>compute pass</strong> is a pipeline pass that is driven by a compute shader. This is used to do computations on the GPU.</li>
+</ul>
+<p>It is important to note that <code>raxel_pipeline_t</code> is <strong>not</strong> the same as a Vulkan pipeline. Instead, <code>raxel_pipeline_t</code> can be thought of a series of passes, which internally may have their own <code>VkPipeline</code> objects. The <code>raxel_pipeline_t</code> is used to abstract over the Vulkan API, and to provide a higher level interface for rendering.</p>
+<p>The implementation of the core renderer (and thus, the example) will be discussed in the following sections. Full details of the individual Vulkan resources are not covered, but the most important parts, namely the handling of the swapchain, compute shaders, and the pipeline, are covered.</p>
+<h3 id="compute-shader-driven-graphics-pipeline">Compute Shader-Driven Graphics Pipeline</h3>
+<p><code>raxel</code> runs purely on compute shaders. There are no vertex or fragment shaders, thus how to fundamentally think about rendering in <code>raxel</code> is different than in traditional graphics programming.</p>
+<p>Instead of worrying about fragments, vertices, and the like, users only need worry about a few things:</p>
+<ul>
+<li>The compute shader</li>
+<li>The data being passed to the compute shader</li>
+<li>The resources that are being written to</li>
+<li>The order in which the compute passes are executed</li>
+</ul>
+<p>The pipeline will keep large resources, specifically the "targets," which are textures that are read and rendered to by compute shaders on the GPU. The effect of this is that the effects of a single pass can be seen in the next pass, thus the order of the passes is important. Because of this, however, this makes multi-pass rendering very easy to implement.</p>
+<p>This effect, where the output of one pass is the input of the next is why <code>raxel_pipeline_t</code> is called a pipeline. Unforuntately, working with Vulkan causes the term "pipeline" to be overloaded, as a Vulkan pipeline is a different concept than a <code>raxel_pipeline_t</code>.</p>
+<p><code>raxel_pipeline_t</code> doesn't even have to be used for rendering. It can be used for any series of compute passes, and can be used to do any kind of computation on the GPU. This is a powerful abstraction, and allows for a wide variety of effects to be achieved.</p>
+<p>In pseudocode, we can think of the pipeline as doing the following:</p>
+<pre><code class="hljs py language-py"><span class="hljs-comment"># Create a pipeline</span>
+pipeline = raxel_pipeline_create()
+pipeline.create_resources()
+
+<span class="hljs-comment"># initialize all the resources needed for the pipeline</span>
+<span class="hljs-keyword">for</span> <span class="hljs-keyword">pass</span> <span class="hljs-keyword">in</span> pipeline:
+    <span class="hljs-keyword">pass</span>.initialize(pipeline.resources)
+
+<span class="hljs-comment"># start the pipeline</span>
+pipeline.start()
+
+<span class="hljs-keyword">for</span> <span class="hljs-keyword">pass</span> <span class="hljs-keyword">in</span> pipeline:
+  <span class="hljs-comment"># pass in the data needed for the pass, like push constants, and the resources that are being written to</span>
+  <span class="hljs-comment"># run the pass, which effects the targets in the pipeline</span>
+  <span class="hljs-keyword">pass</span>.begin(pipeline.resources)
+  <span class="hljs-comment"># seperated into two steps, because sometimes it is nice to reason about the pass in this way</span>
+  <span class="hljs-keyword">pass</span>.end(pipeline.resources)
+
+
+<span class="hljs-comment"># present the final result to the window</span>
+pipeline.present()</code></pre>
+<p>Upon the "presentation" step, which is part of the <code>raxel_pipeline_update</code> function, the pipeline will grab one of the targets as specified via the <code>raxel_pipeline_set_debug_target</code> function, and present it to the window. This is how the user sees the final result of the compute passes.</p>
+<p>Currently, there are two types of targets, although this can be expanded in the future:</p>
+<ul>
+<li><code>RAXEL_PIPELINE_TARGET_COLOR</code> - This is the internal color target, which is the target that is presented to the window. This is the target that the user sees.</li>
+<li><code>RAXEL_PIPELINE_TARGET_DEPTH</code> - This is the internal depth target, which is used for depth testing. This is not presented to the window, but is used for depth testing in the compute passes.</li>
+</ul>
+<p>Some targets to consider in the future are:</p>
+<ul>
+<li><code>RAXEL_PIPELINE_TARGET_NORMAL</code> - This is the internal normal target, which is used for normal mapping. This is not presented to the window, but is used for normal mapping in the compute passes.</li>
+<li><code>RAXEL_PIPELINE_TARGET_WORK_BUFFER_X</code> - This would be a series of work buffers, which are used for intermediate computations. These are not presented to the window, but are used for intermediate computations in the compute passes.</li>
+</ul>
+<p>Adding such targets would be simple, and would allow for different types of rendering effects to be achieved, like deferred rendering, normal mapping, and more.</p>
+<p>At the Vulkan level, this is achieved by using the swapchain. All of these targets are created as part of the swapchain, and exist in the GPU's memory, persisting between frames and compute passes.</p>
+<p>The full initialization of the pipeline looks like this:</p>
+<pre><code class="hljs c language-c"><span class="hljs-type">int</span> <span class="hljs-title function_">raxel_pipeline_initialize</span><span class="hljs-params">(<span class="hljs-type">raxel_pipeline_t</span> *pipeline)</span> {
+    __create_instance(&amp;pipeline-&gt;resources);
+    __pick_physical_device(&amp;pipeline-&gt;resources);
+    __create_logical_device(&amp;pipeline-&gt;resources);
+    __create_command_pools(&amp;pipeline-&gt;resources);
+    __create_sync_objects(&amp;pipeline-&gt;resources);
+    <span class="hljs-comment">// Create swapchain using surface dimensions.</span>
+    raxel_surface_initialize(pipeline-&gt;resources.surface, pipeline-&gt;resources.instance);
+    __create_swapchain(&amp;pipeline-&gt;resources, pipeline-&gt;resources.surface-&gt;width, pipeline-&gt;resources.surface-&gt;height, &amp;pipeline-&gt;resources.swapchain);
+    __create_targets(&amp;pipeline-&gt;resources, &amp;pipeline-&gt;resources.targets, pipeline-&gt;resources.surface-&gt;width, pipeline-&gt;resources.surface-&gt;height);
+    __create_descriptor_pool(pipeline);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+<p>When creating compute shader passes, the user can specify the resources that are being written to, and the dimensions of the dispatch. The dispatch dimensions are based on the window size and the workgroup size, and are used to determine how many workgroups are dispatched.</p>
+<p>This is done via an array of <code>raxel_pipeline_target_type_t</code> enums. In the example code:</p>
+<pre><code class="hljs c language-c"><span class="hljs-comment">// What resources are we writing to?</span>
+compute_ctx-&gt;targets[<span class="hljs-number">0</span>] = RAXEL_PIPELINE_TARGET_COLOR;
+compute_ctx-&gt;targets[<span class="hljs-number">1</span>] = <span class="hljs-number">-1</span>;  <span class="hljs-comment">// Sentinel.</span></code></pre>
+<p>In this example, we only read/write to the internal color target. The end of the array is marked with a sentinel value, <code>-1</code>, which is used to determine the end of the array. This is because the array is statically sized to be the maximum number of targets that can be written to, which is all of them (currently 2, one for color, and one for depth).</p>
+<p>This maps directly into the shader:</p>
+<pre><code class="hljs glsl language-glsl"><span class="hljs-keyword">layout</span>(<span class="hljs-keyword">rgba32f</span>, set = <span class="hljs-number">0</span>, <span class="hljs-keyword">binding</span> = <span class="hljs-number">0</span>) <span class="hljs-keyword">uniform</span> <span class="hljs-type">image2D</span> outImage;</code></pre>
+<p>If you wnated to read/write to both the color and depth targets, you would specify both in the array:</p>
+<pre><code class="hljs c language-c">compute_ctx-&gt;targets[<span class="hljs-number">0</span>] = RAXEL_PIPELINE_TARGET_COLOR;
+compute_ctx-&gt;targets[<span class="hljs-number">1</span>] = RAXEL_PIPELINE_TARGET_DEPTH;
+<span class="hljs-comment">// no need for sentinel, as we know there are only two targets</span></code></pre>
+<p>This would map to the shader as:</p>
+<pre><code class="hljs glsl language-glsl"><span class="hljs-keyword">layout</span>(<span class="hljs-keyword">rgba32f</span>, set = <span class="hljs-number">0</span>, <span class="hljs-keyword">binding</span> = <span class="hljs-number">0</span>) <span class="hljs-keyword">uniform</span> <span class="hljs-type">image2D</span> outImage;
+<span class="hljs-keyword">layout</span>(<span class="hljs-keyword">r32f</span>, set = <span class="hljs-number">0</span>, <span class="hljs-keyword">binding</span> = <span class="hljs-number">1</span>) <span class="hljs-keyword">uniform</span> <span class="hljs-type">image2D</span> outDepth;</code></pre>
+<p>Internally, the compute shader needs to be passed a description of what textures are being written to. We never have to pull the textures from the GPU, then pass them to the compute shader. Instead, we basically pass a set of pointers to the compute shader, and the compute shader knows what to do with them.</p>
+<p>This system cuts down on a lot of boilerplate code, makes multi-pass rendering easier to think about, and makes the code more readable.</p>
+<h3 id="pipeline-and-pass-implementations-and-interface">Pipeline and Pass Implementations and Interface</h3>
+<p>A large amount of thought was put into the interface of the pipeline and passes. Having seen a large amount of disapointing interfaces in other engines, it was a priority to make the interface as simple as possible, while still being powerful.</p>
+<p>The scope of the pipeline being entirely compute shader driven made reasoning about this interface easier. The most important part of defining this interface was structring the data.</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_pipeline</span> {</span>
+    <span class="hljs-type">raxel_pipeline_globals_t</span> resources;
+    raxel_list(<span class="hljs-type">raxel_pipeline_pass_t</span>) passes;
+} <span class="hljs-type">raxel_pipeline_t</span>;</code></pre>
+<p>Pipelines are constituted of a list of passes, and the resources that are shared between the passes. These resources are:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_pipeline_globals</span> {</span>
+    <span class="hljs-type">raxel_allocator_t</span> allocator;
+    VkInstance instance;
+    VkPhysicalDevice device_physical;
+    VkDevice device;
+    VkQueue queue_graphics;
+    VkQueue queue_compute;
+    <span class="hljs-type">uint32_t</span> index_graphics_queue_family;
+    <span class="hljs-type">uint32_t</span> index_compute_queue_family;
+    <span class="hljs-type">raxel_surface_t</span> *surface;
+    VkCommandPool cmd_pool_graphics;
+    VkCommandPool cmd_pool_compute;
+    <span class="hljs-type">raxel_pipeline_swapchain_t</span> swapchain;
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
+    VkDescriptorPool descriptor_pool;
+    <span class="hljs-type">raxel_pipeline_targets_t</span> targets;
+} <span class="hljs-type">raxel_pipeline_globals_t</span>;</code></pre>
+<p>This is the most volatile part of the pipeline -- the design of this structure frequently. During development, resources were added and removed from this structure as needed.</p>
+<p>The most notable part of the this global resources structure is the <code>raxel_pipeline_targets_t</code> structure, which is used to store the targets that are being written to by the compute passes. This structure is defined as:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_pipeline_target</span> {</span>
+    <span class="hljs-type">raxel_pipeline_target_type_t</span> type;
+    VkImage image;
+    VkDeviceMemory memory;
+    VkImageView view;
+} <span class="hljs-type">raxel_pipeline_target_t</span>;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_pipeline_targets</span> {</span>
+    <span class="hljs-comment">// Internal targets stored as an array indexed by raxel_pipeline_target_type_t.</span>
+    <span class="hljs-type">raxel_pipeline_target_t</span> internal[RAXEL_PIPELINE_TARGET_COUNT];
+    <span class="hljs-comment">// Which target (by index) should be used for presentation/debugging.</span>
+    <span class="hljs-type">raxel_pipeline_target_type_t</span> debug_target;
+} <span class="hljs-type">raxel_pipeline_targets_t</span>;</code></pre>
+<p>The <code>raxel_pipeline_target_t</code> structure was extremely nice to work with, as it allowed for the implementation of the compute passes to be very simple. Throughout develpment, parts of this structure were added and removed as needed, but the core structure remained the same.</p>
+<p>The <code>raxel_pipeline_pass_t</code> structure is used to define a single pass in the pipeline. This structure is defined as:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_pipeline_pass</span> {</span>
+    <span class="hljs-type">raxel_string_t</span> name;
+    <span class="hljs-type">raxel_pipeline_pass_resources_t</span> resources;
+    <span class="hljs-type">raxel_allocator_t</span> allocator;
+    <span class="hljs-type">void</span> *pass_data;
+    <span class="hljs-type">void</span> (*initialize)(<span class="hljs-keyword">struct</span> raxel_pipeline_pass *pass, <span class="hljs-type">raxel_pipeline_globals_t</span> *globals);
+    <span class="hljs-type">void</span> (*on_begin)(<span class="hljs-keyword">struct</span> raxel_pipeline_pass *pass, <span class="hljs-type">raxel_pipeline_globals_t</span> *globals);
+    <span class="hljs-type">void</span> (*on_end)(<span class="hljs-keyword">struct</span> raxel_pipeline_pass *pass, <span class="hljs-type">raxel_pipeline_globals_t</span> *globals);
+} <span class="hljs-type">raxel_pipeline_pass_t</span>;</code></pre>
+<p>The <code>raxel_pipeline_pass_t</code> structure is used to define a single pass in the pipeline. This structure is used to define the name of the pass, the resources that are used by the pass, the allocator that is used by the pass, the pass data, and the functions that are used to initialize, begin, and end the pass. This structure is used to define the interface for the passes, and is used to define the functions that are used to initialize, begin, and end the passes.</p>
+<p>Resources for the pass are allocated by the pipeline, and given to the pass. This is meant to provide commonly used, but isolated resources to the pass. Currently, the only resource within <code>raxel_pipeline_pass_resources_t</code> is the <code>VkCommandBuffer</code> that is used to record the commands for the pass.</p>
+<p>The most essential part of the pass structure was the <code>void *pass_data</code>. Having this pointer allowed for the user to store any data that they needed for the pass. In a way, combined with the <code>on_begin</code> and <code>on_end</code> functions, a slight amount of <code>OOP</code> and <code>polymorphism</code> was achieved. The user could define their own pass data, and define their own <code>on_begin</code> and <code>on_end</code>. This is used heavily in the implementation of the passes.</p>
+<p>Forexample, <code>raxel_compute_pass_context_t</code> structure is used to define the context for the compute pass. This structure is defined as:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_compute_pass_context</span> {</span>
+    <span class="hljs-type">raxel_compute_shader_t</span> *compute_shader;
+    <span class="hljs-type">uint32_t</span> dispatch_x;
+    <span class="hljs-type">uint32_t</span> dispatch_y;
+    <span class="hljs-type">uint32_t</span> dispatch_z;
+    <span class="hljs-comment">// Which internal target to use for blitting the compute result.</span>
+    <span class="hljs-type">int8_t</span> targets[RAXEL_PIPELINE_TARGET_COUNT];
+    VkImage output_image;
+    VkDescriptorImageInfo *image_infos;
+    <span class="hljs-type">raxel_size_t</span> num_image_infos;
+    <span class="hljs-type">void</span> (*on_dispatch_finished)(<span class="hljs-keyword">struct</span> raxel_compute_pass_context *context, <span class="hljs-type">raxel_pipeline_globals_t</span> *globals);
+} <span class="hljs-type">raxel_compute_pass_context_t</span>;</code></pre>
+<p>Without the <code>void *pass_data</code> pointer, this would cause unecessary bloating of the <code>raxel_pipeline_pass_resources_t</code> structure, which would make the resources harder to manage. Not all passes need the same individual resources, hence why the <code>void *pass_data</code> pointer was so essential.</p>
+<p>These structures made a lot of code very declarative. For example, this is what it means to "update" the pipeline:</p>
+<pre><code class="hljs c language-c"><span class="hljs-type">void</span> <span class="hljs-title function_">raxel_pipeline_update</span><span class="hljs-params">(<span class="hljs-type">raxel_pipeline_t</span> *pipeline)</span> {
+    <span class="hljs-keyword">if</span> (raxel_surface_update(pipeline-&gt;resources.surface) != <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">return</span>;
+    }
+    <span class="hljs-type">raxel_size_t</span> num_passes = raxel_list_size(pipeline-&gt;passes);
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">size_t</span> i = <span class="hljs-number">0</span>; i &lt; num_passes; i++) {
+        <span class="hljs-type">raxel_pipeline_pass_t</span> *pass = &amp;pipeline-&gt;passes[i];
+        <span class="hljs-keyword">if</span> (pass-&gt;on_begin) {
+            pass-&gt;on_begin(pass, &amp;pipeline-&gt;resources);
+        }
+        <span class="hljs-keyword">if</span> (pass-&gt;on_end) {
+            pass-&gt;on_end(pass, &amp;pipeline-&gt;resources);
+        }
+    }
+
+    raxel_pipeline_present(pipeline);
+}</code></pre>
+<p>At the same time however, usage of the function pointers, void pointers, hides a lot of complexity from the user, and made the executable harder to debug with <code>gdb</code>. However, the interface for actually using the pipeline became very simple, which was one of the main goals of the engine.</p>
+<h3 id="compute-shader-interface">Compute Shader Interface</h3>
+<p>The compute shader abstraction was heavily inspired by Unity's compute shader interface.</p>
+<p>With Unity, you can use compute shaders like this:</p>
+<pre><code class="hljs cs language-cs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">Example</span> : <span class="hljs-title">MonoBehaviour</span> {
+    <span class="hljs-keyword">public</span> ComputeShader computeShader;
+    <span class="hljs-keyword">public</span> RenderTexture result;
+
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Start</span>()</span> {
+        result = <span class="hljs-keyword">new</span> RenderTexture(<span class="hljs-number">256</span>, <span class="hljs-number">256</span>, <span class="hljs-number">0</span>);
+        result.enableRandomWrite = <span class="hljs-literal">true</span>;
+        result.Create();
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Update</span>()</span> {
+        computeShader.SetTexture(<span class="hljs-number">0</span>, <span class="hljs-string">"Result"</span>, result);
+        computeShader.Dispatch(<span class="hljs-number">0</span>, <span class="hljs-number">256</span> / <span class="hljs-number">8</span>, <span class="hljs-number">256</span> / <span class="hljs-number">8</span>, <span class="hljs-number">1</span>);
+    }
+}</code></pre>
+<p>Because of the reliance on compute shaders in the engine, it was important to have an easily intuive interface for compute shaders. The interface for compute shaders in <code>raxel</code> is as follows:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_compute_shader</span> {</span>
+    VkPipeline pipeline;
+    VkPipelineLayout pipeline_layout;
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSet descriptor_set; <span class="hljs-comment">// Bound to a storage image (set=0, binding=0)</span>
+    <span class="hljs-type">raxel_pc_buffer_t</span> *pc_buffer;
+    <span class="hljs-type">raxel_sb_buffer_t</span> *sb_buffer;
+    <span class="hljs-type">raxel_allocator_t</span> *allocator;
+} <span class="hljs-type">raxel_compute_shader_t</span>;
+
+<span class="hljs-comment">/**
+ * Create a compute shader from a SPIR-V binary.
+ * Uses the pipeline’s device.
+ *
+ * @param pipeline Pointer to the pipeline.
+ * @param shader_path File path to the SPIR-V compute shader.
+ * @return Pointer to a newly created compute shader.
+ */</span>
+<span class="hljs-type">raxel_compute_shader_t</span> *<span class="hljs-title function_">raxel_compute_shader_create</span><span class="hljs-params">(<span class="hljs-type">raxel_pipeline_t</span> *pipeline, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *shader_path, <span class="hljs-type">raxel_pc_buffer_desc_t</span> *desc)</span>;
+
+<span class="hljs-comment">/**
+ * Destroy a compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param pipeline Pointer to the pipeline.
+ */</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">raxel_compute_shader_destroy</span><span class="hljs-params">(<span class="hljs-type">raxel_compute_shader_t</span> *shader, <span class="hljs-type">raxel_pipeline_t</span> *pipeline)</span>;
+
+<span class="hljs-comment">/**
+ * Create a push–constant buffer descriptor for a compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param desc Descriptor for the push–constant buffer.
+ */</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">raxel_compute_shader_set_pc</span><span class="hljs-params">(<span class="hljs-type">raxel_compute_shader_t</span> *shader, <span class="hljs-type">raxel_pc_buffer_desc_t</span> *desc)</span>;
+
+
+<span class="hljs-comment">/**
+ * @brief Passes the push-constant buffer to the compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param cmd_buffer The command buffer to record the push-constant update.
+ */</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">raxel_compute_shader_push_pc</span><span class="hljs-params">(<span class="hljs-type">raxel_compute_shader_t</span> *shader, VkCommandBuffer cmd_buffer)</span>;
+
+
+<span class="hljs-comment">/**
+ * @brief Passes the storage buffer to the compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param desc Descriptor for the storage buffer.
+ */</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">raxel_compute_shader_set_sb</span><span class="hljs-params">(<span class="hljs-type">raxel_compute_shader_t</span> *shader, <span class="hljs-type">raxel_pipeline_t</span> *pipeline, <span class="hljs-type">raxel_sb_buffer_desc_t</span> *desc)</span>;</code></pre>
+<p>Essentially, compute shaders can be created from SPIR-V binaries (in the same way that Unity can create compute shaders from <code>.compute</code> files), and can be passed data via push constants and storage buffers (in a similar way you can set data in Unity's compute shaders).</p>
+<p><code>raxel_sb_buffer_t</code> and <code>raxel_pc_buffer_t</code> are thin wrappers around a <code>void *</code> pointer. Using these structures, you can query fields by name, and set them by name, which you see in the <a href="#demonstration">demonstration</a> code. These buffers are fixe sized, and also handle attaching to the pipeline's descriptor set, to actually pass the data to the compute shader.</p>
+<h2 id="voxel-renderer">Voxel Renderer</h2>
+<p>Sitting directly on top of the core renderer is the voxel renderer. The voxel renderer is used to provide a higher level abstraction for rendering voxels, and implement important features like the BVH acceleration structure, and the voxel data structure. It also handles the memory management, and chunking of the voxel data.</p>
+<p>The voxel renderer uses <strong>raymarching</strong> to render the voxels. Raymarching is a technique used to render 3D scenes, where rays are cast from the camera, and the scene is rendered by marching along the ray, and sampling the scene at each point. This is a simple, but powerful technique, and is used in many modern rendering engines.</p>
+<p>In a voxel world, the scene is simply a 3D grid of voxels. This is unlike traditional rendering, where the scene is a collection of meshes. Whereas meshes appoximate the surface of the scene, voxels represent the entire volume of the scene. However, because we are not using meshes, we cannot use traditional rasterization techniques to render the scene. Instead, we use raymarching.</p>
+<p>This is perfectly suited for the abstractions created by <code>raxel</code>'s core rendering system and abstractions, which are based around compute shaders. Because voxel rendering doesn't have any meshes to begin with, and neither does the core renderer, the voxel renderer is a perfect fit for the core renderer.</p>
+<h3 id="raymarching-at-a-glance">Raymarching at a Glance</h3>
+<p>Raymarching is a very intuive technique, moreso than traditional rasterization. With raymarching, we effectively simulate the path of a ray of light through the scene, and sample the scene at each point along the ray.</p>
+<p>To simulate the path of a ray of light, we move in discrete steps, "marching" along the ray. At each step, we sample the scene, and determine if the ray has hit an object. If the ray has hit an object, we can determine the color of the object, and the ray is done. If the ray has not hit an object, we continue to march along the ray. You can extend the technique to to further bouncing of light rays, to achieve effects like shadows, reflections, and refractions.</p>
+<p>Although simple in theory, there are a few things to consider when implementing raymarching:</p>
+<ul>
+<li>What is the step size of the ray?</li>
+<li>How do we determine if the ray has hit an object?</li>
+</ul>
+<p>With voxels (at least the way they are implemented in <code>raxel</code>), there are a few things to consider:</p>
+<ul>
+<li>If the ray has hit a voxel, how do we determine the normal of the voxel?</li>
+<li>How do we determine the color of the voxel?</li>
+</ul>
+<p>These become unknowns with <code>raxel</code>'s implementations of voxels because of the way that voxels, are stored in memory (covered in the <a href="#voxel-renderer">voxel renderer</a> section).</p>
+<p>Having too large of a step size can cause the ray to miss objects, and having too small of a step size can cause the ray to take too long to render. As this is a game engine, we want to render the scene as quickly as possible, but provide reliable, consistent results.</p>
+<h3 id="voxels-in-memory">Voxels in Memory</h3>
+<h4 id="individual-voxels">Individual Voxels</h4>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-type">uint32_t</span> <span class="hljs-type">raxel_material_handle_t</span>;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_voxel</span> {</span>
+    <span class="hljs-type">raxel_material_handle_t</span> material;
+} <span class="hljs-type">raxel_voxel_t</span>;</code></pre>
+<p>One of most important parts of a voxel renderer is how voxels are stored in memory. In <code>raxel</code>, an individual voxel is stored as a <code>uint32_t</code>, which is an index into a "palette" of voxel materials. Originally this was a <code>uint8_t</code>, but GLSL doesn't support 8-bit integers without using extensions.</p>
+<p>Voxel materials, at the moment, are just the albedo color of the voxel, a vec3.</p>
+<p>This design allows for better usage of memory, and minimizes the size of the voxel data being sent to the GPU, given that we don't have a unique material for each voxel. Additionally, it allows for easier extension of the voxel materials, as the voxel materials can be expanded to include more information, like normals, roughness, and metalness, without the overhead of storing this information for every voxel.</p>
+<p>Additionally, using this palletized system matches with the design of other voxel engines, which have "types" of voxels. It is easier to reason about to place a "dirt voxel" or a "grass voxel" than it is to place a voxel with a specific color. This design allows for the user to define their own voxel materials, and to use them in the voxel world. A side-effect this, is changing the attributes of a voxel material, like the color, propogates to all voxels of that material.</p>
+<p>Unfortunately, the design does not allow for voxels to have different attributes within the same material. For some use-cases, being able to do so would be useful, but I have yet to find a reasonable way to implement this.</p>
+<h4 id="voxel-chunks--worlds">Voxel Chunks &amp; Worlds</h4>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_voxel_chunk_meta</span> {</span>
+    <span class="hljs-comment">// defines the bottom-left corner of the chunk</span>
+    <span class="hljs-type">raxel_coord_t</span> x;
+    <span class="hljs-type">raxel_coord_t</span> y;
+    <span class="hljs-type">raxel_coord_t</span> z;
+} <span class="hljs-type">raxel_voxel_chunk_meta_t</span>;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_voxel_chunk</span> {</span>
+    <span class="hljs-comment">// all of these voxel's coordinates are relative to the chunk's bottom-left corner</span>
+    <span class="hljs-type">raxel_voxel_t</span> voxels[RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE];
+} <span class="hljs-type">raxel_voxel_chunk_t</span>;</code></pre>
+<p>Voxels are stored in chunks, which is a flat array of voxels. Chunks are 32x32x32 sized, which is slightly arbitrary. Using larger chunks means having less metadata for the chunks (thus less memory overhead), and needing to unload/load less chunks. Using smaller chunks means having more fine-grained control over the voxel data, and being able to load/unload chunks more quickly, as well as minimizing the amount of unnecessary voxel data that is loaded (the portion of loaded chunks that are visible can be higher).</p>
+<p>Notice how there is no per-voxel metadata, beyond the material. This is because the most important data on a per-voxel basis, like the position of the voxel and it's normal can be derived implicitly from the position of the voxel in the chunk, and it's neighbors. We trade off space for computation, which is a good tradeoff in this case, as the computation is simple, and the space saved is significant, especially when we are dealing with large voxel worlds.</p>
+<p>Given a local coordinate <code>(x, y, z)</code> in a chunk, the index of the voxel in the chunk is <code>x + y * RAXEL_VOXEL_CHUNK_SIZE + z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE</code>. This is a simple way to convert a 3D coordinate into a 1D index.</p>
+<p>Chunk and metadata are stored in seperate lists, in a structure called <code>raxel_voxel_world_t</code>:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_voxel_world</span> {</span>
+    raxel_list(<span class="hljs-type">raxel_voxel_chunk_meta_t</span>) chunk_meta;  <span class="hljs-comment">// index of chunk in chunks</span>
+    raxel_list(<span class="hljs-type">raxel_voxel_chunk_t</span>) chunks;           <span class="hljs-comment">// the first __num_loaded_chunks are loaded</span>
+    <span class="hljs-type">raxel_size_t</span> __num_loaded_chunks;                 <span class="hljs-comment">// between 0 and RAXEL_MAX_LOADED_CHUNKS</span>
+    <span class="hljs-type">raxel_allocator_t</span> *allocator;
+    raxel_list(<span class="hljs-type">raxel_voxel_material_t</span>) materials;
+    <span class="hljs-comment">// book-keeping for updating the voxel world</span>
+    <span class="hljs-type">raxel_voxel_world_update_options_t</span> prev_update_options;
+} <span class="hljs-type">raxel_voxel_world_t</span>;</code></pre>
+<p>Only chunks that have a solid voxel are stored in memory. This makes the <code>raxel_voxel_world_t</code> structure sparse and more space efficent, but makes querying the voxel data more complex. Because the world doesn't necessarily describe a rectangular prism of chunks (in the same way that the individual chunks do), we can't use direct indexing to get the chunk data. Instead, we have to iterate over the chunk metadata, and find the chunk that we are looking for.</p>
+<p>This is less of a problem on the CPU (because we don't iterate over chunks very often), but on the GPU, this presents a larger problem. This gets into the process of rendering voxels, but this mandatory iteration over the chunk metadata is a bottleneck in the rendering process.</p>
+<p>Only the first <code>__num_loaded_chunks</code> are actually sent to the GPU. When chunks are loaded/unloaded in the world, they aren't actually removed from the <code>chunks</code> list (we would need a method of serializing the chunk data to disk, and loading it back into memory). Instead, we just keep track of how many chunks are loaded, and only send the first <code>__num_loaded_chunks</code> to the GPU. Sending only the necessary chunks to the GPU is important, as we don't want to send unnecessary data to the GPU, because we don't want to spend exessive time copying data to the GPU, and filling up the GPU's memory with unnecessary data.</p>
+<h3 id="chunk-determination-and-loadingunloading">Chunk Determination and Loading/Unloading</h3>
+<p>Whenever the camera moves a significant amount (e.g, more than half the size of a chunk), we need to load/unload chunks.</p>
+<p>To load and unload chunks effectively means determining which chunks are in the first <code>__num_loaded_chunks</code> chunks, and which chunks are not.</p>
+<p>We can very poorly do this by iteraing over all the chunks, and checking if the chunk is within the a certain distance of the camera. This is a naive way to do this, but it is fast for small scenes. Once we find the maximum amount of loaded chunks that we can have, we are done.</p>
+<p>The algorithm is as follows:</p>
+<pre><code class="hljs python language-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">update_chunks</span>(<span class="hljs-params">camera_position, voxel_world</span>):
+    <span class="hljs-comment"># find the chunk that the camera is in</span>
+    camera_chunk = get_chunk_from_world_position(camera_position)
+
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> need_to_update_chunks(camera_chunk, voxel_world.prev_update_options):
+        <span class="hljs-keyword">return</span>
+
+    <span class="hljs-comment"># find the chunks that are within a certain distance of the camera</span>
+    num_loaded_chunks = <span class="hljs-number">0</span>
+    <span class="hljs-keyword">for</span> i, chunk_meta <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(voxel_world.chunk_meta):
+        chunk_position = get_chunk_position(chunk_meta)
+        distance = get_distance(camera_chunk, chunk_position)
+        <span class="hljs-keyword">if</span> distance &lt; MAX_CHUNK_DISTANCE:
+            swap_chunks(voxel_world, i, num_loaded_chunks)
+            num_loaded_chunks += <span class="hljs-number">1</span>
+        <span class="hljs-keyword">if</span> num_loaded_chunks &gt;= RAXEL_MAX_LOADED_CHUNKS:
+            <span class="hljs-keyword">break</span>
+
+    voxel_world.__num_loaded_chunks = num_loaded_chunks
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">swap_chunks</span>(<span class="hljs-params">voxel_world, i, j</span>):
+    <span class="hljs-comment"># swap the chunk metadata</span>
+    voxel_world.chunk_meta[i], voxel_world.chunk_meta[j] = voxel_world.chunk_meta[j], voxel_world.chunk_meta[i]
+    <span class="hljs-comment"># swap the chunk data</span>
+    voxel_world.chunks[i], voxel_world.chunks[j] = voxel_world.chunks[j], voxel_world.chunks[i]</code></pre>
+<p>There are a lot of problems with the results of this algorithm. The most notable is that you don't always get the same chunks loaded, even if the camera is in the same position. The order that the chunks are in the <code>chunk_meta</code> list is arbitrary, but it has a large effect on the chunks that are loaded. There is a non-zero chance that the chunks that we "load" will be poorly chosen (like behind the camera), and the chunks that we "unload" will be poorly chosen (like in front of the camera, but far away).</p>
+<p>You can fix this by taking into account the camera's view frustum, and only loading chunks that are within the camera's view frustum. This is a more complex algorithm, but it is more reliable, and is more likely to load the correct chunks. This reduces the chance that a "poor" chunk is loaded, but doesn't mean that only the "best" chunks are loaded. The best chunks to be loaded are the chunks that are in the camera's view frustum, and are the closest to the camera.</p>
+<p>To fix that, we can keep track of which chunks are within the view frustum, sort them by distance, then load at most the first RAXEL_MAX_LOADED_CHUNKS chunks. This is a more complex algorithm, but it is more reliable, and is more likely to load the correct chunks.</p>
+<p>With large scenes, this algorithm is not suitable, and would likely result in stuttering -- whenver the camera moves far enough, this slow algorithm would be run, and the scene would freeze while the chunks are loaded. This is not acceptable for a game engine, and is a problem that needs to be solved.</p>
+<p>Fixing this would likely involve using a more complex data structure, but for now, the simplest algorithm (what is detailed in the pseudocode) is used - there are signifcantly harder, but more important problems to solve in the engine.</p>
+<h3 id="sending-to-the-gpu">Sending to the GPU</h3>
+<p>Once the voxel world loads/unloads chunks, the voxel world is sent to the GPU via a storage buffer. <code>raxel</code> transforms the voxel world into a flat array of voxels, and sends this to the GPU. This is done by copying the voxel into a flat, fixed-size structure, and copying this structure to the GPU via a storage buffer.</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> __<span class="hljs-title">raxel_voxel_world_gpu</span> {</span>
+    <span class="hljs-type">raxel_voxel_chunk_meta_t</span> chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    <span class="hljs-type">raxel_voxel_chunk_t</span> chunks[RAXEL_MAX_LOADED_CHUNKS];
+    <span class="hljs-type">uint32_t</span> num_loaded_chunks;
+} <span class="hljs-type">__raxel_voxel_world_gpu_t</span>;</code></pre>
+<h2 id="naive-voxel-rendering">Naive Voxel Rendering</h2>
+<p>Using these structures, we can naively render voxels by using a fixed step size, and checking every voxel along the ray. This is a simple, but slow way to render voxels, and is not suitable for large scenes. This is the most basic way to render voxels. Here is the shader for doing so:</p>
+<pre><code class="hljs glsl language-glsl"><span class="hljs-meta">#version 450</span>
+
+<span class="hljs-comment">// Compute workgroup size.</span>
+<span class="hljs-keyword">layout</span>(<span class="hljs-keyword">local_size_x</span> = <span class="hljs-number">16</span>, <span class="hljs-keyword">local_size_y</span> = <span class="hljs-number">16</span>) <span class="hljs-keyword">in</span>;
+
+<span class="hljs-comment">// Output storage image (set = 0, binding = 0)</span>
+<span class="hljs-keyword">layout</span>(<span class="hljs-keyword">rgba32f</span>, set = <span class="hljs-number">0</span>, <span class="hljs-keyword">binding</span> = <span class="hljs-number">0</span>) <span class="hljs-keyword">uniform</span> <span class="hljs-type">image2D</span> outImage;
+
+<span class="hljs-meta">#define EPSILON 0.01</span>
+<span class="hljs-meta">#define MAX_DISTANCE 1000.0</span>
+<span class="hljs-meta">#define MAX_STEPS 1000</span>
+<span class="hljs-meta">#define RAXEL_VOXEL_CHUNK_SIZE 32</span>
+<span class="hljs-meta">#define RAXEL_MAX_LOADED_CHUNKS 32</span>
+<span class="hljs-meta">#define MAX_RAYS 8</span>
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// A chunk’s metadata stores its integer coordinates in chunk space and a state value.</span>
+<span class="hljs-comment">//</span>
+struct VoxelChunkMeta {
+    <span class="hljs-type">int</span> x;
+    <span class="hljs-type">int</span> y;
+    <span class="hljs-type">int</span> z;
+    <span class="hljs-type">int</span> state;
+};
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Each chunk now stores its voxels as a flat array.</span>
+<span class="hljs-comment">// The total number of voxels per chunk is RAXEL_VOXEL_CHUNK_SIZE³.</span>
+<span class="hljs-comment">//</span>
+struct VoxelChunk {
+    <span class="hljs-type">uint</span> voxels[RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE];
+};
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// The GPUVoxelWorld holds up to RAXEL_MAX_LOADED_CHUNKS chunks and their metadata.</span>
+<span class="hljs-comment">//</span>
+struct GPUVoxelWorld {
+    VoxelChunkMeta chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    VoxelChunk chunks[RAXEL_MAX_LOADED_CHUNKS];
+    <span class="hljs-type">uint</span> num_loaded_chunks;
+};
+
+<span class="hljs-comment">// Storage buffer (set = 0, binding = 1) holding the voxel world.</span>
+<span class="hljs-keyword">layout</span>(<span class="hljs-keyword">std430</span>, set = <span class="hljs-number">0</span>, <span class="hljs-keyword">binding</span> = <span class="hljs-number">1</span>) <span class="hljs-keyword">buffer</span> VoxelWorldBuffer {
+    GPUVoxelWorld voxel_world;
+};
+
+<span class="hljs-comment">// Push constants: view matrix, fov (radians), rays_per_pixel (unused)</span>
+<span class="hljs-keyword">layout</span>(push_constant) <span class="hljs-keyword">uniform</span> PC {
+    <span class="hljs-type">mat4</span> view;
+    <span class="hljs-type">float</span> fov;
+    <span class="hljs-type">int</span> rays_per_pixel;
+} pc;
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// A structure to hold the result of raymarching.</span>
+<span class="hljs-comment">//</span>
+struct RaymarchResult {
+    <span class="hljs-type">vec3</span> pos;
+    <span class="hljs-type">vec3</span> normal;
+    <span class="hljs-type">float</span> tHit;
+    <span class="hljs-type">bool</span> hit;
+};
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Helper function: compute a flat index into the voxel array for a given local coordinate.</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-type">int</span> flatIndex(<span class="hljs-type">int</span> lx, <span class="hljs-type">int</span> ly, <span class="hljs-type">int</span> lz) {
+    <span class="hljs-keyword">return</span> lx + ly * RAXEL_VOXEL_CHUNK_SIZE + lz * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+}
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Given a world-space voxel coordinate, look through the loaded chunks to find the voxel value.</span>
+<span class="hljs-comment">// This mimics the CPU function that computes chunk coordinates and local coordinates.</span>
+<span class="hljs-comment">// Voxels with value 0 are treated as air; any non-zero voxel is solid.</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-type">uint</span> getVoxelAtWorldPos(<span class="hljs-type">ivec3</span> worldPos) {
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; voxel_world.num_loaded_chunks; i++) {
+        VoxelChunkMeta meta = voxel_world.chunk_meta[i];
+        <span class="hljs-type">int</span> chunkOriginX = meta.x * RAXEL_VOXEL_CHUNK_SIZE;
+        <span class="hljs-type">int</span> chunkOriginY = meta.y * RAXEL_VOXEL_CHUNK_SIZE;
+        <span class="hljs-type">int</span> chunkOriginZ = meta.z * RAXEL_VOXEL_CHUNK_SIZE;
+        <span class="hljs-comment">// Check if the world coordinate lies within this chunk.</span>
+        <span class="hljs-keyword">if</span> (worldPos.x &gt;= chunkOriginX &amp;&amp; worldPos.x &lt; (chunkOriginX + RAXEL_VOXEL_CHUNK_SIZE) &amp;&amp;
+            worldPos.y &gt;= chunkOriginY &amp;&amp; worldPos.y &lt; (chunkOriginY + RAXEL_VOXEL_CHUNK_SIZE) &amp;&amp;
+            worldPos.z &gt;= chunkOriginZ &amp;&amp; worldPos.z &lt; (chunkOriginZ + RAXEL_VOXEL_CHUNK_SIZE)) {
+            <span class="hljs-comment">// Compute local voxel coordinates.</span>
+            <span class="hljs-type">int</span> localX = worldPos.x - chunkOriginX;
+            <span class="hljs-type">int</span> localY = worldPos.y - chunkOriginY;
+            <span class="hljs-type">int</span> localZ = worldPos.z - chunkOriginZ;
+            <span class="hljs-type">int</span> <span class="hljs-keyword">index</span> = flatIndex(localX, localY, localZ);
+            <span class="hljs-keyword">return</span> voxel_world.chunks[i].voxels[<span class="hljs-keyword">index</span>];
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>u;
+}
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Returns true if the voxel at the given world coordinate is solid (non-zero).</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-type">bool</span> isVoxelSolid(<span class="hljs-type">ivec3</span> worldPos) {
+    <span class="hljs-keyword">return</span> getVoxelAtWorldPos(worldPos) != <span class="hljs-number">0</span>u;
+}
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Returns 1.0 for solid and 0.0 for air. Used when estimating normals.</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-type">float</span> voxelValue(<span class="hljs-type">vec3</span> pos) {
+    <span class="hljs-type">ivec3</span> voxelPos = <span class="hljs-type">ivec3</span>(<span class="hljs-built_in">floor</span>(pos));
+    <span class="hljs-keyword">return</span> isVoxelSolid(voxelPos) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>;
+}
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Estimate a surface normal at a given point using central differences.</span>
+<span class="hljs-comment">// We sample the voxelValue offset by EPSILON along each axis.</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-type">vec3</span> estimateNormal(<span class="hljs-type">vec3</span> pos) {
+    <span class="hljs-type">float</span> dx = voxelValue(pos + <span class="hljs-type">vec3</span>(EPSILON, <span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>)) - voxelValue(pos - <span class="hljs-type">vec3</span>(EPSILON, <span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>));
+    <span class="hljs-type">float</span> dy = voxelValue(pos + <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, EPSILON, <span class="hljs-number">0.0</span>)) - voxelValue(pos - <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, EPSILON, <span class="hljs-number">0.0</span>));
+    <span class="hljs-type">float</span> dz = voxelValue(pos + <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>, EPSILON)) - voxelValue(pos - <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>, EPSILON));
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">normalize</span>(<span class="hljs-type">vec3</span>(dx, dy, dz));
+}
+
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// Raymarching function: starting from 'origin' along 'dir', step through space until a solid voxel is hit</span>
+<span class="hljs-comment">// or the maximum distance/steps is reached. On a hit, estimate the surface normal.</span>
+<span class="hljs-comment">//</span>
+RaymarchResult raymarch(<span class="hljs-type">vec3</span> origin, <span class="hljs-type">vec3</span> dir) {
+    RaymarchResult result;
+    result.tHit = <span class="hljs-number">0.0</span>;
+    result.hit = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; MAX_STEPS; i++) {
+        <span class="hljs-type">vec3</span> pos = origin + result.tHit * dir;
+        <span class="hljs-keyword">if</span> (isVoxelSolid(<span class="hljs-type">ivec3</span>(<span class="hljs-built_in">floor</span>(pos)))) {
+            result.pos = pos;
+            result.hit = <span class="hljs-literal">true</span>;
+            result.normal = estimateNormal(pos);
+            <span class="hljs-keyword">break</span>;
+        }
+        result.tHit += <span class="hljs-number">0.05</span>;
+        <span class="hljs-keyword">if</span> (result.tHit &gt; MAX_DISTANCE) {
+            <span class="hljs-keyword">break</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-type">void</span> main() {
+    <span class="hljs-type">ivec2</span> pixelCoord = <span class="hljs-type">ivec2</span>(<span class="hljs-built_in">gl_GlobalInvocationID</span>.xy);
+    <span class="hljs-type">ivec2</span> imageSizeVec = <span class="hljs-built_in">imageSize</span>(outImage);
+    <span class="hljs-type">vec4</span> color = <span class="hljs-type">vec4</span>(<span class="hljs-number">0.0</span>);
+    <span class="hljs-comment">// Map pixel coordinates to normalized device coordinates (range [-1, 1]).</span>
+    <span class="hljs-comment">// Compute the inverse of the view matrix.</span>
+    <span class="hljs-type">mat4</span> invView = <span class="hljs-built_in">inverse</span>(pc.view);
+
+    <span class="hljs-comment">// Map pixel coordinates to normalized device coordinates (range [-1, 1]).</span>
+    <span class="hljs-type">vec2</span> uv = (<span class="hljs-type">vec2</span>(pixelCoord) / <span class="hljs-type">vec2</span>(imageSizeVec)) * <span class="hljs-number">2.0</span> - <span class="hljs-number">1.0</span>;
+    <span class="hljs-type">float</span> aspect = <span class="hljs-type">float</span>(imageSizeVec.x) / <span class="hljs-type">float</span>(imageSizeVec.y);
+    uv.x *= aspect;
+    <span class="hljs-type">float</span> tanFov = <span class="hljs-built_in">tan</span>(pc.fov * <span class="hljs-number">0.5</span>);
+
+    <span class="hljs-comment">// Use the inverse view matrix to compute ray origin and direction.</span>
+    <span class="hljs-type">vec3</span> rayOrigin = (invView * <span class="hljs-type">vec4</span>(<span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>, <span class="hljs-number">1.0</span>)).xyz;
+    <span class="hljs-type">vec3</span> rayDir = <span class="hljs-built_in">normalize</span>((invView * <span class="hljs-type">vec4</span>(uv.x * tanFov, uv.y * tanFov, <span class="hljs-number">-1.0</span>, <span class="hljs-number">0.0</span>)).xyz);
+    <span class="hljs-comment">// flip the ray direction, so Y is up</span>
+    rayDir.y = -rayDir.y;
+
+    RaymarchResult result = raymarch(rayOrigin, rayDir);
+    <span class="hljs-comment">// Normal shaded rendering using simple diffuse lighting.</span>
+    <span class="hljs-keyword">if</span> (result.hit) {
+        <span class="hljs-type">vec3</span> lightDir = <span class="hljs-built_in">normalize</span>(<span class="hljs-type">vec3</span>(<span class="hljs-number">1.0</span>, <span class="hljs-number">1.0</span>, <span class="hljs-number">-1.0</span>));
+        <span class="hljs-type">float</span> diff = <span class="hljs-built_in">max</span>(<span class="hljs-built_in">dot</span>(result.normal, lightDir), <span class="hljs-number">0.0</span>);
+        color = <span class="hljs-type">vec4</span>(<span class="hljs-type">vec3</span>(diff), <span class="hljs-number">1.0</span>);
+    } <span class="hljs-keyword">else</span> {
+        color = <span class="hljs-type">vec4</span>(<span class="hljs-number">0.0</span>);
+    }
+
+  <span class="hljs-built_in">imageStore</span>(outImage, pixelCoord, color);
+}</code></pre>
+<p>Right now, the shader is concerned about materials, and entirely focused on determining if a ray has hit a voxel or not. Here are the results of rendering a simple scene with this shader. At the origin, a sphere of voxels with a radius of 50 was placed:</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/naive_voxel_rendering.png" alt="Naive Voxel Rendering"></p>
+<p>The results of doing this was not great. There are a lot of artificats, and performance was at ~3 FPS. Neither the performance nor the quality of the rendering was acceptable. The colors in the scene was for debugging purposes, and shows the ray direction.</p>
+<p>In order to take this screenshot, I had to increase my step size to <code>0.1</code>, and my maximum steps to <code>10000</code>. However, that meant for every pixel that didn't hit a voxel, the ray would take <code>10000</code> steps, meaning looking at the sky would take a long time to render.</p>
+<p>Being closer to the sphere, the rendering was better, but the performance was still not acceptable, and you couldn't really see the sphere.</p>
+<p>Still, that was better results than a few other attempts I had at rendering voxels.</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/stuck.png" alt="Stuck in the Voxel"></p>
+<p>This was my first attempt at rendering voxels. For some reason, the scene was stuck behind a single voxel. It turns out that the data I was sending the GPU, but the shader was mostly correct. I still don't know why this happened, but it was a good lesson in debugging.</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/view_matrix_problems.png" alt="Distance Issues"></p>
+<p>This was another attempt at rendering voxels. I was extremely confused as to why the scene was rendering like this. Turns out, the distance that rays were allowed to travel was too short, and the step size was too large. This resulted in only a tiny portion of the scene being rendered, and the rest of the scene being black.</p>
+<h2 id="accelerated-voxel-rendering-with-bvh">Accelerated Voxel Rendering with BVH</h2>
+<p>When rendering a scene, checking every single voxel for intersections with a ray is too slow, especially as the scene grows in size. To speed up this process, raxel uses an acceleration structure called a Bounding Volume Hierarchy (BVH).</p>
+<p>The BVH is a tree structure that divides the scene into smaller and smaller bounding volumes. Each node in the tree represents a bounding volume that contains all of the voxels in its children. The tree is built by recursively splitting the scene into two halves along one axis, and then splitting each half into two halves along another axis, and so on, until each leaf node contains a small number of voxels.</p>
+<p>By using this technique, we are able to quickly determine which voxels are potentially intersected by a ray, and only check those voxels for intersections. This greatly reduces the number of voxel-ray intersections that need to be checked, and speeds up the rendering process.</p>
+<p>This means that we can render larger scenes with more voxels, and still get good performance. The BVH is built on the CPU, and then uploaded to the GPU, where it is used to accelerate the rendering process.</p>
+<p>Accelerating our voxel rendering with a BVH involves three main steps:</p>
+<ol>
+<li>Building the BVH from the voxel data, which is easiest using a non-flat tree structure.</li>
+<li>Flattening the BVH into a linear array, which is then uploaded to the GPU.</li>
+<li>Traversing the BVH on the GPU to determine which voxels are intersected by a ray.</li>
+</ol>
+<h3 id="constructing-the-bvh">Constructing the BVH</h3>
+<p>In raxel, constructing the BVH is performed on the CPU using the voxel data from the loaded chunks. The primary goal is to reduce the number of voxel-ray intersection tests by quickly eliminating large regions of empty space. Below is a detailed explanation of how this design was derived and implemented.</p>
+<h4 id="1-calculating-bounding-volumes-for-voxels">1. Calculating Bounding Volumes for Voxels</h4>
+<p>Every solid voxel in the loaded chunks is represented by a simple axis-aligned bounding box (AABB). Because voxels are uniformly sized cubes, each AABB is defined by:</p>
+<ul>
+<li><strong>Minimum Point:</strong> The voxel’s world-space position.</li>
+<li><strong>Maximum Point:</strong> The voxel’s position plus one unit along each axis.</li>
+</ul>
+<p>This straightforward representation provides all the spatial information needed for later intersection tests.</p>
+<h4 id="2-building-the-hierarchical-tree">2. Building the Hierarchical Tree</h4>
+<p>Once the AABBs are calculated, we construct a binary tree structure to organize them. This hierarchical structure allows us to discard large numbers of voxels quickly during rendering. The tree is built recursively using the following approach:</p>
+<ul>
+<li><strong>Recursive Splitting:</strong><br>
+For a given set of voxels, we compute the centroids of their AABBs and determine the overall bounds of these centroids. We then select the axis (X, Y, or Z) with the greatest extent as the splitting axis.<br>
+The voxel primitives are sorted along this axis and divided into two groups. This division continues recursively until one of the following conditions is met:<ul>
+<li>The number of primitives in a node is less than or equal to a specified threshold (max leaf size).</li>
+<li>Further splitting would exceed a pre-set maximum number of BVH nodes. We have a fixed-size buffer for the BVH, so we need to ensure that we don't exceed this size.</li></ul></li>
+</ul>
+<p>This does add a lot of complexity to the CPU-side of rendering, however, we build this structure infrequently enough (and its actually relatively fast, once we determine which chunks are worth loading), that the performance hit is acceptable.</p>
+<h4 id="3-flattening-the-bvh">3. Flattening the BVH</h4>
+<p>GPUs are not well-suited for traversing recursive data structures, so the BVH tree is “flattened” into a linear array that can be easily processed by the compute shader. In essence, we turn all of the pointers from our tree structure into offsets into a flat array, and provide identifiers for each node to facilitate traversal (i.e is this node a leaf or an interior node).</p>
+<p>The flattened BVH stores each node’s bounding box, child offsets (for interior nodes), and the number of primitives (for leaf nodes). This information is critical for the GPU’s stack-based traversal algorithm.</p>
+<h4 id="4-uploading-the-bvh-to-the-gpu">4. Uploading the BVH to the GPU</h4>
+<p>After flattening, the BVH is packaged together with the voxel chunk data into a structured storage buffer. This buffer is then uploaded to the GPU, where the compute shader uses it to accelerate raymarching. Whenever we update the voxel world, we need to rebuild the BVH, and re-upload it to the GPU.</p>
+<p>Here is the implementation of doing this:</p>
+<pre><code class="hljs c language-c"><span class="hljs-type">void</span> <span class="hljs-title function_">raxel_voxel_world_update</span><span class="hljs-params">(<span class="hljs-type">raxel_voxel_world_t</span> *world,
+                              <span class="hljs-type">raxel_voxel_world_update_options_t</span> *options,
+                              <span class="hljs-type">raxel_compute_shader_t</span> *compute_shader,
+                              <span class="hljs-type">raxel_pipeline_t</span> *pipeline)</span> {
+    <span class="hljs-type">raxel_coord_t</span> cam_chunk_x, cam_chunk_y, cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world,
+                                                   options-&gt;camera_position[<span class="hljs-number">0</span>],
+                                                   options-&gt;camera_position[<span class="hljs-number">1</span>],
+                                                   options-&gt;camera_position[<span class="hljs-number">2</span>],
+                                                   &amp;cam_chunk_x, &amp;cam_chunk_y, &amp;cam_chunk_z);
+
+    <span class="hljs-type">raxel_coord_t</span> prev_cam_chunk_x, prev_cam_chunk_y, prev_cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world,
+                                                   world-&gt;prev_update_options.camera_position[<span class="hljs-number">0</span>],
+                                                   world-&gt;prev_update_options.camera_position[<span class="hljs-number">1</span>],
+                                                   world-&gt;prev_update_options.camera_position[<span class="hljs-number">2</span>],
+                                                   &amp;prev_cam_chunk_x, &amp;prev_cam_chunk_y, &amp;prev_cam_chunk_z);
+
+    world-&gt;prev_update_options = *options;
+
+    <span class="hljs-keyword">if</span> (cam_chunk_x == prev_cam_chunk_x &amp;&amp;
+        cam_chunk_y == prev_cam_chunk_y &amp;&amp;
+        cam_chunk_z == prev_cam_chunk_z) {
+        <span class="hljs-keyword">return</span>;
+    }
+
+    <span class="hljs-type">raxel_size_t</span> num_chunks = raxel_list_size(world-&gt;chunk_meta);
+    <span class="hljs-type">raxel_size_t</span> num_loaded_chunks = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">raxel_size_t</span> i = <span class="hljs-number">0</span>; i &lt; num_chunks; i++) {
+        <span class="hljs-type">raxel_voxel_chunk_meta_t</span> *meta = &amp;world-&gt;chunk_meta[i];
+        <span class="hljs-type">raxel_coord_t</span> dx = meta-&gt;x - cam_chunk_x;
+        <span class="hljs-type">raxel_coord_t</span> dy = meta-&gt;y - cam_chunk_y;
+        <span class="hljs-type">raxel_coord_t</span> dz = meta-&gt;z - cam_chunk_z;
+        <span class="hljs-type">float</span> dist = sqrtf(dx * dx + dy * dy + dz * dz);
+        <span class="hljs-keyword">if</span> (dist &lt; options-&gt;view_distance) {
+            <span class="hljs-keyword">if</span> (num_loaded_chunks != i) {
+                __raxel_voxel_world_swap_chunks(world, num_loaded_chunks, i);
+            }
+            num_loaded_chunks++;
+        }
+        <span class="hljs-keyword">if</span> (num_loaded_chunks &gt;= RAXEL_MAX_LOADED_CHUNKS) {
+            <span class="hljs-keyword">break</span>;
+        }
+    }
+    world-&gt;__num_loaded_chunks = num_loaded_chunks;
+
+    <span class="hljs-comment">// --- Build the BVH from the currently loaded chunks ---</span>
+    <span class="hljs-type">int</span> max_leaf_size_bvh = MAX_LEAF_SIZE_BVH;
+    <span class="hljs-type">raxel_bvh_accel_t</span> *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size_bvh, world-&gt;allocator);
+
+    <span class="hljs-comment">// Update GPU world buffer with voxel data and BVH.</span>
+    <span class="hljs-type">__raxel_voxel_world_gpu_t</span> *gpu_world = compute_shader-&gt;sb_buffer-&gt;data;
+    gpu_world-&gt;num_loaded_chunks = world-&gt;__num_loaded_chunks;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">raxel_size_t</span> i = <span class="hljs-number">0</span>; i &lt; world-&gt;__num_loaded_chunks; i++) {
+        gpu_world-&gt;chunk_meta[i] = world-&gt;chunk_meta[i];
+        memccpy(&amp;gpu_world-&gt;chunks[i], &amp;world-&gt;chunks[i], <span class="hljs-number">1</span>, <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">raxel_voxel_chunk_t</span>));
+
+        <span class="hljs-comment">// print out the number of non-empty voxels in each chunk</span>
+        <span class="hljs-type">int</span> num_voxels = <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>; j &lt; RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+            <span class="hljs-keyword">if</span> (world-&gt;chunks[i].voxels[j].material != <span class="hljs-number">0</span>) {
+                num_voxels++;
+            }
+        }
+    }
+
+    <span class="hljs-keyword">if</span> (!bvh) {
+        RAXEL_CORE_LOG(<span class="hljs-string">"No primitives to build BVH!\n"</span>);
+        raxel_sb_buffer_update(compute_shader-&gt;sb_buffer, pipeline);
+        <span class="hljs-keyword">return</span>;
+    }
+    <span class="hljs-built_in">memcpy</span>(&amp;gpu_world-&gt;bvh, bvh, <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">raxel_bvh_accel_t</span>));
+    raxel_sb_buffer_update(compute_shader-&gt;sb_buffer, pipeline);
+    raxel_bvh_accel_destroy(bvh, world-&gt;allocator);
+}</code></pre>
+<p>The first portion is the implementation from the <a href="#chunk-determination-and-loadingunloading">loading and unloading chunks</a> section. The second portion is the implementation of building the BVH from the voxel world, and updating the GPU world buffer with the voxel data and BVH.</p>
+<p>This increases the amount of data that we need to send to the GPU, but the performance increase is worth it. The BVH is built on the CPU, and then uploaded to the GPU, where it is used to accelerate the rendering process.</p>
+<p>Here is the stucture we now send to the GPU:</p>
+<pre><code class="hljs c language-c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_linear_bvh_node_t</span> {</span>
+    <span class="hljs-type">raxel_bvh_bounds_t</span> bounds;
+    <span class="hljs-class"><span class="hljs-keyword">union</span> {</span>
+        <span class="hljs-type">int32_t</span> primitives_offset;    <span class="hljs-comment">// for leaf nodes</span>
+        <span class="hljs-type">int32_t</span> second_child_offset;  <span class="hljs-comment">// for interior nodes</span>
+    };
+    <span class="hljs-type">uint32_t</span> n_primitives;  <span class="hljs-comment">// 0 means interior node</span>
+    <span class="hljs-type">uint32_t</span> axis;           <span class="hljs-comment">// interior node: splitting axis</span>
+} <span class="hljs-type">raxel_linear_bvh_node_t</span>;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">raxel_bvh_accel_t</span> {</span>
+    <span class="hljs-type">raxel_linear_bvh_node_t</span> nodes[RAXEL_BVH_MAX_NODES];  <span class="hljs-comment">// linear array of nodes</span>
+    <span class="hljs-type">int32_t</span> n_nodes;                                         <span class="hljs-comment">// total number of nodes</span>
+    <span class="hljs-type">int32_t</span> max_leaf_size;                                   <span class="hljs-comment">// maximum primitives per leaf</span>
+} <span class="hljs-type">raxel_bvh_accel_t</span>;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> __<span class="hljs-title">raxel_voxel_world_gpu</span> {</span>
+    <span class="hljs-type">raxel_bvh_accel_t</span> bvh;
+    <span class="hljs-type">raxel_voxel_chunk_meta_t</span> chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    <span class="hljs-type">raxel_voxel_chunk_t</span> chunks[RAXEL_MAX_LOADED_CHUNKS];
+    <span class="hljs-type">uint32_t</span> num_loaded_chunks;
+} <span class="hljs-type">__raxel_voxel_world_gpu_t</span>;</code></pre>
+<h3 id="traversing-the-bvh">Traversing the BVH</h3>
+<p>To traverse the BVH, we use a stack-based approach. Because we are using GLSL, we can't use recursion, and have to use a stack to keep track of the nodes that we need to traverse.</p>
+<p>We can modify our raymarching function to use the BVH, and add a few utility functions to help with traversing the BVH. Here is the updated raymarching function:</p>
+<pre><code class="hljs glsl language-glsl"><span class="hljs-type">bool</span> intersectAABB(<span class="hljs-type">vec3</span> ro, <span class="hljs-type">vec3</span> rd, <span class="hljs-type">vec3</span> inv_rd, <span class="hljs-type">vec3</span> bmin, <span class="hljs-type">vec3</span> bmax, <span class="hljs-keyword">out</span> <span class="hljs-type">float</span> tmin, <span class="hljs-keyword">out</span> <span class="hljs-type">float</span> tmax) {
+    <span class="hljs-type">vec3</span> t0 = (bmin - ro) * inv_rd;
+    <span class="hljs-type">vec3</span> t1 = (bmax - ro) * inv_rd;
+    <span class="hljs-type">vec3</span> tsmaller = <span class="hljs-built_in">min</span>(t0, t1);
+    <span class="hljs-type">vec3</span> tbigger = <span class="hljs-built_in">max</span>(t0, t1);
+    tmin = <span class="hljs-built_in">max</span>(<span class="hljs-built_in">max</span>(tsmaller.x, tsmaller.y), tsmaller.z);
+    tmax = <span class="hljs-built_in">min</span>(<span class="hljs-built_in">min</span>(tbigger.x, tbigger.y), tbigger.z);
+    <span class="hljs-keyword">return</span> tmax &gt;= <span class="hljs-built_in">max</span>(tmin, <span class="hljs-number">0.0</span>);
+}
+
+
+<span class="hljs-type">bool</span> traverseBVH(<span class="hljs-type">vec3</span> ro, <span class="hljs-type">vec3</span> rd, <span class="hljs-keyword">out</span> <span class="hljs-type">float</span> t_hit, <span class="hljs-keyword">out</span> <span class="hljs-type">int</span> leaf_id) {
+    <span class="hljs-type">vec3</span> inv_rd = <span class="hljs-number">1.0</span> / rd;
+    <span class="hljs-type">int</span> stack[<span class="hljs-number">64</span>];
+    <span class="hljs-type">int</span> stack_ptr = <span class="hljs-number">0</span>;
+    stack[stack_ptr++] = <span class="hljs-number">0</span>; <span class="hljs-comment">// start at root (index 0)</span>
+    <span class="hljs-type">bool</span> hit_found = <span class="hljs-literal">false</span>;
+    t_hit = <span class="hljs-number">1e30</span>;
+    leaf_id = <span class="hljs-number">-1</span>;
+    <span class="hljs-keyword">while</span> (stack_ptr &gt; <span class="hljs-number">0</span>) {
+        <span class="hljs-type">int</span> node_index = stack[--stack_ptr];
+        <span class="hljs-keyword">if</span> (node_index &lt; <span class="hljs-number">0</span> || node_index &gt;= voxel_world.bvh.n_nodes)
+            <span class="hljs-keyword">continue</span>;
+        BVHNode node = voxel_world.bvh.nodes[node_index];
+        <span class="hljs-type">float</span> tmin, tmax;
+        <span class="hljs-keyword">if</span> (!intersectAABB(ro, rd, inv_rd, node.bounds_min, node.bounds_max, tmin, tmax))
+            <span class="hljs-keyword">continue</span>;
+        <span class="hljs-keyword">if</span> (node.n_primitives &gt; <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">if</span> (tmin &lt; t_hit) {
+                t_hit = tmin;
+                leaf_id = node_index;
+                hit_found = <span class="hljs-literal">true</span>;
+            }
+        } <span class="hljs-keyword">else</span> {
+            stack[stack_ptr++] = node_index + <span class="hljs-number">1</span>;
+            stack[stack_ptr++] = node.child_offset;
+        }
+    }
+    <span class="hljs-keyword">return</span> hit_found;
+}
+
+RaymarchResult raymarch(<span class="hljs-type">vec3</span> ro, <span class="hljs-type">vec3</span> rd) {
+    RaymarchResult result;
+    result.hit = <span class="hljs-literal">false</span>;
+    result.tHit = <span class="hljs-number">0.0</span>;
+    result.leaf_id = <span class="hljs-number">-1</span>;
+    result.prim_offset = <span class="hljs-number">-1</span>;
+    result.n_primitives = <span class="hljs-number">0</span>;
+    result.num_aabb_tests = <span class="hljs-number">0</span>;
+    result.deepest_stack = <span class="hljs-number">0</span>;
+    result.num_steps = <span class="hljs-number">0</span>;
+    <span class="hljs-type">float</span> t;
+    <span class="hljs-type">int</span> leaf;
+    <span class="hljs-keyword">if</span> (traverseBVH(ro, rd, t, leaf)) {
+        result.hit = <span class="hljs-literal">true</span>;
+        result.tHit = t;
+        result.leaf_id = leaf;
+        result.pos = ro + t * rd;
+        BVHNode leafNode = voxel_world.bvh.nodes[leaf];
+        result.prim_offset = leafNode.child_offset;
+        result.n_primitives = <span class="hljs-type">int</span>(leafNode.n_primitives);
+        <span class="hljs-type">float</span> eps = <span class="hljs-number">0.01</span>;
+        <span class="hljs-type">float</span> dx = (isVoxelSolid(<span class="hljs-type">ivec3</span>(result.pos + <span class="hljs-type">vec3</span>(eps, <span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>))) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>) -
+                   (isVoxelSolid(<span class="hljs-type">ivec3</span>(result.pos - <span class="hljs-type">vec3</span>(eps, <span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>))) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>);
+        <span class="hljs-type">float</span> dy = (isVoxelSolid(<span class="hljs-type">ivec3</span>(result.pos + <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, eps, <span class="hljs-number">0.0</span>))) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>) -
+                   (isVoxelSolid(<span class="hljs-type">ivec3</span>(result.pos - <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, eps, <span class="hljs-number">0.0</span>))) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>);
+        <span class="hljs-type">float</span> dz = (isVoxelSolid(<span class="hljs-type">ivec3</span>(result.pos + <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>, eps))) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>) -
+                   (isVoxelSolid(<span class="hljs-type">ivec3</span>(result.pos - <span class="hljs-type">vec3</span>(<span class="hljs-number">0.0</span>, <span class="hljs-number">0.0</span>, eps))) ? <span class="hljs-number">1.0</span> : <span class="hljs-number">0.0</span>);
+        result.normal = <span class="hljs-built_in">normalize</span>(<span class="hljs-type">vec3</span>(dx, dy, dz));
+    }
+    <span class="hljs-keyword">return</span> result;
+}</code></pre>
+<h3 id="results-of-accelerated-voxel-rendering">Results of Accelerated Voxel Rendering</h3>
+<p>The BVH was faster. Performance was at ~200 FPS for 800x600 resolution, on a debug build. However, the implementation was non-functional. The scene would render, you could only see the root node of the BVH, which manifested as a single, large voxel.</p>
+<p>I was unable to determine the cause of this issue. Looking through the output of creating the BVH on the CPU, the BVH was built correctly, it seemed, and <em>some</em> data was being sent to the GPU. However, either, the BVH was not being traversed correctly, or the data was not being sent to the GPU correctly.</p>
+<p>Anyway, here is the result of the accelerated voxel rendering:</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/accelerated_voxel_rendering.png" alt="Accelerated Voxel Rendering"></p>
+<h1 id="reflections--further-work">Reflections &amp; Further Work</h1>
+<p>Although the results of the accelerated voxel rendering were subpar, I am happy with the progress that I made on this project. Taking on such an endeavour taught me a lot about C, graphics programming, Vulkan, but also my own limitations as a programmer.</p>
+<p>I have built a few large project before, even other "game engines," but this building <code>raxel</code> was a different experience. Prior to this, I never built a project that was so polarizing -- at times, I wanted to do anything but work on this project. I felt stuck in the abyss of Vulkan, and the amount of work that I had to do to get the simplest things working was overwhelming. At the same time, however, the joy of even seeing a red square on the screen was immense.</p>
+<p>Every single picture in this report was a victory. Behind each one of them was hours fiddling with the code, trying to get the simplest things to work. I am proud of the work that I did, and the progress that I made.</p>
+<p>If I had to start again, I would have done many things differently:</p>
+<ul>
+<li>I would have gotten Vulkan validation layers working from the start. Near the end of the project, I finally implemented them, and they were a godsend. They helped me catch many bugs that I would have otherwise missed, and gave better error messages than Vulkan's default error messages (<code>VULKAN_ERROR_UNKNOWN</code> my beloved).</li>
+<li>I would have done more reading on Vulkan, and specifically actual codebases that use Vulkan. Most of my learning was from the Vulkan documentation, which is good, but not great. A problem I consistently had was assuming that Vulkan worked in a certain way, and then finding out that it didn't. This was a problem that could have been solved by reading more code.</li>
+<li>I would have tampered my expectations. I expected to have a fully functional voxel engine by the end of this project, but that was unrealistic. I should have set more realistic goals, and been more patient with myself. Even around ~200 commits in, and I still didn't have a fully functional voxel engine. I should have been more patient with myself, and more realistic with my goals.</li>
+</ul>
+<p>I am proud of the work that I did, and the progress that I made. I learned a lot, and I am happy with the results of this project. I am excited to continue working on this project, and see where it goes.</p>
+<h1 id="miscellaneous-development-photos">Miscellaneous Development Photos</h1>
+<p>Here are some photos of the development process of <code>raxel</code>:</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/the_thing.png" alt="The Thing"></p>
+<p>I lovingly call putting UV coordinates on the screen "The Thing." It started out as a joke between my roomate and I, where was confused at what I was trying to get working, and I would just say "The Thing." This took an abusrd amount of time to get working, after abstracting the Vulkan code into my pipeline system.</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/the_other_thing.png" alt="The Other Thing"></p>
+<p>This was a recreation of my first multi-pass render from <code>raxel</code>. This was a huge victory for me, as it showed that my system of passing data between shaders was working. </p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/sphere_sdf.png" alt="Sphere SDF"></p>
+<p>Earlier on in the development, when I was focused on the engine portion of <code>raxel</code>, I implemented a sphere SDF. At that point, I thought voxels were going to be easy. I was wrong.</p>
+<p><img src="file:///D:/Documents/Code/School/raxel/docs/w25-report/images/half_life.png" alt="Half Life Easter Egg"></p>
+<p>Engineers are nerds.</p></body></html>
+    </body>
+</html>
