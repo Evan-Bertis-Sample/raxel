@@ -1,14 +1,16 @@
 ```
-██████╗  █████╗ ██╗  ██╗███████╗██╗     
-██╔══██╗██╔══██╗╚██╗██╔╝██╔════╝██║     
-██████╔╝███████║ ╚███╔╝ █████╗  ██║     
+██████╗  █████╗ ██╗  ██╗███████╗██╗
+██╔══██╗██╔══██╗╚██╗██╔╝██╔════╝██║
+██████╔╝███████║ ╚███╔╝ █████╗  ██║
 ██╔══██╗██╔══██║ ██╔██╗ ██╔══╝  ██║
 ██║  ██║██║  ██║██╔╝ ██╗███████╗███████╗
 ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
 ```
+
 # raxel
 
 **A Raymarched Voxel Engine Developed with Vulkan, in C99**
+
 ```
 Author: Evan Bertis-Sample
 Date: 3/21/2025
@@ -19,14 +21,13 @@ Course: COMP_SCI 499 (Prof. Geisler)
 
 This report covers the development of `raxel` within the past quarter. These developments include, but are not limited to:
 
-* The implementation of a Vulkan-based rendering pipeline, that relies on compute shaders for raymarching.
-* The development of a voxel data structure that is used to store and render voxel data.
-* The implementation of a basic input system that allows for user interaction with the engine.
-* The creation of a basic logging system that allows for debugging and logging of engine events.
-* The development of a basic windowing system that allows for the creation of windows and surfaces.
-* The implementation of a basic memory allocator that is used throughout the engine.
-* The creation of a command line interface that allows for easy building and running of the engine, and for the creation of new projects.
-
+- The implementation of a Vulkan-based rendering pipeline, that relies on compute shaders for raymarching.
+- The development of a voxel data structure that is used to store and render voxel data.
+- The implementation of a basic input system that allows for user interaction with the engine.
+- The creation of a basic logging system that allows for debugging and logging of engine events.
+- The development of a basic windowing system that allows for the creation of windows and surfaces.
+- The implementation of a basic memory allocator that is used throughout the engine.
+- The creation of a command line interface that allows for easy building and running of the engine, and for the creation of new projects.
 
 # Table of Contents
 
@@ -50,11 +51,9 @@ This report covers the development of `raxel` within the past quarter. These dev
   - [Workflow of using my own Engine](#workflow-of-using-my-own-engine)
   - [Plans for the Spring](#plans-for-the-spring)
 
-
-
 # Engine
 
-`raxel` is split into two core parts, the *engine* and the *rendering systems.*
+`raxel` is split into two core parts, the _engine_ and the _rendering systems._
 
 The engine encapsulates the `raxel` that aren't interacting directly with the Vulkan code. Rather, the engine is concerned with building an abstraction around the rendering systems, providing tooling, and making the developer experience better. It also provides many utilities that would be fundamental to building games and technical demos.
 
@@ -62,14 +61,14 @@ Whereas the rendering systems is the portion of `raxel` that directly interact w
 
 As of writing this report, the responsibilities of the engine and the rendering systems are split as follows:
 
-* **Engine**
-  * Building and compiling games, and linking it with the engine
-  * Providing a standard library for the user, namely data structures and wrappers around the rendering system
-  * Providing a suite of tools to make development easier - handling unit tests, enabling intellisense (in VSCode), updating the engine, running raxel games, etc.
-* **Rendering Systems**
-  * Setting up graphics resources, making lower level calls to graphics libraries
-  * Creating an abstraction above these resources, allowing the developer to focus on their application of these graphics tools
-  * Defining voxels, voxel worlds, and handling the rendering of them
+- **Engine**
+  - Building and compiling games, and linking it with the engine
+  - Providing a standard library for the user, namely data structures and wrappers around the rendering system
+  - Providing a suite of tools to make development easier - handling unit tests, enabling intellisense (in VSCode), updating the engine, running raxel games, etc.
+- **Rendering Systems**
+  - Setting up graphics resources, making lower level calls to graphics libraries
+  - Creating an abstraction above these resources, allowing the developer to focus on their application of these graphics tools
+  - Defining voxels, voxel worlds, and handling the rendering of them
 
 ## Objectives
 
@@ -82,10 +81,11 @@ The engine is designed to be a tool that I can use to quickly prototype ideas, a
 The engine is split into several directories, and the main focus of the engine thus far have been the `core` and `scripts` directories.
 
 The `core` directory contains the core engine code, and is split into several subdirectories:
-* `graphics` - Contains the code for the rendering systems, notably, the implementation of `raxel_surface_t`, `raxel_pipeline_t`, and other Vulkan wrappers. It also contains implementations of `raxel_pipeline_pass_t` which is the bulk, and most important part of the rendering system.
-* `util` - Contains common utilities that are used throughout the engine, such as memory allocators, logging, and standard data structures, like lists, arrays, hashtables and strings.
-* `input` - Contains the code for the input system, which is used to handle user input, such as keyboard and mouse events. This is a very thin wrapper around GLFW's input system.
-* `voxel` - Contains the code for the voxel rendering system, which is used to render voxel data. This is a thin wrapper around the core rendering system, and is used to provide a higher level abstraction for rendering voxels. It also contains the implementation of things like the BVH acceleration structure, and the voxel data structure.
+
+- `graphics` - Contains the code for the rendering systems, notably, the implementation of `raxel_surface_t`, `raxel_pipeline_t`, and other Vulkan wrappers. It also contains implementations of `raxel_pipeline_pass_t` which is the bulk, and most important part of the rendering system.
+- `util` - Contains common utilities that are used throughout the engine, such as memory allocators, logging, and standard data structures, like lists, arrays, hashtables and strings.
+- `input` - Contains the code for the input system, which is used to handle user input, such as keyboard and mouse events. This is a very thin wrapper around GLFW's input system.
+- `voxel` - Contains the code for the voxel rendering system, which is used to render voxel data. This is a thin wrapper around the core rendering system, and is used to provide a higher level abstraction for rendering voxels. It also contains the implementation of things like the BVH acceleration structure, and the voxel data structure.
 
 Within this directory, we have a suite of header files that include the headers contained within the subdirectories of `core`. These headers are used to provide a single include point for the user.
 
@@ -106,7 +106,7 @@ Before using any of the scripts, you can optionally run `scripts/raxel_install.s
 
 The engine dynamically links with the user's game code. The build system for the engine is built in a manner such that it is not opinionated about the structure of the user's game code.
 
-This choice was made in able to enforce a seperation of concerns between the engine and the user's game code. The engine is responsible for rendering, and the user's game code is responsible for game logic. The engine is not responsible for the user's game logic, and the user's game logic is not responsible for rendering. This seperation of concerns allows for the user to build their game in any way they see fit, and to use any libraries that they may need. 
+This choice was made in able to enforce a seperation of concerns in development, and allow for the reusability of the engine. This was used a large amount of development. For example, the testing suite for the engine is built as a "game" that is linked with the engine, and run as a seperate executable, whereas development of the voxel rendering system was debugged in a seperate "game" that was linked with the engine.
 
 By setting up this system early in the processs, it has pushed for a more modular design of the engine. In order to create a demo, the engine would have to provide a series of abstractions to build the demo on top of. This has manifested via the creation of thing like the `raxel_voxel_world_t`, and `raxel_input_manager_t` abstractions.
 
@@ -135,6 +135,7 @@ target_include_directories(${PROJECT} PRIVATE ${INCLUDES})
 This builds one of the simplest possible games, with a single source file, `main.c`. The `raxel.cmake` file specifies that the game should be built with this source file, and that the source file should be included in the project.
 
 Internally, the raxel build system uses it's own `CMakeLists.txt` file to build the engine, the dependencies, and the user's game code. The abridged version of the build process is as follows:
+
 ```
 1. Set up CMake, specifying the project name, minimum version, the languages used, and the project version
 2. Find if the user has a `raxel.cmake` file in their project directory. If not, throw an error.
@@ -156,17 +157,16 @@ Furthermore, assets are stored in the `.raxel` directory, and are copied to the 
 
 There are a few commands that are available:
 
-* `raxel build` - This command is used to build the engine, and the user's game code. This command is used to compile the engine, and the user's game code in the manner described in the [build system](#build-system) section. 
-* `raxel run` - This command is used to run the user's game code. This command is used to run the user's game code. This simply runs the executable that is created within the `.raxel` directory.
-* `raxel update` - Updates the user's version of raxel by pulling the latest version of the core engine from the repository. Because the user's game code is seperate from the engine, this is one of the affordances that the engine provides. The user can update the engine without having to worry about their game code being affected. In development, this has not been used much.
-* `raxel index` - Creates necessary JSON files (`c_cpp_properties.json`) for intellisense in VSCode. Because the game code is seperate from the engine, intellisense doesn't work outside the box, one of the drawbacks from seperating engine and game code so strictly.
-* `raxel test` - Runs the core raxel unit tests. The unit testing system is a raxel "game" located next to the engine code. This is an end-to-end test of the engine, as running the testing suite involves actually building a "game," which in reality, is just a series of unit tests.
-* `raxel sc` - Compiles the shaders in the user's and raxel's code, and places them in the `.raxel` directory. The shaders are compiled into `SPIR-V` format, which is the format that Vulkan uses. Shaders that are part of the engine core are placed in a seperate directory within `.raxel`, `shaders/internal`, and the user's shaders are placed in `shaders/` directly.
-* `raxel clean` - Cleans the build directory, and removes the `.raxel` directory. This is useful for cleaning up the build artifacts, and for starting fresh.
-* `raxel br` - Compiles the engine, user's game code, and shaders, and runs the game. This is a convenience command that is used to combine `raxel build`, `raxel run`, and `raxel sc` into a single command.
+- `raxel build` - This command is used to build the engine, and the user's game code. This command is used to compile the engine, and the user's game code in the manner described in the [build system](#build-system) section.
+- `raxel run` - This command is used to run the user's game code. This command is used to run the user's game code. This simply runs the executable that is created within the `.raxel` directory.
+- `raxel update` - Updates the user's version of raxel by pulling the latest version of the core engine from the repository. Because the user's game code is seperate from the engine, this is one of the affordances that the engine provides. The user can update the engine without having to worry about their game code being affected. In development, this has not been used much.
+- `raxel index` - Creates necessary JSON files (`c_cpp_properties.json`) for intellisense in VSCode. Because the game code is seperate from the engine, intellisense doesn't work outside the box, one of the drawbacks from seperating engine and game code so strictly.
+- `raxel test` - Runs the core raxel unit tests. The unit testing system is a raxel "game" located next to the engine code. This is an end-to-end test of the engine, as running the testing suite involves actually building a "game," which in reality, is just a series of unit tests.
+- `raxel sc` - Compiles the shaders in the user's and raxel's code, and places them in the `.raxel` directory. The shaders are compiled into `SPIR-V` format, which is the format that Vulkan uses. Shaders that are part of the engine core are placed in a seperate directory within `.raxel`, `shaders/internal`, and the user's shaders are placed in `shaders/` directly.
+- `raxel clean` - Cleans the build directory, and removes the `.raxel` directory. This is useful for cleaning up the build artifacts, and for starting fresh.
+- `raxel br` - Compiles the engine, user's game code, and shaders, and runs the game. This is a convenience command that is used to combine `raxel build`, `raxel run`, and `raxel sc` into a single command.
 
 Each of these commands have different subcommands, and can be run with the `--help` flag to see the available subcommands. For example, running `raxel build --help` will show the available subcommands for the `raxel build` command.
-
 
 # Rendering Systems
 
@@ -175,19 +175,20 @@ The most developed part of `raxel` are the rendering systems. The rendering syst
 Because the engine is a voxel engine, the voxel renderer has been developed such that the interface is as simple as possible, with minimal knowledged of graphics programming required. The core renderer is more complex, but it is significantly easier than programming directly with Vulkan.
 
 The core renderer achieves:
-* Initialization of Vulkan, and all of the boilerplate code that is required to set up the graphics resources
-* Creating graphics pipelines and resources
-* Taking care of the synchronization of the graphics resources
-* Abstracting multi-pass rendering into an easy, declarative interface
-* Abstracting over compute shaders
-* Passing data between the CPU and GPU
+
+- Initialization of Vulkan, and all of the boilerplate code that is required to set up the graphics resources
+- Creating graphics pipelines and resources
+- Taking care of the synchronization of the graphics resources
+- Abstracting multi-pass rendering into an easy, declarative interface
+- Abstracting over compute shaders
+- Passing data between the CPU and GPU
 
 Whereas the voxel renderer achieves:
-* Storing voxel data in memory
-* Rendering voxels in a compute shader
-* Creating acceleration structures for the voxels
-* Handling the memory management of the voxel data
 
+- Storing voxel data in memory
+- Rendering voxels in a compute shader
+- Creating acceleration structures for the voxels
+- Handling the memory management of the voxel data
 
 ## Core Renderer
 
@@ -305,9 +306,10 @@ int main(void) {
 }
 ```
 
-This code is only slightly abridged, only really removing the code for populating the voxel world, and loading/unloading chunks based on camera position. The code demonstrates how the core renderer and voxel renderer are used to create a simple raymarched voxel scene. 
+This code is only slightly abridged, only really removing the code for populating the voxel world, and loading/unloading chunks based on camera position. The code demonstrates how the core renderer and voxel renderer are used to create a simple raymarched voxel scene.
 
 In plain English, the code does the following:
+
 1. Creates a window and a Vulkan surface
 1. Sets up input handling
 1. Creates a pipeline, and initializes it
@@ -322,9 +324,10 @@ In plain English, the code does the following:
 1. Repeats the main loop until the window is closed
 
 To define some terminology, before covering it in greater detail:
-* A **raxel pipeline** is a series of pipeline passes. This is *different* than a Vulkan pipeline.
-* A **pipeline pass** is a single logical step in the pipeline. Steps can be like things like clearing the screen, computing the depth buffer, or composing the final image.
-* A **compute pass** is a pipeline pass that is driven by a compute shader. This is used to do computations on the GPU.
+
+- A **raxel pipeline** is a series of pipeline passes. This is _different_ than a Vulkan pipeline.
+- A **pipeline pass** is a single logical step in the pipeline. Steps can be like things like clearing the screen, computing the depth buffer, or composing the final image.
+- A **compute pass** is a pipeline pass that is driven by a compute shader. This is used to do computations on the GPU.
 
 It is important to note that `raxel_pipeline_t` is **not** the same as a Vulkan pipeline. Instead, `raxel_pipeline_t` can be thought of a series of passes, which internally may have their own `VkPipeline` objects. The `raxel_pipeline_t` is used to abstract over the Vulkan API, and to provide a higher level interface for rendering.
 
@@ -335,10 +338,11 @@ The implementation of the core renderer (and thus, the example) will be discusse
 `raxel` runs purely on compute shaders. There are no vertex or fragment shaders, thus how to fundamentally think about rendering in `raxel` is different than in traditional graphics programming.
 
 Instead of worrying about fragments, vertices, and the like, users only need worry about a few things:
-* The compute shader
-* The data being passed to the compute shader
-* The resources that are being written to
-* The order in which the compute passes are executed
+
+- The compute shader
+- The data being passed to the compute shader
+- The resources that are being written to
+- The order in which the compute passes are executed
 
 The pipeline will keep large resources, specifically the "targets," which are textures that are read and rendered to by compute shaders on the GPU. The effect of this is that the effects of a single pass can be seen in the next pass, thus the order of the passes is important. Because of this, however, this makes multi-pass rendering very easy to implement.
 
@@ -349,6 +353,7 @@ This effect, where the output of one pass is the input of the next is why `raxel
 ![Compute Shader Pipeline](./images/compute_shader_pipeline.png)
 
 In pseudocode, we can think of the pipeline as doing the following:
+
 ```py
 # Create a pipeline
 pipeline = raxel_pipeline_create()
@@ -373,22 +378,24 @@ for pass in pipeline:
 pipeline.present()
 ```
 
-
-Upon the "presentation" step, which is part of the `raxel_pipeline_update` function, the pipeline will grab one of the targets as specified via the `raxel_pipeline_set_debug_target` function, and present it to the window. This is how the user sees the final result of the compute passes. 
+Upon the "presentation" step, which is part of the `raxel_pipeline_update` function, the pipeline will grab one of the targets as specified via the `raxel_pipeline_set_debug_target` function, and present it to the window. This is how the user sees the final result of the compute passes.
 
 Currently, there are two types of targets, although this can be expanded in the future:
-* `RAXEL_PIPELINE_TARGET_COLOR` - This is the internal color target, which is the target that is presented to the window. This is the target that the user sees.
-* `RAXEL_PIPELINE_TARGET_DEPTH` - This is the internal depth target, which is used for depth testing. This is not presented to the window, but is used for depth testing in the compute passes.
+
+- `RAXEL_PIPELINE_TARGET_COLOR` - This is the internal color target, which is the target that is presented to the window. This is the target that the user sees.
+- `RAXEL_PIPELINE_TARGET_DEPTH` - This is the internal depth target, which is used for depth testing. This is not presented to the window, but is used for depth testing in the compute passes.
 
 Some targets to consider in the future are:
-* `RAXEL_PIPELINE_TARGET_NORMAL` - This is the internal normal target, which is used for normal mapping. This is not presented to the window, but is used for normal mapping in the compute passes.
-* `RAXEL_PIPELINE_TARGET_WORK_BUFFER_X` - This would be a series of work buffers, which are used for intermediate computations. These are not presented to the window, but are used for intermediate computations in the compute passes.
+
+- `RAXEL_PIPELINE_TARGET_NORMAL` - This is the internal normal target, which is used for normal mapping. This is not presented to the window, but is used for normal mapping in the compute passes.
+- `RAXEL_PIPELINE_TARGET_WORK_BUFFER_X` - This would be a series of work buffers, which are used for intermediate computations. These are not presented to the window, but are used for intermediate computations in the compute passes.
 
 Adding such targets would be simple, and would allow for different types of rendering effects to be achieved, like deferred rendering, normal mapping, and more.
 
 At the Vulkan level, this is achieved by using the swapchain. All of these targets are created as part of the swapchain, and exist in the GPU's memory, persisting between frames and compute passes.
 
 The full initialization of the pipeline looks like this:
+
 ```c
 int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
     __create_instance(&pipeline->resources);
@@ -418,11 +425,13 @@ compute_ctx->targets[1] = -1;  // Sentinel.
 In this example, we only read/write to the internal color target. The end of the array is marked with a sentinel value, `-1`, which is used to determine the end of the array. This is because the array is statically sized to be the maximum number of targets that can be written to, which is all of them (currently 2, one for color, and one for depth).
 
 This maps directly into the shader:
+
 ```glsl
 layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 ```
 
 If you wnated to read/write to both the color and depth targets, you would specify both in the array:
+
 ```c
 compute_ctx->targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
 compute_ctx->targets[1] = RAXEL_PIPELINE_TARGET_DEPTH;
@@ -430,6 +439,7 @@ compute_ctx->targets[1] = RAXEL_PIPELINE_TARGET_DEPTH;
 ```
 
 This would map to the shader as:
+
 ```glsl
 layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
 layout(r32f, set = 0, binding = 1) uniform image2D outDepth;
@@ -438,7 +448,6 @@ layout(r32f, set = 0, binding = 1) uniform image2D outDepth;
 Internally, the compute shader needs to be passed a description of what textures are being written to. We never have to pull the textures from the GPU, then pass them to the compute shader. Instead, we basically pass a set of pointers to the compute shader, and the compute shader knows what to do with them.
 
 This system cuts down on a lot of boilerplate code, makes multi-pass rendering easier to think about, and makes the code more readable.
-
 
 ### Pipeline and Pass Implementations and Interface
 
@@ -566,15 +575,69 @@ At the same time however, usage of the function pointers, void pointers, hides a
 
 ## Voxel Renderer
 
-...
-
-### Objectives of the Voxel Renderer
-
-...
+Sitting directly on top of the core renderer is the voxel renderer. The voxel renderer is used to provide a higher level abstraction for rendering voxels, and implement important features like the BVH acceleration structure, and the voxel data structure. It also handles the memory management, and chunking of the voxel data.
 
 ### Voxels in Memory
 
-...
+#### Individual Voxels
+
+```c
+typedef uint32_t raxel_material_handle_t;
+
+typedef struct raxel_voxel {
+    raxel_material_handle_t material;
+} raxel_voxel_t;
+```
+
+The most important part of a voxel renderer is how voxels are stored in memory. In `raxel`, an individual voxel is stored as a `uint32_t`, which is an index into a "palette" of voxel materials. Originally this was a `uint8_t`, but GLSL doesn't support 8-bit integers without using extensions.
+
+Voxel materials, at the moment, are just the albedo color of the voxel, a vec3.
+
+This design allows for better usage of memory, and minimizes the size of the voxel data being sent to the GPU, given that we don't have a unique material for each voxel. Additionally, it allows for easier extension of the voxel materials, as the voxel materials can be expanded to include more information, like normals, roughness, and metalness, without the overhead of storing this information for every voxel.
+
+Additionally, using this palletized system matches with the design of other voxel engines, which have "types" of voxels. It is easier to reason about to place a "dirt voxel" or a "grass voxel" than it is to place a voxel with a specific color. This design allows for the user to define their own voxel materials, and to use them in the voxel world. A side-effect this, is changing the attributes of a voxel material, like the color, propogates to all voxels of that material.
+
+Unfortunately, the design does not allow for voxels to have different attributes within the same material. For some use-cases, being able to do so would be useful, but I have yet to find a reasonable way to implement this.
+
+#### Voxel Chunks & Worlds
+
+```c
+typedef struct raxel_voxel_chunk_meta {
+    // defines the bottom-left corner of the chunk
+    raxel_coord_t x;
+    raxel_coord_t y;
+    raxel_coord_t z;
+} raxel_voxel_chunk_meta_t;
+
+typedef struct raxel_voxel_chunk {
+    // all of these voxel's coordinates are relative to the chunk's bottom-left corner
+    raxel_voxel_t voxels[RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE];
+} raxel_voxel_chunk_t;
+```
+
+Voxels are stored in chunks, which is a flat array of voxels. Chunks are 32x32x32 sized, which is slightly arbitrary. Using larger chunks means having less metadata for the chunks (thus less memory overhead), and needing to unload/load less chunks. Using smaller chunks means having more fine-grained control over the voxel data, and being able to load/unload chunks more quickly, as well as minimizing the amount of unnecessary voxel data that is loaded (the portion of loaded chunks that are visible can be higher).
+
+Given a local coordinate `(x, y, z)` in a chunk, the index of the voxel in the chunk is `x + y * RAXEL_VOXEL_CHUNK_SIZE + z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE`. This is a simple way to convert a 3D coordinate into a 1D index.
+
+Chunk and metadata are stored in seperate lists, in a structure called `raxel_voxel_world_t`:
+
+```c
+typedef struct raxel_voxel_world {
+    raxel_list(raxel_voxel_chunk_meta_t) chunk_meta;  // index of chunk in chunks
+    raxel_list(raxel_voxel_chunk_t) chunks;           // the first __num_loaded_chunks are loaded
+    raxel_size_t __num_loaded_chunks;                 // between 0 and RAXEL_MAX_LOADED_CHUNKS
+    raxel_allocator_t *allocator;
+    raxel_list(raxel_voxel_material_t) materials;
+    // book-keeping for updating the voxel world
+    raxel_voxel_world_update_options_t prev_update_options;
+} raxel_voxel_world_t;
+```
+
+Only chunks that have a solid voxel are stored in memory. This makes the `raxel_voxel_world_t` structure sparse and more space efficent, but makes querying the voxel data more complex. Because the world doesn't necessarily describe a rectangular prism of chunks (in the same way that the individual chunks do), we can't use direct indexing to get the chunk data. Instead, we have to iterate over the chunk metadata, and find the chunk that we are looking for.
+
+This is less of a problem on the CPU (because we don't iterate over chunks very often), but on the GPU, this presents a larger problem. This gets into the process of rendering voxels, but this mandatory iteration over the chunk metadata is a bottleneck in the rendering process.
+
+Only the first `__num_loaded_chunks` are actually sent to the GPU. When chunks are loaded/unloaded in the world, they aren't actually removed from the `chunks` list (we would need a method of serializing the chunk data to disk, and loading it back into memory). Instead, we just keep track of how many chunks are loaded, and only send the first `__num_loaded_chunks` to the GPU. Sending only the necessary chunks to the GPU is important, as we don't want to send unnecessary data to the GPU, because we don't want to spend exessive time copying data to the GPU, and filling up the GPU's memory with unnecessary data.
 
 ### Memory Management
 
@@ -592,7 +655,6 @@ At the same time however, usage of the function pointers, void pointers, hides a
 
 ...
 
-
 ## Building and Running the Demo
 
 ...
@@ -608,5 +670,3 @@ At the same time however, usage of the function pointers, void pointers, hides a
 ## Plans for the Spring
 
 ...
-
-
