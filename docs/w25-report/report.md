@@ -713,6 +713,18 @@ With large scenes, this algorithm is not suitable, and would likely result in st
 
 Fixing this would likely involve using a more complex data structure, but for now, the simplest algorithm (what is detailed in the pseudocode) is used - there are signifcantly harder, but more important problems to solve in the engine.
 
+### Sending to the GPU
+
+Once the voxel world loads/unloads chunks, the voxel world is sent to the GPU via a storage buffer. `raxel` transforms the voxel world into a flat array of voxels, and sends this to the GPU. This is done by copying the voxel into a flat, fixed-size structure, and copying this structure to the GPU.
+
+```c
+typedef struct __raxel_voxel_world_gpu {
+    raxel_voxel_chunk_meta_t chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    raxel_voxel_chunk_t chunks[RAXEL_MAX_LOADED_CHUNKS];
+    uint32_t num_loaded_chunks;
+} __raxel_voxel_world_gpu_t;
+```
+
 ## Naive Voxel Rendering
 
 Using these structures, we can naively render voxels by using a fixed step size, and checking every voxel along the ray. This is a simple, but slow way to render voxels, and is not suitable for large scenes. This is the most basic way to render voxels. Here is the shader for doing so:
@@ -898,15 +910,46 @@ void main() {
 }
 ```
 
-Using this shader, we render
+
+Right now, the shader is concerned about materials, and entirely focused on determining if a ray has hit a voxel or not. Here are the results of rendering a simple scene with this shader. At the origin, a sphere of voxels with a radius of 50 was placed:
+
+![Naive Voxel Rendering](./images/naive_voxel_rendering.png)
+
+The results of doing this was not great. There are a lot of artificats, and performance was at ~3 FPS. Neither the performance nor the quality of the rendering was acceptable. The colors in the scene was for debugging purposes, and shows the ray direction.
+
+In order to take this screenshot, I had to increase my step size to `0.1`, and my maximum steps to `10000`. However, that meant for every pixel that didn't hit a voxel, the ray would take `10000` steps, meaning looking at the sky would take a long time to render.
+
+Being closer to the sphere, the rendering was better, but the performance was still not acceptable, and you couldn't really see the sphere.
+
+Still, that was better results than a few other attempts I had at rendering voxels.
+
+![Stuck in the Voxel](./images/stuck.png)
+
+This was my first attempt at rendering voxels. For some reason, the scene was stuck behind a single voxel. It turns out that the data I was sending the GPU, but the shader was mostly correct. I still don't know why this happened, but it was a good lesson in debugging.
+
+![Distance Issues](./images/view_matrix_problems.png)
+
+This was another attempt at rendering voxels. I was extremely confused as to why the scene was rendering like this. Turns out, the distance that rays were allowed to travel was too short, and the step size was too large. This resulted in only a tiny portion of the scene being rendered, and the rest of the scene being black.
+
 
 ## Accelerated Voxel Rendering with BVH
 
 When rendering a scene, checking every single voxel for intersections with a ray is too slow, especially as the scene grows in size. To speed up this process, raxel uses an acceleration structure called a Bounding Volume Hierarchy (BVH).
 
-### BVH Theory
+The BVH is a tree structure that divides the scene into smaller and smaller bounding volumes. Each node in the tree represents a bounding volume that contains all of the voxels in its children. The tree is built by recursively splitting the scene into two halves along one axis, and then splitting each half into two halves along another axis, and so on, until each leaf node contains a small number of voxels.
+
+By using this technique, we are able to quickly determine which voxels are potentially intersected by a ray, and only check those voxels for intersections. This greatly reduces the number of voxel-ray intersections that need to be checked, and speeds up the rendering process.
+
+This means that we can render larger scenes with more voxels, and still get good performance. The BVH is built on the CPU, and then uploaded to the GPU, where it is used to accelerate the rendering process.
+
+Accelerating our voxel rendering with a BVH involves three main steps:
+1. Building the BVH from the voxel data, which is easiest using a non-flat tree structure.
+2. Flattening the BVH into a linear array, which is then uploaded to the GPU.
+3. Traversing the BVH on the GPU to determine which voxels are intersected by a ray.
 
 ### Building the BVH from Voxels
+
+
 
 ### Traversing the BVH
 
