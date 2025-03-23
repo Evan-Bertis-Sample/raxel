@@ -639,13 +639,20 @@ This is less of a problem on the CPU (because we don't iterate over chunks very 
 
 Only the first `__num_loaded_chunks` are actually sent to the GPU. When chunks are loaded/unloaded in the world, they aren't actually removed from the `chunks` list (we would need a method of serializing the chunk data to disk, and loading it back into memory). Instead, we just keep track of how many chunks are loaded, and only send the first `__num_loaded_chunks` to the GPU. Sending only the necessary chunks to the GPU is important, as we don't want to send unnecessary data to the GPU, because we don't want to spend exessive time copying data to the GPU, and filling up the GPU's memory with unnecessary data.
 
-### Memory Management
+### Chunk Determination and Loading/Unloading
 
-...
 
-### Acceleration Structures (BVH)
 
-...
+## Naive Voxel Rendering
+
+
+
+
+## Accelerated Voxel Rendering with BVH
+
+When rendering a scene, checking every single voxel for intersections with a ray is too slow, especially as the scene grows in size. To speed up this process, raxel uses an acceleration structure called a Bounding Volume Hierarchy (BVH).
+
+A BVH allows
 
 ### Rendering Voxels in Compute Shader
 
@@ -655,18 +662,6 @@ Only the first `__num_loaded_chunks` are actually sent to the GPU. When chunks a
 
 ...
 
-## Building and Running the Demo
-
-...
-
 # Reflections & Further Work
-
-...
-
-## Workflow of using my own Engine
-
-...
-
-## Plans for the Spring
 
 ...
