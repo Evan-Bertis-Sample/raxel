@@ -305,11 +305,68 @@ int main(void) {
 }
 ```
 
-This code is only slightly abridged, only really removing the code for populating the voxel world, and loading/unloading chunks based on camera position. The code demonstrates how the core renderer and voxel renderer are used to create a simple raymarched voxel scene. The code is split into several parts:
+This code is only slightly abridged, only really removing the code for populating the voxel world, and loading/unloading chunks based on camera position. The code demonstrates how the core renderer and voxel renderer are used to create a simple raymarched voxel scene. 
+
+In plain English, the code does the following:
+1. Creates a window and a Vulkan surface
+1. Sets up input handling
+1. Creates a pipeline, and initializes it
+1. Creates a clear pass to clear the internal color target, making the screen blue
+1. Creates a compute shader and pass, which is used to render the voxel scene
+1. Creates a voxel world, and populates it with voxel data
+1. In the main loop, updates the camera position based on user input
+1. Updates the view matrix based on the camera position and rotation
+1. Updates the push constants for the compute shader, which includes the view matrix, field of view, and rays per pixel
+1. Updates the voxel world based on the camera position
+1. Updates the pipeline, which is rendering and presenting the scene
+1. Repeats the main loop until the window is closed
+
+The implementation of the core renderer (and thus, the example) will be discussed in the following sections. Full details of the individual Vulkan resources are not covered, but the most important parts, namely the handling of the swapchain, compute shaders, and the pipeline, are covered.
 
 ### Compute Shader-Driven Graphics Pipeline
 
-...
+`raxel` runs purely on compute shaders. There are no vertex or fragment shaders, thus how to fundamentally think about rendering in `raxel` is different than in traditional graphics programming.
+
+Instead of worrying about fragments, vertices, and the like, users only need worry about a few things:
+* The compute shader
+* The data being passed to the compute shader
+* The resources that are being written to
+* The order in which the compute passes are executed
+
+The pipeline will keep large resources, specifically the "targets," which are textures that are read and rendered to by compute shaders on the GPU. The effect of this is that the effects of a single pass can be seen in the next pass, thus the order of the passes is important. Because of this, however, this makes multi-pass rendering very easy to implement.
+
+![Compute Shader Pipeline](/images/compute_shader_pipeline.png)
+
+Upon the "presentation" step, which is part of the `raxel_pipeline_update` function, the pipeline will grab one of the targets as specified via the `raxel_pipeline_set_debug_target` function, and present it to the window. This is how the user sees the final result of the compute passes. 
+
+Currently, there are two types of targets, although this can be expanded in the future:
+* `RAXEL_PIPELINE_TARGET_COLOR` - This is the internal color target, which is the target that is presented to the window. This is the target that the user sees.
+* `RAXEL_PIPELINE_TARGET_DEPTH` - This is the internal depth target, which is used for depth testing. This is not presented to the window, but is used for depth testing in the compute passes.
+
+Some targets to consider in the future are:
+* `RAXEL_PIPELINE_TARGET_NORMAL` - This is the internal normal target, which is used for normal mapping. This is not presented to the window, but is used for normal mapping in the compute passes.
+* `RAXEL_PIPELINE_TARGET_WORK_BUFFER_X` - This would be a series of work buffers, which are used for intermediate computations. These are not presented to the window, but are used for intermediate computations in the compute passes.
+
+Adding such targets would be simple, and would allow for different types of rendering effects to be achieved, like deferred rendering, normal mapping, and more.
+
+At the Vulkan level, this is achieved by using the swapchain. All of these targets are created as part of the swap chain, and exist in the GPU's memory, persisting between frames and compute passes.
+
+The full initialization of the pipeline looks like this:
+```c
+int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
+    __create_instance(&pipeline->resources);
+    __pick_physical_device(&pipeline->resources);
+    __create_logical_device(&pipeline->resources);
+    __create_command_pools(&pipeline->resources);
+    __create_sync_objects(&pipeline->resources);
+    // Create swapchain using surface dimensions.
+    raxel_surface_initialize(pipeline->resources.surface, pipeline->resources.instance);
+    __create_swapchain(&pipeline->resources, pipeline->resources.surface->width, pipeline->resources.surface->height, &pipeline->resources.swapchain);
+    __create_targets(&pipeline->resources, &pipeline->resources.targets, pipeline->resources.surface->width, pipeline->resources.surface->height);
+    __create_descriptor_pool(pipeline);
+    return 0;
+}
+```
 
 ### Abstractions of the Core Renderer
 
