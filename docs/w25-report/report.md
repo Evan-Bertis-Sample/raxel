@@ -947,8 +947,151 @@ Accelerating our voxel rendering with a BVH involves three main steps:
 2. Flattening the BVH into a linear array, which is then uploaded to the GPU.
 3. Traversing the BVH on the GPU to determine which voxels are intersected by a ray.
 
-### Building the BVH from Voxels
+### Constructing the BVH
 
+Constructing the Bounding Volume Hierarchy (BVH) is a key step in accelerating voxel rendering. In raxel, this process is performed on the CPU using the voxel data from the loaded chunks. The primary goal is to reduce the number of voxel-ray intersection tests by quickly eliminating large regions of empty space. Below is a detailed explanation of how this design was derived and implemented.
+
+#### 1. Calculating Bounding Volumes for Voxels
+
+Every solid voxel in the loaded chunks is represented by a simple axis-aligned bounding box (AABB). Because voxels are uniformly sized cubes, each AABB is defined by:
+- **Minimum Point:** The voxel’s world-space position.
+- **Maximum Point:** The voxel’s position plus one unit along each axis.
+
+This straightforward representation provides all the spatial information needed for later intersection tests.
+
+#### 2. Building the Hierarchical Tree
+
+Once the AABBs are calculated, we construct a binary tree structure to organize them. This hierarchical structure allows us to discard large numbers of voxels quickly during rendering. The tree is built recursively using the following approach:
+
+- **Recursive Splitting:**  
+  For a given set of voxels, we compute the centroids of their AABBs and determine the overall bounds of these centroids. We then select the axis (X, Y, or Z) with the greatest extent as the splitting axis.  
+  The voxel primitives are sorted along this axis and divided into two groups. This division continues recursively until one of the following conditions is met:
+  - The number of primitives in a node is less than or equal to a specified threshold (max leaf size).
+  - Further splitting would exceed a pre-set maximum number of BVH nodes. We have a fixed-size buffer for the BVH, so we need to ensure that we don't exceed this size.
+
+
+This does add a lot of complexity to the CPU-side of rendering, however, we build this structure infrequently enough (and its actually relatively fast, once we determine which chunks are worth loading), that the performance hit is acceptable.
+
+#### 3. Flattening the BVH
+
+GPUs are not well-suited for traversing recursive data structures, so the BVH tree is “flattened” into a linear array that can be easily processed by the compute shader. In essence, we turn all of the pointers from our tree structure into offsets into a flat array, and provide identifiers for each node to facilitate traversal (i.e is this node a leaf or an interior node).
+
+The flattened BVH stores each node’s bounding box, child offsets (for interior nodes), and the number of primitives (for leaf nodes). This information is critical for the GPU’s stack-based traversal algorithm.
+
+#### 4. Uploading the BVH to the GPU
+
+After flattening, the BVH is packaged together with the voxel chunk data into a structured storage buffer. This buffer is then uploaded to the GPU, where the compute shader uses it to accelerate raymarching. Whenever we update the voxel world, we need to rebuild the BVH, and re-upload it to the GPU.
+
+Here is the implementation of doing this:
+
+```c
+void raxel_voxel_world_update(raxel_voxel_world_t *world,
+                              raxel_voxel_world_update_options_t *options,
+                              raxel_compute_shader_t *compute_shader,
+                              raxel_pipeline_t *pipeline) {
+    raxel_coord_t cam_chunk_x, cam_chunk_y, cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world,
+                                                   options->camera_position[0],
+                                                   options->camera_position[1],
+                                                   options->camera_position[2],
+                                                   &cam_chunk_x, &cam_chunk_y, &cam_chunk_z);
+
+    raxel_coord_t prev_cam_chunk_x, prev_cam_chunk_y, prev_cam_chunk_z;
+    __raxel_voxel_world_from_world_to_chunk_coords(world,
+                                                   world->prev_update_options.camera_position[0],
+                                                   world->prev_update_options.camera_position[1],
+                                                   world->prev_update_options.camera_position[2],
+                                                   &prev_cam_chunk_x, &prev_cam_chunk_y, &prev_cam_chunk_z);
+
+    world->prev_update_options = *options;
+
+    if (cam_chunk_x == prev_cam_chunk_x &&
+        cam_chunk_y == prev_cam_chunk_y &&
+        cam_chunk_z == prev_cam_chunk_z) {
+        return;
+    }
+
+    raxel_size_t num_chunks = raxel_list_size(world->chunk_meta);
+    raxel_size_t num_loaded_chunks = 0;
+    for (raxel_size_t i = 0; i < num_chunks; i++) {
+        raxel_voxel_chunk_meta_t *meta = &world->chunk_meta[i];
+        raxel_coord_t dx = meta->x - cam_chunk_x;
+        raxel_coord_t dy = meta->y - cam_chunk_y;
+        raxel_coord_t dz = meta->z - cam_chunk_z;
+        float dist = sqrtf(dx * dx + dy * dy + dz * dz);
+        if (dist < options->view_distance) {
+            if (num_loaded_chunks != i) {
+                __raxel_voxel_world_swap_chunks(world, num_loaded_chunks, i);
+            }
+            num_loaded_chunks++;
+        }
+        if (num_loaded_chunks >= RAXEL_MAX_LOADED_CHUNKS) {
+            break;
+        }
+    }
+    world->__num_loaded_chunks = num_loaded_chunks;
+
+    // --- Build the BVH from the currently loaded chunks ---
+    int max_leaf_size_bvh = MAX_LEAF_SIZE_BVH;
+    raxel_bvh_accel_t *bvh = raxel_bvh_accel_build_from_voxel_world(world, max_leaf_size_bvh, world->allocator);
+
+    // Update GPU world buffer with voxel data and BVH.
+    __raxel_voxel_world_gpu_t *gpu_world = compute_shader->sb_buffer->data;
+    gpu_world->num_loaded_chunks = world->__num_loaded_chunks;
+    for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
+        gpu_world->chunk_meta[i] = world->chunk_meta[i];
+        memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
+
+        // print out the number of non-empty voxels in each chunk
+        int num_voxels = 0;
+        for (int j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+            if (world->chunks[i].voxels[j].material != 0) {
+                num_voxels++;
+            }
+        }
+    }
+
+    if (!bvh) {
+        RAXEL_CORE_LOG("No primitives to build BVH!\n");
+        raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
+        return;
+    }
+    memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
+    raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
+    raxel_bvh_accel_destroy(bvh, world->allocator);
+}
+```
+
+The first portion is the implementation from the [loading and unloading chunks](#chunk-determination-and-loadingunloading) section. The second portion is the implementation of building the BVH from the voxel world, and updating the GPU world buffer with the voxel data and BVH.
+
+This increases the amount of data that we need to send to the GPU, but the performance increase is worth it. The BVH is built on the CPU, and then uploaded to the GPU, where it is used to accelerate the rendering process.
+
+Here is the stucture we now send to the GPU:
+
+```c
+typedef struct raxel_linear_bvh_node_t {
+    raxel_bvh_bounds_t bounds;
+    union {
+        int32_t primitives_offset;    // for leaf nodes
+        int32_t second_child_offset;  // for interior nodes
+    };
+    uint32_t n_primitives;  // 0 means interior node
+    uint32_t axis;           // interior node: splitting axis
+} raxel_linear_bvh_node_t;
+
+typedef struct raxel_bvh_accel_t {
+    raxel_linear_bvh_node_t nodes[RAXEL_BVH_MAX_NODES];  // linear array of nodes
+    int32_t n_nodes;                                         // total number of nodes
+    int32_t max_leaf_size;                                   // maximum primitives per leaf
+} raxel_bvh_accel_t;
+
+typedef struct __raxel_voxel_world_gpu {
+    raxel_bvh_accel_t bvh;
+    raxel_voxel_chunk_meta_t chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    raxel_voxel_chunk_t chunks[RAXEL_MAX_LOADED_CHUNKS];
+    uint32_t num_loaded_chunks;
+} __raxel_voxel_world_gpu_t;
+```
 
 
 ### Traversing the BVH
@@ -1032,6 +1175,16 @@ RaymarchResult raymarch(vec3 ro, vec3 rd) {
     return result;
 }
 ```
+
+### Results of Accelerated Voxel Rendering
+
+The BVH was faster. Performance was at ~200 FPS for 800x600 resolution, on a debug build. However, the implementation was non-functional. The scene would render, you could only see the root node of the BVH, which manifested as a single, large voxel. 
+
+I was unable to determine the cause of this issue. Looking through the output of creating the BVH on the CPU, the BVH was built correctly, it seemed, and *some* data was being sent to the GPU. However, either, the BVH was not being traversed correctly, or the data was not being sent to the GPU correctly.
+
+Anyway, here is the result of the accelerated voxel rendering:
+
+![Accelerated Voxel Rendering](./images/accelerated_voxel_rendering.png)
 
 # Reflections & Further Work
 
