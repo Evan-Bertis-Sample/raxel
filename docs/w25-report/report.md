@@ -545,10 +545,7 @@ typedef struct raxel_compute_pass_context {
     uint32_t dispatch_z;
     // Which internal target to use for blitting the compute result.
     int8_t targets[RAXEL_PIPELINE_TARGET_COUNT];
-    // Optional: if non-null, use this image as the computed result.
     VkImage output_image;
-    // Callback invoked after dispatch finishes.
-    // If NULL, the default blit callback is used.
     VkDescriptorImageInfo *image_infos;
     raxel_size_t num_image_infos;
     void (*on_dispatch_finished)(struct raxel_compute_pass_context *context, raxel_pipeline_globals_t *globals);
