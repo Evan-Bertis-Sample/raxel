@@ -839,17 +839,12 @@ void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
     if (raxel_surface_update(pipeline->resources.surface) != 0) {
         return;
     }
-
     raxel_size_t num_passes = raxel_list_size(pipeline->passes);
-
     for (size_t i = 0; i < num_passes; i++) {
         raxel_pipeline_pass_t *pass = &pipeline->passes[i];
-        // RAXEL_CORE_LOG("Running pass %d\n", i);
-        // RAXEL_CORE_LOG("On begin\n");
         if (pass->on_begin) {
             pass->on_begin(pass, &pipeline->resources);
         }
-        // RAXEL_CORE_LOG("On end\n");
         if (pass->on_end) {
             pass->on_end(pass, &pipeline->resources);
         }

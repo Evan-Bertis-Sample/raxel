@@ -321,6 +321,13 @@ In plain English, the code does the following:
 1. Updates the pipeline, which is rendering and presenting the scene
 1. Repeats the main loop until the window is closed
 
+To define some terminology, before covering it in greater detail:
+* A **raxel pipeline** is a series of pipeline passes. This is *different* than a Vulkan pipeline.
+* A **pipeline pass** is a single logical step in the pipeline. Steps can be like things like clearing the screen, computing the depth buffer, or composing the final image.
+* A **compute pass** is a pipeline pass that is driven by a compute shader. This is used to do computations on the GPU.
+
+It is important to note that `raxel_pipeline_t` is **not** the same as a Vulkan pipeline. Instead, `raxel_pipeline_t` can be thought of a series of passes, which internally may have their own `VkPipeline` objects. The `raxel_pipeline_t` is used to abstract over the Vulkan API, and to provide a higher level interface for rendering.
+
 The implementation of the core renderer (and thus, the example) will be discussed in the following sections. Full details of the individual Vulkan resources are not covered, but the most important parts, namely the handling of the swapchain, compute shaders, and the pipeline, are covered.
 
 ### Compute Shader-Driven Graphics Pipeline
@@ -335,7 +342,37 @@ Instead of worrying about fragments, vertices, and the like, users only need wor
 
 The pipeline will keep large resources, specifically the "targets," which are textures that are read and rendered to by compute shaders on the GPU. The effect of this is that the effects of a single pass can be seen in the next pass, thus the order of the passes is important. Because of this, however, this makes multi-pass rendering very easy to implement.
 
-![Compute Shader Pipeline](/images/compute_shader_pipeline.png)
+This effect, where the output of one pass is the input of the next is why `raxel_pipeline_t` is called a pipeline. Unforuntately, working with Vulkan causes the term "pipeline" to be overloaded, as a Vulkan pipeline is a different concept than a `raxel_pipeline_t`.
+
+`raxel_pipeline_t` doesn't even have to be used for rendering. It can be used for any series of compute passes, and can be used to do any kind of computation on the GPU. This is a powerful abstraction, and allows for a wide variety of effects to be achieved.
+
+![Compute Shader Pipeline](./images/compute_shader_pipeline.png)
+
+In pseudocode, we can think of the pipeline as doing the following:
+```py
+# Create a pipeline
+pipeline = raxel_pipeline_create()
+pipeline.create_resources()
+
+# initialize all the resources needed for the pipeline
+for pass in pipeline:
+    pass.initialize(pipeline.resources)
+
+# start the pipeline
+pipeline.start()
+
+for pass in pipeline:
+  # pass in the data needed for the pass, like push constants, and the resources that are being written to
+  # run the pass, which effects the targets in the pipeline
+  pass.begin(pipeline.resources)
+  # seperated into two steps, because sometimes it is nice to reason about the pass in this way
+  pass.end(pipeline.resources)
+
+
+# present the final result to the window
+pipeline.present()
+```
+
 
 Upon the "presentation" step, which is part of the `raxel_pipeline_update` function, the pipeline will grab one of the targets as specified via the `raxel_pipeline_set_debug_target` function, and present it to the window. This is how the user sees the final result of the compute passes. 
 
@@ -349,7 +386,7 @@ Some targets to consider in the future are:
 
 Adding such targets would be simple, and would allow for different types of rendering effects to be achieved, like deferred rendering, normal mapping, and more.
 
-At the Vulkan level, this is achieved by using the swapchain. All of these targets are created as part of the swap chain, and exist in the GPU's memory, persisting between frames and compute passes.
+At the Vulkan level, this is achieved by using the swapchain. All of these targets are created as part of the swapchain, and exist in the GPU's memory, persisting between frames and compute passes.
 
 The full initialization of the pipeline looks like this:
 ```c
@@ -368,9 +405,164 @@ int raxel_pipeline_initialize(raxel_pipeline_t *pipeline) {
 }
 ```
 
-### Abstractions of the Core Renderer
+When creating compute shader passes, the user can specify the resources that are being written to, and the dimensions of the dispatch. The dispatch dimensions are based on the window size and the workgroup size, and are used to determine how many workgroups are dispatched.
 
-...
+This is done via an array of `raxel_pipeline_target_type_t` enums. In the example code:
+
+```c
+// What resources are we writing to?
+compute_ctx->targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
+compute_ctx->targets[1] = -1;  // Sentinel.
+```
+
+In this example, we only read/write to the internal color target. The end of the array is marked with a sentinel value, `-1`, which is used to determine the end of the array. This is because the array is statically sized to be the maximum number of targets that can be written to, which is all of them (currently 2, one for color, and one for depth).
+
+This maps directly into the shader:
+```glsl
+layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
+```
+
+If you wnated to read/write to both the color and depth targets, you would specify both in the array:
+```c
+compute_ctx->targets[0] = RAXEL_PIPELINE_TARGET_COLOR;
+compute_ctx->targets[1] = RAXEL_PIPELINE_TARGET_DEPTH;
+// no need for sentinel, as we know there are only two targets
+```
+
+This would map to the shader as:
+```glsl
+layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
+layout(r32f, set = 0, binding = 1) uniform image2D outDepth;
+```
+
+Internally, the compute shader needs to be passed a description of what textures are being written to. We never have to pull the textures from the GPU, then pass them to the compute shader. Instead, we basically pass a set of pointers to the compute shader, and the compute shader knows what to do with them.
+
+This system cuts down on a lot of boilerplate code, makes multi-pass rendering easier to think about, and makes the code more readable.
+
+
+### Pipeline and Pass Implementations and Interface
+
+A large amount of thought was put into the interface of the pipeline and passes. Having seen a large amount of disapointing interfaces in other engines, it was a priority to make the interface as simple as possible, while still being powerful.
+
+The scope of the pipeline being entirely compute shader driven made reasoning about this interface easier. The most important part of defining this interface was structring the data.
+
+```c
+typedef struct raxel_pipeline {
+    raxel_pipeline_globals_t resources;
+    raxel_list(raxel_pipeline_pass_t) passes;
+} raxel_pipeline_t;
+```
+
+Pipelines are constituted of a list of passes, and the resources that are shared between the passes. These resources are:
+
+```c
+typedef struct raxel_pipeline_globals {
+    raxel_allocator_t allocator;
+    VkInstance instance;
+    VkPhysicalDevice device_physical;
+    VkDevice device;
+    VkQueue queue_graphics;
+    VkQueue queue_compute;
+    uint32_t index_graphics_queue_family;
+    uint32_t index_compute_queue_family;
+    raxel_surface_t *surface;
+    VkCommandPool cmd_pool_graphics;
+    VkCommandPool cmd_pool_compute;
+    raxel_pipeline_swapchain_t swapchain;
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
+    VkDescriptorPool descriptor_pool;
+    raxel_pipeline_targets_t targets;
+} raxel_pipeline_globals_t;
+```
+
+This is the most volatile part of the pipeline -- the design of this structure frequently. During development, resources were added and removed from this structure as needed.
+
+The most notable part of the this global resources structure is the `raxel_pipeline_targets_t` structure, which is used to store the targets that are being written to by the compute passes. This structure is defined as:
+
+```c
+typedef struct raxel_pipeline_target {
+    raxel_pipeline_target_type_t type;
+    VkImage image;
+    VkDeviceMemory memory;
+    VkImageView view;
+} raxel_pipeline_target_t;
+
+typedef struct raxel_pipeline_targets {
+    // Internal targets stored as an array indexed by raxel_pipeline_target_type_t.
+    raxel_pipeline_target_t internal[RAXEL_PIPELINE_TARGET_COUNT];
+    // Which target (by index) should be used for presentation/debugging.
+    raxel_pipeline_target_type_t debug_target;
+} raxel_pipeline_targets_t;
+```
+
+The `raxel_pipeline_target_t` structure was extremely nice to work with, as it allowed for the implementation of the compute passes to be very simple. Throughout develpment, parts of this structure were added and removed as needed, but the core structure remained the same.
+
+The `raxel_pipeline_pass_t` structure is used to define a single pass in the pipeline. This structure is defined as:
+
+```c
+typedef struct raxel_pipeline_pass {
+    raxel_string_t name;
+    raxel_pipeline_pass_resources_t resources;
+    raxel_allocator_t allocator;
+    void *pass_data;
+    void (*initialize)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals_t *globals);
+    void (*on_begin)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals_t *globals);
+    void (*on_end)(struct raxel_pipeline_pass *pass, raxel_pipeline_globals_t *globals);
+} raxel_pipeline_pass_t;
+```
+
+The `raxel_pipeline_pass_t` structure is used to define a single pass in the pipeline. This structure is used to define the name of the pass, the resources that are used by the pass, the allocator that is used by the pass, the pass data, and the functions that are used to initialize, begin, and end the pass. This structure is used to define the interface for the passes, and is used to define the functions that are used to initialize, begin, and end the passes.
+
+Resources for the pass are allocated by the pipeline, and given to the pass. This is meant to provide commonly used, but isolated resources to the pass. Currently, the only resource within `raxel_pipeline_pass_resources_t` is the `VkCommandBuffer` that is used to record the commands for the pass.
+
+The most essential part of the pass structure was the `void *pass_data`. Having this pointer allowed for the user to store any data that they needed for the pass. In a way, combined with the `on_begin` and `on_end` functions, a slight amount of `OOP` and `polymorphism` was achieved. The user could define their own pass data, and define their own `on_begin` and `on_end`. This is used heavily in the implementation of the passes.
+
+Forexample, `raxel_compute_pass_context_t` structure is used to define the context for the compute pass. This structure is defined as:
+
+```c
+typedef struct raxel_compute_pass_context {
+    raxel_compute_shader_t *compute_shader;
+    uint32_t dispatch_x;
+    uint32_t dispatch_y;
+    uint32_t dispatch_z;
+    // Which internal target to use for blitting the compute result.
+    int8_t targets[RAXEL_PIPELINE_TARGET_COUNT];
+    // Optional: if non-null, use this image as the computed result.
+    VkImage output_image;
+    // Callback invoked after dispatch finishes.
+    // If NULL, the default blit callback is used.
+    VkDescriptorImageInfo *image_infos;
+    raxel_size_t num_image_infos;
+    void (*on_dispatch_finished)(struct raxel_compute_pass_context *context, raxel_pipeline_globals_t *globals);
+} raxel_compute_pass_context_t;
+```
+
+Without the `void *pass_data` pointer, this would cause unecessary bloating of the `raxel_pipeline_pass_resources_t` structure, which would make the resources harder to manage. Not all passes need the same individual resources, hence why the `void *pass_data` pointer was so essential.
+
+These structures made a lot of code very declarative. For example, this is what it means to "update" the pipeline:
+
+```c
+void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
+    if (raxel_surface_update(pipeline->resources.surface) != 0) {
+        return;
+    }
+    raxel_size_t num_passes = raxel_list_size(pipeline->passes);
+    for (size_t i = 0; i < num_passes; i++) {
+        raxel_pipeline_pass_t *pass = &pipeline->passes[i];
+        if (pass->on_begin) {
+            pass->on_begin(pass, &pipeline->resources);
+        }
+        if (pass->on_end) {
+            pass->on_end(pass, &pipeline->resources);
+        }
+    }
+
+    raxel_pipeline_present(pipeline);
+}
+```
+
+At the same time however, usage of the function pointers, void pointers, hides a lot of complexity from the user, and made the executable harder to debug with `gdb`. However, the interface for actually using the pipeline became very simple, which was one of the main goals of the engine.
 
 ## Voxel Renderer
 
