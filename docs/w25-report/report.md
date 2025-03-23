@@ -66,7 +66,9 @@ As of writing this report, the responsibilities of the engine and the rendering 
 
 ## Objectives
 
-Building the engine was a selfish effort, and it's design is to cater to my (Evan's) workflow. This workflow involves minimum usage of GUI's, a reliance on the CLI, and creating the minim possible 
+Building the engine was a semi-selfish effort, and it's design is to cater to my (Evan's) workflow. This workflow involves minimum usage of GUI's, a reliance on the CLI, and creating the minimum possible friction to get a project up and running.
+
+      
 
 ## High Level Description
 

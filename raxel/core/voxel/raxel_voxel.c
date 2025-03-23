@@ -264,6 +264,8 @@ static __raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *p
         if (extent[2] > ((axis == 0) ? extent[0] : extent[1])) axis = 2;
         node->split_axis = axis;
         int mid = (start + end) / 2;
+        
+        // not a part of the C99 standard, but works in GCC
         int cmp(const void *a, const void *b) {
             int ia = *(const int *)a;
             int ib = *(const int *)b;
@@ -273,6 +275,7 @@ static __raxel_bvh_build_node_t *__build_raxel_bvh_limited(raxel_bvh_bounds_t *p
             float diff = (axis == 0 ? ca[0] - cb[0] : axis == 1 ? ca[1] - cb[1] : ca[2] - cb[2]);
             return (diff < 0) ? -1 : (diff > 0) ? 1 : 0;
         }
+
         qsort(primitive_indices + start, n_primitives, sizeof(int), cmp);
         *node_counter += 2;
         node->children[0] = __build_raxel_bvh_limited(primitive_bounds, primitive_indices,
@@ -335,6 +338,7 @@ raxel_bvh_accel_t *raxel_bvh_accel_build(raxel_bvh_bounds_t *primitive_bounds,
     __raxel_bvh_build_node_t *root = __build_raxel_bvh_limited(primitive_bounds, primitive_indices, 0, n, max_leaf_size, &node_counter, allocator);
     // __print_bvh_build_structure(root, 0); // DO NOT DO THIS
     bvh->n_nodes = __count_raxel_bvh_nodes(root);
+    RAXEL_CORE_LOG("Built BVH with %d nodes\n", bvh->n_nodes);
     int offset = 0;
     __flatten_bvh_tree(root, &offset, bvh->nodes);
     __raxel_bvh_build_tree_free(root, allocator);
@@ -395,6 +399,9 @@ raxel_bvh_accel_t *raxel_bvh_accel_build_from_voxel_world(raxel_voxel_world_t *w
             index++;
         }
     }
+
+    RAXEL_CORE_LOG("Building BVH with %d primitives\n", total_prims);
+    
     raxel_bvh_accel_t *bvh = raxel_bvh_accel_build(prim_bounds, prim_indices, total_prims, max_leaf_size, allocator);
     raxel_free(allocator, prim_bounds);
     raxel_free(allocator, prim_indices);
@@ -479,6 +486,16 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     for (raxel_size_t i = 0; i < world->__num_loaded_chunks; i++) {
         gpu_world->chunk_meta[i] = world->chunk_meta[i];
         memccpy(&gpu_world->chunks[i], &world->chunks[i], 1, sizeof(raxel_voxel_chunk_t));
+
+        // print out the number of non-empty voxels in each chunk
+        int num_voxels = 0;
+        for (int j = 0; j < RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE; j++) {
+            if (world->chunks[i].voxels[j].material != 0) {
+                num_voxels++;
+            }
+        }
+
+        RAXEL_CORE_LOG("Chunk %d: %d non-empty voxels\n", i, num_voxels);
     }
 
     if (!bvh) {
@@ -490,11 +507,11 @@ void raxel_voxel_world_update(raxel_voxel_world_t *world,
     RAXEL_CORE_LOG("Copying BVH to GPU world buffer, size: %d\n", sizeof(raxel_bvh_accel_t));
     memcpy(&gpu_world->bvh, bvh, sizeof(raxel_bvh_accel_t));
     // Optional: print BVH structure for debugging.
-    raxel_bvh_accel_destroy(bvh, world->allocator);
     RAXEL_CORE_LOG("Dispatching updated chunks and BVH!\n");
     RAXEL_CORE_LOG("Num Loaded Chunks: %d\n", world->__num_loaded_chunks);
     RAXEL_CORE_LOG("Num BVH Nodes: %d\n", bvh->n_nodes);
     RAXEL_CORE_LOG("Data Size: %d\n", sizeof(__raxel_voxel_world_gpu_t));
     // raxel_bvh_accel_print(bvh);
     raxel_sb_buffer_update(compute_shader->sb_buffer, pipeline);
+    raxel_bvh_accel_destroy(bvh, world->allocator);
 }

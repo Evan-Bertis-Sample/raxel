@@ -265,13 +265,13 @@ void main() {
     } else if (pc.debug_mode == 4) {
         // Debug mode 4: Raw Voxel Data.
         int idx = pixelCoord.y * imageSizeVec.x + pixelCoord.x;
-        int chunk_idx = idx % RAXEL_MAX_LOADED_CHUNKS;
+        int chunk_idx = idx % int(voxel_world.num_loaded_chunks);
         int voxel_x = idx % RAXEL_VOXEL_CHUNK_SIZE;
         int voxel_y = (idx / RAXEL_VOXEL_CHUNK_SIZE) % RAXEL_VOXEL_CHUNK_SIZE;
         int voxel_z = (idx / (RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE)) % RAXEL_VOXEL_CHUNK_SIZE;
         uint voxel = voxel_world.chunks[chunk_idx].voxels[flatIndex(voxel_x, voxel_y, voxel_z)];
         float v = float(voxel) / 255.0;
-        float c = chunk_idx / float(RAXEL_MAX_LOADED_CHUNKS);
+        float c = chunk_idx / float(voxel_world.num_loaded_chunks);
         color = vec4(v, c, 0.0, 1.0);
     } else if (pc.debug_mode == 0) {
         // Debug mode 0: Normal shaded rendering.
