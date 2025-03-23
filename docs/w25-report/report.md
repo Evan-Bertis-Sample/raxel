@@ -29,6 +29,8 @@ This report covers the development of `raxel` within the past quarter. These dev
 - The implementation of a basic memory allocator that is used throughout the engine.
 - The creation of a command line interface that allows for easy building and running of the engine, and for the creation of new projects.
 
+The report mainly aims to highlight some of the challenges faced during development, the techniques used, and design decisions made. It also aims to provide a high-level overview of the engine, and to provide a demonstration of the engine in action. It isn't overly formal/comprhensive of *everything* that was done, but it does cover the most important parts of the engine.
+
 # Table of Contents
 
 - [Engine](#engine)
@@ -573,6 +575,92 @@ void raxel_pipeline_update(raxel_pipeline_t *pipeline) {
 
 At the same time however, usage of the function pointers, void pointers, hides a lot of complexity from the user, and made the executable harder to debug with `gdb`. However, the interface for actually using the pipeline became very simple, which was one of the main goals of the engine.
 
+### Compute Shader Interface
+
+The compute shader abstraction was heavily inspired by Unity's compute shader interface.
+
+With Unity, you can use compute shaders like this:
+    
+```cs
+public class Example : MonoBehaviour {
+    public ComputeShader computeShader;
+    public RenderTexture result;
+
+    void Start() {
+        result = new RenderTexture(256, 256, 0);
+        result.enableRandomWrite = true;
+        result.Create();
+    }
+
+    void Update() {
+        computeShader.SetTexture(0, "Result", result);
+        computeShader.Dispatch(0, 256 / 8, 256 / 8, 1);
+    }
+}
+```
+
+Because of the reliance on compute shaders in the engine, it was important to have an easily intuive interface for compute shaders. The interface for compute shaders in `raxel` is as follows:
+
+```c
+typedef struct raxel_compute_shader {
+    VkPipeline pipeline;
+    VkPipelineLayout pipeline_layout;
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSet descriptor_set; // Bound to a storage image (set=0, binding=0)
+    raxel_pc_buffer_t *pc_buffer;
+    raxel_sb_buffer_t *sb_buffer;
+    raxel_allocator_t *allocator;
+} raxel_compute_shader_t;
+
+/**
+ * Create a compute shader from a SPIR-V binary.
+ * Uses the pipeline’s device.
+ *
+ * @param pipeline Pointer to the pipeline.
+ * @param shader_path File path to the SPIR-V compute shader.
+ * @return Pointer to a newly created compute shader.
+ */
+raxel_compute_shader_t *raxel_compute_shader_create(raxel_pipeline_t *pipeline, const char *shader_path, raxel_pc_buffer_desc_t *desc);
+
+/**
+ * Destroy a compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param pipeline Pointer to the pipeline.
+ */
+void raxel_compute_shader_destroy(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline);
+
+/**
+ * Create a push–constant buffer descriptor for a compute shader.
+ *
+ * @param shader Pointer to the compute shader.
+ * @param desc Descriptor for the push–constant buffer.
+ */
+void raxel_compute_shader_set_pc(raxel_compute_shader_t *shader, raxel_pc_buffer_desc_t *desc);
+
+
+/**
+ * @brief Passes the push-constant buffer to the compute shader.
+ * 
+ * @param shader Pointer to the compute shader.
+ * @param cmd_buffer The command buffer to record the push-constant update.
+ */
+void raxel_compute_shader_push_pc(raxel_compute_shader_t *shader, VkCommandBuffer cmd_buffer);
+
+
+/**
+ * @brief Passes the storage buffer to the compute shader.
+ * 
+ * @param shader Pointer to the compute shader.
+ * @param desc Descriptor for the storage buffer.
+ */
+void raxel_compute_shader_set_sb(raxel_compute_shader_t *shader, raxel_pipeline_t *pipeline, raxel_sb_buffer_desc_t *desc);
+```
+
+Essentially, compute shaders can be created from SPIR-V binaries (in the same way that Unity can create compute shaders from `.compute` files), and can be passed data via push constants and storage buffers (in a similar way you can set data in Unity's compute shaders).
+
+`raxel_sb_buffer_t` and `raxel_pc_buffer_t` are thin wrappers around a `void *` pointer. Using these structures, you can query fields by name, and set them by name, which you see in the [demonstration](#demonstration) code. These buffers are fixe sized, and also handle attaching to the pipeline's descriptor set, to actually pass the data to the compute shader.
+
 ## Voxel Renderer
 
 Sitting directly on top of the core renderer is the voxel renderer. The voxel renderer is used to provide a higher level abstraction for rendering voxels, and implement important features like the BVH acceleration structure, and the voxel data structure. It also handles the memory management, and chunking of the voxel data.
@@ -642,6 +730,8 @@ typedef struct raxel_voxel_chunk {
 ```
 
 Voxels are stored in chunks, which is a flat array of voxels. Chunks are 32x32x32 sized, which is slightly arbitrary. Using larger chunks means having less metadata for the chunks (thus less memory overhead), and needing to unload/load less chunks. Using smaller chunks means having more fine-grained control over the voxel data, and being able to load/unload chunks more quickly, as well as minimizing the amount of unnecessary voxel data that is loaded (the portion of loaded chunks that are visible can be higher).
+
+Notice how there is no per-voxel metadata, beyond the material. This is because the most important data on a per-voxel basis, like the position of the voxel and it's normal can be derived implicitly from the position of the voxel in the chunk, and it's neighbors. We trade off space for computation, which is a good tradeoff in this case, as the computation is simple, and the space saved is significant, especially when we are dealing with large voxel worlds.
 
 Given a local coordinate `(x, y, z)` in a chunk, the index of the voxel in the chunk is `x + y * RAXEL_VOXEL_CHUNK_SIZE + z * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE`. This is a simple way to convert a 3D coordinate into a 1D index.
 
@@ -715,7 +805,7 @@ Fixing this would likely involve using a more complex data structure, but for no
 
 ### Sending to the GPU
 
-Once the voxel world loads/unloads chunks, the voxel world is sent to the GPU via a storage buffer. `raxel` transforms the voxel world into a flat array of voxels, and sends this to the GPU. This is done by copying the voxel into a flat, fixed-size structure, and copying this structure to the GPU.
+Once the voxel world loads/unloads chunks, the voxel world is sent to the GPU via a storage buffer. `raxel` transforms the voxel world into a flat array of voxels, and sends this to the GPU. This is done by copying the voxel into a flat, fixed-size structure, and copying this structure to the GPU via a storage buffer.
 
 ```c
 typedef struct __raxel_voxel_world_gpu {
