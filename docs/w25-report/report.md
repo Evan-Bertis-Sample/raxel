@@ -680,8 +680,6 @@ Raymarching is a very intuive technique, moreso than traditional rasterization. 
 
 To simulate the path of a ray of light, we move in discrete steps, "marching" along the ray. At each step, we sample the scene, and determine if the ray has hit an object. If the ray has hit an object, we can determine the color of the object, and the ray is done. If the ray has not hit an object, we continue to march along the ray. You can extend the technique to to further bouncing of light rays, to achieve effects like shadows, reflections, and refractions.
 
-![Raymarching](./images/raymarching.png)
-
 Although simple in theory, there are a few things to consider when implementing raymarching:
 
 - What is the step size of the ray?
@@ -1044,7 +1042,7 @@ Accelerating our voxel rendering with a BVH involves three main steps:
 
 ### Constructing the BVH
 
-Constructing the Bounding Volume Hierarchy (BVH) is a key step in accelerating voxel rendering. In raxel, this process is performed on the CPU using the voxel data from the loaded chunks. The primary goal is to reduce the number of voxel-ray intersection tests by quickly eliminating large regions of empty space. Below is a detailed explanation of how this design was derived and implemented.
+In raxel, constructing the BVH is performed on the CPU using the voxel data from the loaded chunks. The primary goal is to reduce the number of voxel-ray intersection tests by quickly eliminating large regions of empty space. Below is a detailed explanation of how this design was derived and implemented.
 
 #### 1. Calculating Bounding Volumes for Voxels
 
