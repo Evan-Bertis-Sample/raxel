@@ -196,8 +196,6 @@ RaymarchResult raymarch(vec3 ro, vec3 rd) {
     result.num_steps = 0;
     float t;
     int leaf;
-    // For simplicity, we do not count AABB tests and stack depth in this version.
-    // (You could add counters inside traverseBVH if desired.)
     if (traverseBVH(ro, rd, t, leaf)) {
         result.hit = true;
         result.tHit = t;

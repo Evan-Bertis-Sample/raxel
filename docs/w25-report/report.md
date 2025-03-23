@@ -577,6 +577,32 @@ At the same time however, usage of the function pointers, void pointers, hides a
 
 Sitting directly on top of the core renderer is the voxel renderer. The voxel renderer is used to provide a higher level abstraction for rendering voxels, and implement important features like the BVH acceleration structure, and the voxel data structure. It also handles the memory management, and chunking of the voxel data.
 
+The voxel renderer uses **raymarching** to render the voxels. Raymarching is a technique used to render 3D scenes, where rays are cast from the camera, and the scene is rendered by marching along the ray, and sampling the scene at each point. This is a simple, but powerful technique, and is used in many modern rendering engines.
+
+In a voxel world, the scene is simply a 3D grid of voxels. This is unlike traditional rendering, where the scene is a collection of meshes. Whereas meshes appoximate the surface of the scene, voxels represent the entire volume of the scene. However, because we are not using meshes, we cannot use traditional rasterization techniques to render the scene. Instead, we use raymarching.
+
+This is perfectly suited for the abstractions created by `raxel`'s core rendering system and abstractions, which are based around compute shaders. Because voxel rendering doesn't have any meshes to begin with, and neither does the core renderer, the voxel renderer is a perfect fit for the core renderer.
+
+### Raymarching at a Glance
+
+Raymarching is a very intuive technique, moreso than traditional rasterization. With raymarching, we effectively simulate the path of a ray of light through the scene, and sample the scene at each point along the ray. 
+
+To simulate the path of a ray of light, we move in discrete steps, "marching" along the ray. At each step, we sample the scene, and determine if the ray has hit an object. If the ray has hit an object, we can determine the color of the object, and the ray is done. If the ray has not hit an object, we continue to march along the ray. You can extend the technique to to further bouncing of light rays, to achieve effects like shadows, reflections, and refractions.
+
+![Raymarching](./images/raymarching.png)
+
+Although simple in theory, there are a few things to consider when implementing raymarching:
+* What is the step size of the ray?
+* How do we determine if the ray has hit an object?
+
+With voxels (at least the way they are implemented in `raxel`), there are a few things to consider:
+* If the ray has hit a voxel, how do we determine the normal of the voxel?
+* How do we determine the color of the voxel?
+
+These become unknowns with `raxel`'s implementations of voxels because of the way that voxels, are stored in memory (covered in the [voxel renderer](#voxel-renderer) section).
+
+Having too large of a step size can cause the ray to miss objects, and having too small of a step size can cause the ray to take too long to render. As this is a game engine, we want to render the scene as quickly as possible, but provide reliable, consistent results.
+
 ### Voxels in Memory
 
 #### Individual Voxels
@@ -589,7 +615,7 @@ typedef struct raxel_voxel {
 } raxel_voxel_t;
 ```
 
-The most important part of a voxel renderer is how voxels are stored in memory. In `raxel`, an individual voxel is stored as a `uint32_t`, which is an index into a "palette" of voxel materials. Originally this was a `uint8_t`, but GLSL doesn't support 8-bit integers without using extensions.
+One of most important parts of a voxel renderer is how voxels are stored in memory. In `raxel`, an individual voxel is stored as a `uint32_t`, which is an index into a "palette" of voxel materials. Originally this was a `uint8_t`, but GLSL doesn't support 8-bit integers without using extensions.
 
 Voxel materials, at the moment, are just the albedo color of the voxel, a vec3.
 
@@ -645,22 +671,280 @@ Only the first `__num_loaded_chunks` are actually sent to the GPU. When chunks a
 
 ## Naive Voxel Rendering
 
+Using these structures, we can naively render voxels by using a fixed step size, and checking every voxel along the ray. This is a simple, but slow way to render voxels, and is not suitable for large scenes. This is the most basic way to render voxels. Here is the shader for doing so:
+```glsl
+#version 450
 
+// Compute workgroup size.
+layout(local_size_x = 16, local_size_y = 16) in;
 
+// Output storage image (set = 0, binding = 0)
+layout(rgba32f, set = 0, binding = 0) uniform image2D outImage;
+
+#define EPSILON 0.01
+#define MAX_DISTANCE 1000.0
+#define MAX_STEPS 1000
+#define RAXEL_VOXEL_CHUNK_SIZE 32
+#define RAXEL_MAX_LOADED_CHUNKS 32
+#define MAX_RAYS 8
+
+//
+// A chunk’s metadata stores its integer coordinates in chunk space and a state value.
+//
+struct VoxelChunkMeta {
+    int x;
+    int y;
+    int z;
+    int state;
+};
+
+//
+// Each chunk now stores its voxels as a flat array.
+// The total number of voxels per chunk is RAXEL_VOXEL_CHUNK_SIZE³.
+//
+struct VoxelChunk {
+    uint voxels[RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE];
+};
+
+//
+// The GPUVoxelWorld holds up to RAXEL_MAX_LOADED_CHUNKS chunks and their metadata.
+//
+struct GPUVoxelWorld {
+    VoxelChunkMeta chunk_meta[RAXEL_MAX_LOADED_CHUNKS];
+    VoxelChunk chunks[RAXEL_MAX_LOADED_CHUNKS];
+    uint num_loaded_chunks;
+};
+
+// Storage buffer (set = 0, binding = 1) holding the voxel world.
+layout(std430, set = 0, binding = 1) buffer VoxelWorldBuffer {
+    GPUVoxelWorld voxel_world;
+};
+
+// Push constants: view matrix, fov (radians), rays_per_pixel (unused)
+layout(push_constant) uniform PC {
+    mat4 view;
+    float fov;
+    int rays_per_pixel;
+} pc;
+
+//
+// A structure to hold the result of raymarching.
+//
+struct RaymarchResult {
+    vec3 pos;
+    vec3 normal;
+    float tHit;
+    bool hit;
+};
+
+//
+// Helper function: compute a flat index into the voxel array for a given local coordinate.
+//
+int flatIndex(int lx, int ly, int lz) {
+    return lx + ly * RAXEL_VOXEL_CHUNK_SIZE + lz * RAXEL_VOXEL_CHUNK_SIZE * RAXEL_VOXEL_CHUNK_SIZE;
+}
+
+//
+// Given a world-space voxel coordinate, look through the loaded chunks to find the voxel value.
+// This mimics the CPU function that computes chunk coordinates and local coordinates.
+// Voxels with value 0 are treated as air; any non-zero voxel is solid.
+//
+uint getVoxelAtWorldPos(ivec3 worldPos) {
+    for (int i = 0; i < voxel_world.num_loaded_chunks; i++) {
+        VoxelChunkMeta meta = voxel_world.chunk_meta[i];
+        int chunkOriginX = meta.x * RAXEL_VOXEL_CHUNK_SIZE;
+        int chunkOriginY = meta.y * RAXEL_VOXEL_CHUNK_SIZE;
+        int chunkOriginZ = meta.z * RAXEL_VOXEL_CHUNK_SIZE;
+        // Check if the world coordinate lies within this chunk.
+        if (worldPos.x >= chunkOriginX && worldPos.x < (chunkOriginX + RAXEL_VOXEL_CHUNK_SIZE) &&
+            worldPos.y >= chunkOriginY && worldPos.y < (chunkOriginY + RAXEL_VOXEL_CHUNK_SIZE) &&
+            worldPos.z >= chunkOriginZ && worldPos.z < (chunkOriginZ + RAXEL_VOXEL_CHUNK_SIZE)) {
+            // Compute local voxel coordinates.
+            int localX = worldPos.x - chunkOriginX;
+            int localY = worldPos.y - chunkOriginY;
+            int localZ = worldPos.z - chunkOriginZ;
+            int index = flatIndex(localX, localY, localZ);
+            return voxel_world.chunks[i].voxels[index];
+        }
+    }
+    return 0u;
+}
+
+//
+// Returns true if the voxel at the given world coordinate is solid (non-zero).
+//
+bool isVoxelSolid(ivec3 worldPos) {
+    return getVoxelAtWorldPos(worldPos) != 0u;
+}
+
+//
+// Returns 1.0 for solid and 0.0 for air. Used when estimating normals.
+//
+float voxelValue(vec3 pos) {
+    ivec3 voxelPos = ivec3(floor(pos));
+    return isVoxelSolid(voxelPos) ? 1.0 : 0.0;
+}
+
+//
+// Estimate a surface normal at a given point using central differences.
+// We sample the voxelValue offset by EPSILON along each axis.
+//
+vec3 estimateNormal(vec3 pos) {
+    float dx = voxelValue(pos + vec3(EPSILON, 0.0, 0.0)) - voxelValue(pos - vec3(EPSILON, 0.0, 0.0));
+    float dy = voxelValue(pos + vec3(0.0, EPSILON, 0.0)) - voxelValue(pos - vec3(0.0, EPSILON, 0.0));
+    float dz = voxelValue(pos + vec3(0.0, 0.0, EPSILON)) - voxelValue(pos - vec3(0.0, 0.0, EPSILON));
+    return normalize(vec3(dx, dy, dz));
+}
+
+//
+// Raymarching function: starting from 'origin' along 'dir', step through space until a solid voxel is hit
+// or the maximum distance/steps is reached. On a hit, estimate the surface normal.
+//
+RaymarchResult raymarch(vec3 origin, vec3 dir) {
+    RaymarchResult result;
+    result.tHit = 0.0;
+    result.hit = false;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        vec3 pos = origin + result.tHit * dir;
+        if (isVoxelSolid(ivec3(floor(pos)))) {
+            result.pos = pos;
+            result.hit = true;
+            result.normal = estimateNormal(pos);
+            break;
+        }
+        result.tHit += 0.05;
+        if (result.tHit > MAX_DISTANCE) {
+            break;
+        }
+    }
+    return result;
+}
+
+void main() {
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imageSizeVec = imageSize(outImage);
+    vec4 color = vec4(0.0);
+    // Map pixel coordinates to normalized device coordinates (range [-1, 1]).
+    // Compute the inverse of the view matrix.
+    mat4 invView = inverse(pc.view);
+
+    // Map pixel coordinates to normalized device coordinates (range [-1, 1]).
+    vec2 uv = (vec2(pixelCoord) / vec2(imageSizeVec)) * 2.0 - 1.0;
+    float aspect = float(imageSizeVec.x) / float(imageSizeVec.y);
+    uv.x *= aspect;
+    float tanFov = tan(pc.fov * 0.5);
+
+    // Use the inverse view matrix to compute ray origin and direction.
+    vec3 rayOrigin = (invView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec3 rayDir = normalize((invView * vec4(uv.x * tanFov, uv.y * tanFov, -1.0, 0.0)).xyz);
+    // flip the ray direction, so Y is up
+    rayDir.y = -rayDir.y;
+
+    RaymarchResult result = raymarch(rayOrigin, rayDir);
+    // Normal shaded rendering using simple diffuse lighting.
+    if (result.hit) {
+        vec3 lightDir = normalize(vec3(1.0, 1.0, -1.0));
+        float diff = max(dot(result.normal, lightDir), 0.0);
+        color = vec4(vec3(diff), 1.0);
+    } else {
+        color = vec4(0.0);
+    }
+
+  imageStore(outImage, pixelCoord, color);
+}
+```
+
+Using this shader, we render
 
 ## Accelerated Voxel Rendering with BVH
 
 When rendering a scene, checking every single voxel for intersections with a ray is too slow, especially as the scene grows in size. To speed up this process, raxel uses an acceleration structure called a Bounding Volume Hierarchy (BVH).
 
-A BVH allows
+### BVH Theory
 
-### Rendering Voxels in Compute Shader
+### Building the BVH from Voxels
 
-...
+### Traversing the BVH
 
-# Demonstration
+To traverse the BVH, we use a stack-based approach. Because we are using GLSL, we can't use recursion, and have to use a stack to keep track of the nodes that we need to traverse.
 
-...
+We can modify our raymarching function to use the BVH, and add a few utility functions to help with traversing the BVH. Here is the updated raymarching function:
+
+```glsl
+
+bool intersectAABB(vec3 ro, vec3 rd, vec3 inv_rd, vec3 bmin, vec3 bmax, out float tmin, out float tmax) {
+    vec3 t0 = (bmin - ro) * inv_rd;
+    vec3 t1 = (bmax - ro) * inv_rd;
+    vec3 tsmaller = min(t0, t1);
+    vec3 tbigger = max(t0, t1);
+    tmin = max(max(tsmaller.x, tsmaller.y), tsmaller.z);
+    tmax = min(min(tbigger.x, tbigger.y), tbigger.z);
+    return tmax >= max(tmin, 0.0);
+}
+
+
+bool traverseBVH(vec3 ro, vec3 rd, out float t_hit, out int leaf_id) {
+    vec3 inv_rd = 1.0 / rd;
+    int stack[64];
+    int stack_ptr = 0;
+    stack[stack_ptr++] = 0; // start at root (index 0)
+    bool hit_found = false;
+    t_hit = 1e30;
+    leaf_id = -1;
+    while (stack_ptr > 0) {
+        int node_index = stack[--stack_ptr];
+        if (node_index < 0 || node_index >= voxel_world.bvh.n_nodes)
+            continue;
+        BVHNode node = voxel_world.bvh.nodes[node_index];
+        float tmin, tmax;
+        if (!intersectAABB(ro, rd, inv_rd, node.bounds_min, node.bounds_max, tmin, tmax))
+            continue;
+        if (node.n_primitives > 0) {
+            if (tmin < t_hit) {
+                t_hit = tmin;
+                leaf_id = node_index;
+                hit_found = true;
+            }
+        } else {
+            stack[stack_ptr++] = node_index + 1;
+            stack[stack_ptr++] = node.child_offset;
+        }
+    }
+    return hit_found;
+}
+
+RaymarchResult raymarch(vec3 ro, vec3 rd) {
+    RaymarchResult result;
+    result.hit = false;
+    result.tHit = 0.0;
+    result.leaf_id = -1;
+    result.prim_offset = -1;
+    result.n_primitives = 0;
+    result.num_aabb_tests = 0;
+    result.deepest_stack = 0;
+    result.num_steps = 0;
+    float t;
+    int leaf;
+    if (traverseBVH(ro, rd, t, leaf)) {
+        result.hit = true;
+        result.tHit = t;
+        result.leaf_id = leaf;
+        result.pos = ro + t * rd;
+        BVHNode leafNode = voxel_world.bvh.nodes[leaf];
+        result.prim_offset = leafNode.child_offset;
+        result.n_primitives = int(leafNode.n_primitives);
+        float eps = 0.01;
+        float dx = (isVoxelSolid(ivec3(result.pos + vec3(eps, 0.0, 0.0))) ? 1.0 : 0.0) -
+                   (isVoxelSolid(ivec3(result.pos - vec3(eps, 0.0, 0.0))) ? 1.0 : 0.0);
+        float dy = (isVoxelSolid(ivec3(result.pos + vec3(0.0, eps, 0.0))) ? 1.0 : 0.0) -
+                   (isVoxelSolid(ivec3(result.pos - vec3(0.0, eps, 0.0))) ? 1.0 : 0.0);
+        float dz = (isVoxelSolid(ivec3(result.pos + vec3(0.0, 0.0, eps))) ? 1.0 : 0.0) -
+                   (isVoxelSolid(ivec3(result.pos - vec3(0.0, 0.0, eps))) ? 1.0 : 0.0);
+        result.normal = normalize(vec3(dx, dy, dz));
+    }
+    return result;
+}
+```
 
 # Reflections & Further Work
 
