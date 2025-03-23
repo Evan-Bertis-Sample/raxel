@@ -667,7 +667,51 @@ Only the first `__num_loaded_chunks` are actually sent to the GPU. When chunks a
 
 ### Chunk Determination and Loading/Unloading
 
+Whenever the camera moves a significant amount (e.g, more than half the size of a chunk), we need to load/unload chunks.
 
+To load and unload chunks effectively means determining which chunks are in the first `__num_loaded_chunks` chunks, and which chunks are not. 
+
+We can very poorly do this by iteraing over all the chunks, and checking if the chunk is within the a certain distance of the camera. This is a naive way to do this, but it is fast for small scenes. Once we find the maximum amount of loaded chunks that we can have, we are done.
+
+The algorithm is as follows:
+
+```python
+def update_chunks(camera_position, voxel_world):
+    # find the chunk that the camera is in
+    camera_chunk = get_chunk_from_world_position(camera_position)
+
+    if not need_to_update_chunks(camera_chunk, voxel_world.prev_update_options):
+        return
+
+    # find the chunks that are within a certain distance of the camera
+    num_loaded_chunks = 0
+    for i, chunk_meta in enumerate(voxel_world.chunk_meta):
+        chunk_position = get_chunk_position(chunk_meta)
+        distance = get_distance(camera_chunk, chunk_position)
+        if distance < MAX_CHUNK_DISTANCE:
+            swap_chunks(voxel_world, i, num_loaded_chunks)
+            num_loaded_chunks += 1
+        if num_loaded_chunks >= RAXEL_MAX_LOADED_CHUNKS:
+            break
+
+    voxel_world.__num_loaded_chunks = num_loaded_chunks
+
+def swap_chunks(voxel_world, i, j):
+    # swap the chunk metadata
+    voxel_world.chunk_meta[i], voxel_world.chunk_meta[j] = voxel_world.chunk_meta[j], voxel_world.chunk_meta[i]
+    # swap the chunk data
+    voxel_world.chunks[i], voxel_world.chunks[j] = voxel_world.chunks[j], voxel_world.chunks[i]
+```
+
+There are a lot of problems with the results of this algorithm. The most notable is that you don't always get the same chunks loaded, even if the camera is in the same position. The order that the chunks are in the `chunk_meta` list is arbitrary, but it has a large effect on the chunks that are loaded. There is a non-zero chance that the chunks that we "load" will be poorly chosen (like behind the camera), and the chunks that we "unload" will be poorly chosen (like in front of the camera, but far away).
+
+You can fix this by taking into account the camera's view frustum, and only loading chunks that are within the camera's view frustum. This is a more complex algorithm, but it is more reliable, and is more likely to load the correct chunks. This reduces the chance that a "poor" chunk is loaded, but doesn't mean that only the "best" chunks are loaded. The best chunks to be loaded are the chunks that are in the camera's view frustum, and are the closest to the camera.
+
+To fix that, we can keep track of which chunks are within the view frustum, sort them by distance, then load at most the first RAXEL_MAX_LOADED_CHUNKS chunks. This is a more complex algorithm, but it is more reliable, and is more likely to load the correct chunks.
+
+With large scenes, this algorithm is not suitable, and would likely result in stuttering -- whenver the camera moves far enough, this slow algorithm would be run, and the scene would freeze while the chunks are loaded. This is not acceptable for a game engine, and is a problem that needs to be solved.
+
+Fixing this would likely involve using a more complex data structure, but for now, the simplest algorithm (what is detailed in the pseudocode) is used - there are signifcantly harder, but more important problems to solve in the engine.
 
 ## Naive Voxel Rendering
 
